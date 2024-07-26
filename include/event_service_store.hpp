@@ -208,13 +208,18 @@ struct UserSubscription
                     subvalue->metricReportDefinitions.emplace_back(*value);
                 }
             }
-            else if (element.key() == "OriginResources")
+            else if (element.first == "OriginResources")
             {
-                const auto& obj = element.value();
-                for (const auto& val : obj.items())
+                const nlohmann::json::array_t* obj =
+                    element.second.get_ptr<const nlohmann::json::array_t*>();
+                if (obj == nullptr)
+                {
+                    continue;
+                }
+                for (const auto& val : *obj)
                 {
                     const std::string* value =
-                        val.value().get_ptr<const std::string*>();
+                        val.get_ptr<const std::string*>();
                     if (value == nullptr)
                     {
                         continue;
@@ -222,9 +227,9 @@ struct UserSubscription
                     subvalue->originResources.emplace_back(*value);
                 }
             }
-            else if (element.key() == "IncludeOriginOfCondition")
+            else if (element.first == "IncludeOriginOfCondition")
             {
-                const bool* value = element.value().get_ptr<const bool*>();
+                const bool* value = element.second.get_ptr<const bool*>();
                 if (value == nullptr)
                 {
                     continue;

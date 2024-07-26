@@ -48,9 +48,10 @@ inline void
             else
             {
                 pcieDeviceList.push_back(
-                    {{"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                                   "/PCIeDevices/" +
-                                       devName}});
+                    {{"@odata.id",
+                      "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/PCIeDevices/" + devName}});
             }
         }
         asyncResp->res.jsonValue[name + "@odata.count"] = pcieDeviceList.size();

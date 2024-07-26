@@ -121,6 +121,7 @@ inline void handleMessageRoutesMessageRegistryFileGet(
     {
         header = &registries::platform::header;
         url = registries::platform::url;
+    }
     else if (registry == "Telemetry")
     {
         header = &registries::telemetry::header;
@@ -237,7 +238,12 @@ inline void handleMessageRegistryGet(
     else if (registry == "BiosAttributeRegistry")
     {
         header = &registries::bios::header;
-        for (const registries::MessageEntry& entry : registries::bios::registry)
+        for (const registries::MessageEntry& entry :
+            registries::bios::registry)
+        {
+            registryEntries.emplace_back(&entry);
+        }
+    }
     else if (registry == "Telemetry")
     {
         header = &registries::telemetry::header;

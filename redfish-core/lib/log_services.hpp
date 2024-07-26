@@ -984,7 +984,7 @@ static std::string getDumpEntriesPath(const std::string& dumpType)
     }
     else if (dumpType == "FDR")
     {
-        entriesPath = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        entriesPath = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FDR/Entries/";
     }
     else if (dumpType == "FaultLog")
@@ -1392,7 +1392,7 @@ inline void
             {
                 asyncResp->res.jsonValue["DiagnosticDataType"] = "Manager";
                 asyncResp->res.jsonValue["AdditionalDataURI"] =
-                    "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+                    "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                     "/LogServices/Dump/Entries/" +
                     entryID + "/attachment";
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
@@ -1402,7 +1402,7 @@ inline void
                 asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
                 asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "System";
                 asyncResp->res.jsonValue["AdditionalDataURI"] =
-                    "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                    "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                     "/LogServices/Dump/Entries/" +
                     entryID + "/attachment";
             }
@@ -1411,7 +1411,7 @@ inline void
                 asyncResp->res.jsonValue["DiagnosticDataType"] =
                     faultLogDiagnosticDataType;
                 asyncResp->res.jsonValue["AdditionalDataURI"] =
-                    "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                    "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                     "/LogServices/FaultLog/Entries/" +
                     entryID + "/attachment";
                 if (notificationType != "NA")
@@ -1443,7 +1443,7 @@ inline void
                     asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
                     asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
                     asyncResp->res.jsonValue["AdditionalDataURI"] =
-                        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                         "/LogServices/FDR/Entries/" +
                         entryID + "/attachment";
                 }
@@ -1463,7 +1463,7 @@ inline void
                     asyncResp->res.jsonValue["DiagnosticDataType"] =
                         faultLogDiagnosticDataType;
                     asyncResp->res.jsonValue["AdditionalDataURI"] =
-                        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                         "/LogServices/FaultLog/Entries/" +
                         entryID + "/attachment";
                     if (notificationType != "NA")
@@ -1826,7 +1826,7 @@ inline std::string getDumpEntryPath(const std::string& dumpPath)
     }
     if (dumpPath == "/xyz/openbmc_project/dump/fdr/entry")
     {
-        return "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        return "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                "/LogServices/FDR/Entries/";
     }
     return "";
@@ -2037,7 +2037,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 "LogService.CollectDiagnosticData");
             return;
         }
-        dumpPath = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/Dump/";
+        dumpPath = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/Dump/";
     }
     else if (dumpType == "FDR")
     {
@@ -2062,7 +2062,7 @@ inline void createDump(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 "LogService.CollectDiagnosticData");
             return;
         }
-        dumpPath = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/FDR/";
+        dumpPath = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/FDR/";
     }
     else if (dumpType == "BMC")
     {
@@ -2229,11 +2229,12 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/LogServices/")
         .privileges(redfish::privileges::getLogServiceCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -2265,45 +2266,26 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
         nlohmann::json& logServiceArray = asyncResp->res.jsonValue["Members"];
         logServiceArray = nlohmann::json::array();
         nlohmann::json::object_t eventLog;
-<<<<<<< HEAD
-        eventLog["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                                "/LogServices/EventLog";
-        logServiceArray.push_back(std::move(eventLog));
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         nlohmann::json::object_t selLog;
-        selLog["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        selLog["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                               "/LogServices/SEL";
         logServiceArray.push_back(std::move(selLog));
 #endif
-        if constexpr (BMCWEB_REDFISH_DUMP_LOG)
-        {
-            nlohmann::json::object_t dumpLog;
-            dumpLog["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                                   "/LogServices/Dump";
-            logServiceArray.push_back(std::move(dumpLog));
-        }
 
 #ifdef BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
         nlohmann::json::object_t fdrLog;
-        fdrLog["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        fdrLog["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                               "/LogServices/FDR";
         logServiceArray.push_back(std::move(fdrLog));
 #endif // BMCWEB_ENABLE_REDFISH_FDR_DUMP_LOG
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
         nlohmann::json::object_t faultLog;
-        faultLog["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        faultLog["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                 "/LogServices/FaultLog";
         logServiceArray.push_back(std::move(faultLog));
 #endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
-
-#ifdef BMCWEB_ENABLE_REDFISH_CPU_LOG
-        nlohmann::json::object_t crashdump;
-        crashdump["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                                 "/LogServices/Crashdump";
-        logServiceArray.push_back(std::move(crashdump));
-#endif
-=======
         eventLog["@odata.id"] =
             std::format("/redfish/v1/Systems/{}/LogServices/EventLog",
                         BMCWEB_REDFISH_SYSTEM_URI_NAME);
@@ -2325,7 +2307,6 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
                             BMCWEB_REDFISH_SYSTEM_URI_NAME);
             logServiceArray.emplace_back(std::move(crashdump));
         }
->>>>>>> master
 
         if constexpr (BMCWEB_REDFISH_HOST_LOGGER)
         {
@@ -2337,7 +2318,7 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
         }
 
         nlohmann::json::object_t debugToken;
-        debugToken["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        debugToken["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                   "/LogServices/DebugTokenService";
         logServiceArray.push_back(std::move(debugToken));
 
@@ -2381,12 +2362,12 @@ inline void requestRoutesSystemLogServiceCollection(App& app)
 
 inline void requestRoutesEventLogService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                      "/LogServices/EventLog/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/LogServices/EventLog/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -2472,16 +2453,16 @@ inline void requestRoutesEventLogService(App& app)
 #endif /* BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES */
 
         asyncResp->res.jsonValue["Entries"] = {
-            {"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                           "/LogServices/EventLog/Entries"}};
         asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"] = {
 
-            {"target", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"target", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                        "/LogServices/EventLog/Actions/LogService.ClearLog"}};
     });
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/")
         .privileges(redfish::privileges::patchLogService)
         .methods(boost::beast::http::verb::patch)(
@@ -2540,7 +2521,7 @@ inline void requestRoutesEventLogService(App& app)
 inline void requestRoutesSELLogService(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/SEL/")
+                 "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/SEL/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -2550,7 +2531,7 @@ inline void requestRoutesSELLogService(App& app)
             return;
         }
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/SEL";
+            "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/SEL";
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogService.v1_1_0.LogService";
         asyncResp->res.jsonValue["Name"] = "SEL Log Service";
@@ -2566,19 +2547,19 @@ inline void requestRoutesSELLogService(App& app)
             redfishDateTimeOffset.second;
 
         asyncResp->res.jsonValue["Entries"] = {
-            {"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                           "/LogServices/SEL/Entries"}};
         asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"] = {
 
             {"target",
-             "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/SEL/"
+             "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/SEL/"
              "Actions/LogService.ClearLog"}};
     });
 }
 
 inline void requestRoutesJournalEventLogClear(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/Actions/"
                       "LogService.ClearLog/")
         .privileges({{"ConfigureComponents"}})
@@ -2703,12 +2684,12 @@ static LogParseError
 
 inline void requestRoutesJournalEventLogEntryCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                      "/LogServices/EventLog/Entries/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/LogServices/EventLog/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& systemName) {
         query_param::QueryCapabilities capabilities = {
             .canDelegateTop = true,
             .canDelegateSkip = true,
@@ -2807,7 +2788,7 @@ inline void requestRoutesJournalEventLogEntryCollection(App& app)
         if (skip + top < entryCount)
         {
             asyncResp->res.jsonValue["Members@odata.nextLink"] =
-                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                 "/LogServices/EventLog/Entries?$skip=" +
                 std::to_string(skip + top);
         }
@@ -2816,7 +2797,7 @@ inline void requestRoutesJournalEventLogEntryCollection(App& app)
 
 inline void requestRoutesJournalEventLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -2891,7 +2872,7 @@ inline void requestRoutesJournalEventLogEntry(App& app)
 
 inline void requestRoutesDBusEventLogEntryCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
@@ -2914,7 +2895,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogEntryCollection.LogEntryCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/EventLog/Entries";
         asyncResp->res.jsonValue["Name"] = "System Event Log Entries";
         asyncResp->res.jsonValue["Description"] =
@@ -3095,7 +3076,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 {
                     message_registries::generateMessageRegistry(
                         thisEntry,
-                        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/"
+                        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/"
                         "EventLog/Entries/",
                         "v1_13_0", std::to_string(*id),
                         "System Event Log Entry",
@@ -3169,7 +3150,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
 
 inline void requestRoutesDBusEventLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -3274,7 +3255,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             {
                 message_registries::generateMessageRegistry(
                     asyncResp->res.jsonValue,
-                    "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/"
+                    "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/"
                     "EventLog/Entries/",
                     "v1_13_0", std::to_string(*id), "System Event Log Entry",
                     redfish::time_utils::getDateTimeStdtime(
@@ -3305,7 +3286,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#LogEntry.v1_13_0.LogEntry";
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/"
+                    "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/LogServices/"
                     "EventLog/"
                     "Entries/" +
                     std::to_string(*id);
@@ -3349,7 +3330,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
         });
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::patchLogEntry)
         .methods(boost::beast::http::verb::patch)(
@@ -3382,7 +3363,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                         *resolved);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
 
@@ -3592,7 +3573,7 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
     {
         message_registries::generateMessageRegistry(
             thisEntry,
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/"
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/"
             "SEL/Entries/",
             "v1_13_0", std::to_string(*id), "System Event Log Entry",
             redfish::time_utils::getDateTimeStdtime(timestamp), messageId,
@@ -3607,7 +3588,7 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
     if (thisEntry["Id"].size() == 0)
     {
         thisEntry["@odata.type"] = logEntryVersion;
-        thisEntry["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        thisEntry["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                  "/LogServices/SEL/"
                                  "Entries/" +
                                  std::to_string(*id);
@@ -3643,7 +3624,7 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
 
 inline void requestRoutesDBusSELLogEntryCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/SEL/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
@@ -3658,7 +3639,7 @@ inline void requestRoutesDBusSELLogEntryCollection(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogEntryCollection.LogEntryCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/SEL/Entries";
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/SEL/Entries";
         asyncResp->res.jsonValue["Name"] = "System Event Log Entries";
         asyncResp->res.jsonValue["Description"] =
             "Collection of System Event Log Entries";
@@ -3719,7 +3700,7 @@ inline void requestRoutesDBusSELLogEntryCollection(App& app)
 
 inline void requestRoutesDBusSELLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/SEL/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -3775,7 +3756,7 @@ inline void requestRoutesDBusSELLogEntry(App& app)
             "org.freedesktop.DBus.Properties", "GetAll", "");
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/SEL/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
         .methods(boost::beast::http::verb::delete_)(
@@ -3801,7 +3782,7 @@ inline void requestRoutesDBusSELLogServiceActionsClear(App& app)
      * all entries found in the Entries collection for this Log Service.
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/SEL/Actions/"
                       "LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
@@ -3938,7 +3919,7 @@ inline void fillHostLoggerEntryJson(const std::string& logEntryID,
 {
     // Fill in the log entry with the gathered data.
     logEntryJson["@odata.type"] = logEntryVersion;
-    logEntryJson["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    logEntryJson["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                 "/LogServices/HostLogger/Entries/" +
                                 logEntryID;
     logEntryJson["Name"] = "Host Logger Entry";
@@ -3951,7 +3932,7 @@ inline void fillHostLoggerEntryJson(const std::string& logEntryID,
 
 inline void requestRoutesSystemHostLogger(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/HostLogger/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
@@ -3962,27 +3943,26 @@ inline void requestRoutesSystemHostLogger(App& app)
             return;
         }
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/HostLogger";
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/HostLogger";
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogService.v1_1_0.LogService";
         asyncResp->res.jsonValue["Name"] = "Host Logger Service";
         asyncResp->res.jsonValue["Description"] = "Host Logger Service";
         asyncResp->res.jsonValue["Id"] = "HostLogger";
         asyncResp->res.jsonValue["Entries"] = {
-            {"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                           "/LogServices/HostLogger/Entries"}};
     });
 }
 
 inline void requestRoutesSystemHostLoggerCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/HostLogger/Entries/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                   const std::string& managerId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
         query_param::QueryCapabilities capabilities = {
             .canDelegateTop = true,
             .canDelegateSkip = true,
@@ -3994,7 +3974,7 @@ inline void requestRoutesSystemHostLoggerCollection(App& app)
             return;
         }
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/HostLogger/Entries";
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogEntryCollection.LogEntryCollection";
@@ -4047,7 +4027,7 @@ inline void requestRoutesSystemHostLoggerCollection(App& app)
             if (skip + top < logCount)
             {
                 asyncResp->res.jsonValue["Members@odata.nextLink"] =
-                    "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                    "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                     "/LogServices/HostLogger/Entries?$skip=" +
                     std::to_string(skip + top);
             }
@@ -4057,7 +4037,7 @@ inline void requestRoutesSystemHostLoggerCollection(App& app)
 
 inline void requestRoutesSystemHostLoggerLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/HostLogger/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -4141,7 +4121,7 @@ inline void handleBMCLogServicesCollectionGet(
     asyncResp->res.jsonValue["@odata.type"] =
         "#LogServiceCollection.LogServiceCollection";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME "/LogServices";
+        "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/LogServices";
     asyncResp->res.jsonValue["Name"] = "Open BMC Log Services Collection";
     asyncResp->res.jsonValue["Description"] =
         "Collection of LogServices for this Manager";
@@ -4151,7 +4131,7 @@ inline void handleBMCLogServicesCollectionGet(
 #ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
     logServiceArray.push_back(
         {{"@odata.id",
-          "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME "/LogServices/Journal"}});
+          "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/LogServices/Journal"}});
 #endif
 
     asyncResp->res.jsonValue["Members@odata.count"] = logServiceArray.size();
@@ -4183,14 +4163,14 @@ inline void handleBMCLogServicesCollectionGet(
                 if (path == "/xyz/openbmc_project/dump/bmc")
                 {
                     logServiceArrayLocal.push_back(
-                        {{"@odata.id", "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+                        {{"@odata.id", "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                                        "/LogServices/Dump"}});
                 }
                 else if (path == "/xyz/openbmc_project/dump/faultlog")
                 {
 #ifndef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
                     nlohmann::json::object_t member;
-                    member["@odata.id"] = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+                    member["@odata.id"] = "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                                           "/LogServices/FaultLog";
                     logServiceArrayLocal.emplace_back(std::move(member));
 #endif
@@ -4205,7 +4185,7 @@ inline void handleBMCLogServicesCollectionGet(
 
 inline void requestRoutesBMCLogServiceCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME "/LogServices/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/LogServices/")
         .privileges(redfish::privileges::getLogServiceCollection)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleBMCLogServicesCollectionGet, std::ref(app)));
@@ -4214,7 +4194,7 @@ inline void requestRoutesBMCLogServiceCollection(App& app)
 inline void requestRoutesBMCJournalLogService(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME "/LogServices/Journal/")
+                 "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/LogServices/Journal/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4228,7 +4208,7 @@ inline void requestRoutesBMCJournalLogService(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogService.v1_2_0.LogService";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME "/LogServices/Journal";
+            "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/LogServices/Journal";
         asyncResp->res.jsonValue["Name"] = "Open BMC Journal Log Service";
         asyncResp->res.jsonValue["Description"] = "BMC Journal Log Service";
         asyncResp->res.jsonValue["Id"] = "Journal";
@@ -4241,7 +4221,7 @@ inline void requestRoutesBMCJournalLogService(App& app)
             redfishDateTimeOffset.second;
 
         asyncResp->res.jsonValue["Entries"] = {
-            {"@odata.id", "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+            {"@odata.id", "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                           "/LogServices/Journal/Entries"}};
     });
 }
@@ -4293,7 +4273,7 @@ static int
 
     // Fill in the log entry with the gathered data
     bmcJournalLogEntryJson["@odata.type"] = logEntryVersion;
-    bmcJournalLogEntryJson["@odata.id"] = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+    bmcJournalLogEntryJson["@odata.id"] = "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                                           "/LogServices/Journal/Entries/" +
                                           bmcJournalLogEntryID;
     bmcJournalLogEntryJson["Name"] = "BMC Journal Entry";
@@ -4318,7 +4298,7 @@ static int
 
 inline void requestRoutesBMCJournalLogEntryCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                       "/LogServices/Journal/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
@@ -4343,7 +4323,7 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogEntryCollection.LogEntryCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+            "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
             "/LogServices/Journal/Entries";
         asyncResp->res.jsonValue["Name"] = "Open BMC Journal Entries";
         asyncResp->res.jsonValue["Description"] =
@@ -4398,7 +4378,7 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
         if (skip + top < entryCount)
         {
             asyncResp->res.jsonValue["Members@odata.nextLink"] =
-                "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+                "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                 "/LogServices/Journal/Entries?$skip=" +
                 std::to_string(skip + top);
         }
@@ -4407,7 +4387,7 @@ inline void requestRoutesBMCJournalLogEntryCollection(App& app)
 
 inline void requestRoutesBMCJournalLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                       "/LogServices/Journal/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -4497,20 +4477,20 @@ inline void
 
     if (dumpType == "BMC")
     {
-        dumpPath = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME "/LogServices/Dump";
+        dumpPath = "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
     }
     else if (dumpType == "FaultLog")
     {
-        dumpPath = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+        dumpPath = "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                    "/LogServices/FaultLog";
         overWritePolicy = "Unknown";
         collectDiagnosticDataSupported = false;
     }
     else if (dumpType == "System")
     {
-        dumpPath = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/Dump";
+        dumpPath = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/Dump";
         overWritePolicy = "WrapsWhenFull";
         collectDiagnosticDataSupported = true;
     }
@@ -4786,7 +4766,7 @@ inline void handleLogServicesDumpEntryComputerSystemDelete(
 inline void handleLogServicesDumpEntryDownloadGet(
     crow::App& app, const std::string& dumpType, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& dumpId)
+    [[maybe_unused]] const std::string& chassisId, const std::string& dumpId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -4903,7 +4883,7 @@ inline void handleLogServicesDumpClearLogComputerSystemPost(
 
 inline void requestRoutesBMCDumpServiceActionInfo(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
                       "/LogServices/Dump/CollectDiagnosticDataActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
@@ -4917,7 +4897,7 @@ inline void requestRoutesBMCDumpServiceActionInfo(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#ActionInfo.v1_2_0.ActionInfo";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
+            "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
             "/LogServices/Dump/CollectDiagnosticDataActionInfo";
         asyncResp->res.jsonValue["Name"] =
             "CollectDiagnosticDataActionInfo Action Info";
@@ -5067,12 +5047,12 @@ inline void requestRoutesSystemDumpEntryCollection(App& app)
 inline void requestRoutesSystemDumpService(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/Dump/")
+                 "/redfish/v1/Systems/<str>/LogServices/Dump/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleLogServicesDumpServiceComputerSystemGet, std::ref(app)));
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/Dump/")
+                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/Dump/")
         .privileges(redfish::privileges::patchLogService)
         .methods(boost::beast::http::verb::patch)(std::bind_front(
             handleLogServicesDumpServiceComputerSystemPatch, std::ref(app)));
@@ -5080,7 +5060,7 @@ inline void requestRoutesSystemDumpService(App& app)
 
 inline void requestRoutesSystemDumpServiceActionInfo(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/Dump/CollectDiagnosticDataActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
@@ -5094,7 +5074,7 @@ inline void requestRoutesSystemDumpServiceActionInfo(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#ActionInfo.v1_2_0.ActionInfo";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/Dump/CollectDiagnosticDataActionInfo";
         asyncResp->res.jsonValue["Name"] =
             "CollectDiagnosticDataActionInfo Action Info";
@@ -5139,14 +5119,12 @@ inline void requestRoutesSystemDumpServiceActionInfo(App& app)
 
 inline void requestRoutesSystemDumpEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                      "/LogServices/Dump/Entries/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleLogServicesDumpEntryComputerSystemGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                      "/LogServices/Dump/Entries/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/LogServices/Dump/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
         .methods(boost::beast::http::verb::delete_)(std::bind_front(
             handleLogServicesDumpEntryComputerSystemDelete, std::ref(app)));
@@ -5155,8 +5133,7 @@ inline void requestRoutesSystemDumpEntry(App& app)
 inline void requestRoutesSystemDumpCreate(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                 "/LogServices/Dump/Actions/LogService.CollectDiagnosticData/")
+                 "/redfish/v1/Systems/<str>/LogServices/Dump/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleLogServicesDumpCollectDiagnosticDataComputerSystemPost,
@@ -5165,8 +5142,7 @@ inline void requestRoutesSystemDumpCreate(App& app)
 
 inline void requestRoutesSystemDumpClear(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                      "/LogServices/Dump/Actions/LogService.ClearLog/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/LogServices/Dump/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleLogServicesDumpClearLogComputerSystemPost, std::ref(app)));
@@ -5174,7 +5150,7 @@ inline void requestRoutesSystemDumpClear(App& app)
 
 inline void requestRoutesSystemFaultLogService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FaultLog/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
@@ -5187,7 +5163,7 @@ inline void requestRoutesSystemFaultLogService(App& app)
             return;
         }
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/FaultLog";
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/FaultLog";
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogService.v1_2_0.LogService";
         asyncResp->res.jsonValue["Name"] = "FaultLog LogService";
@@ -5202,12 +5178,12 @@ inline void requestRoutesSystemFaultLogService(App& app)
             redfishDateTimeOffset.second;
 
         asyncResp->res.jsonValue["Entries"] = {
-            {"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                           "/LogServices/FaultLog/Entries"}};
         asyncResp->res.jsonValue["Actions"] = {
             {"#LogService.ClearLog",
              {{"target",
-               "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+               "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                "/LogServices/FaultLog/Actions/LogService.ClearLog"}}}};
     });
 }
@@ -5217,7 +5193,7 @@ inline void requestRoutesSystemFaultLogEntryCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FaultLog/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
@@ -5230,7 +5206,7 @@ inline void requestRoutesSystemFaultLogEntryCollection(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogEntryCollection.LogEntryCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/FaultLog/Entries";
         asyncResp->res.jsonValue["Name"] = "System FaultLog Entries";
         asyncResp->res.jsonValue["Description"] =
@@ -5242,7 +5218,7 @@ inline void requestRoutesSystemFaultLogEntryCollection(App& app)
 
 inline void requestRoutesSystemFaultLogEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FaultLog/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
 
@@ -5257,7 +5233,7 @@ inline void requestRoutesSystemFaultLogEntry(App& app)
         getDumpEntryById(asyncResp, param, "FaultLog");
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FaultLog/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
         .methods(boost::beast::http::verb::delete_)(
@@ -5270,7 +5246,7 @@ inline void requestRoutesSystemFaultLogEntry(App& app)
 
 inline void requestRoutesSystemFaultLogClear(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FaultLog/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
@@ -5330,7 +5306,7 @@ inline void
     }
 
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/FDR";
+        "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/FDR";
     asyncResp->res.jsonValue["@odata.type"] = "#LogService.v1_2_0.LogService";
     asyncResp->res.jsonValue["Name"] = "FDR LogService";
     asyncResp->res.jsonValue["Description"] = "System FDR LogService";
@@ -5344,13 +5320,13 @@ inline void
         redfishDateTimeOffset.second;
     asyncResp->res.jsonValue["Entries"] = {
         {"@odata.id",
-         "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/FDR/Entries"}};
+         "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/FDR/Entries"}};
     asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"] = {
-        {"target", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        {"target", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                    "/LogServices/FDR/Actions/LogService.ClearLog"}};
     asyncResp->res.jsonValue["Actions"]["#LogService.CollectDiagnosticData"] = {
         {"target",
-         "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+         "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
          "/LogServices/FDR/Actions/LogService.CollectDiagnosticData"}};
 
     getFDRServiceState(asyncResp);
@@ -5462,13 +5438,13 @@ inline void
 inline void requestRoutesSystemFDRService(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/FDR/")
+                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/FDR/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleFDRServiceGet, std::ref(app)));
 
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/FDR/")
+                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/FDR/")
         .privileges(redfish::privileges::patchLogService)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleFDRServicePatch, std::ref(app)));
@@ -5479,7 +5455,7 @@ inline void requestRoutesSystemFDREntryCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FDR/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
@@ -5493,7 +5469,7 @@ inline void requestRoutesSystemFDREntryCollection(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogEntryCollection.LogEntryCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/FDR/Entries";
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/FDR/Entries";
         asyncResp->res.jsonValue["Name"] = "System FDR Entries";
         asyncResp->res.jsonValue["Description"] =
             "Collection of System FDR Entries";
@@ -5504,7 +5480,7 @@ inline void requestRoutesSystemFDREntryCollection(App& app)
 
 inline void requestRoutesSystemFDREntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FDR/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -5519,7 +5495,7 @@ inline void requestRoutesSystemFDREntry(App& app)
         getDumpEntryById(asyncResp, param, "FDR");
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FDR/Entries/<str>/")
         .privileges(redfish::privileges::deleteLogEntry)
         .methods(boost::beast::http::verb::delete_)(
@@ -5536,7 +5512,7 @@ inline void requestRoutesSystemFDREntry(App& app)
 
 inline void requestRoutesSystemFDREntryDownload(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FDR/Entries/<str>/attachment/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -5567,8 +5543,7 @@ inline void requestRoutesSystemFDREntryDownload(App& app)
 inline void requestRoutesSystemFDRCreate(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                 "/LogServices/FDR/Actions/LogService.CollectDiagnosticData/")
+                 "/redfish/v1/Systems/<str>/LogServices/FDR/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleLogServicesDumpCollectDiagnosticDataPost,
@@ -5577,7 +5552,7 @@ inline void requestRoutesSystemFDRCreate(App& app)
 
 void inline requestRoutesSystemFDRClear(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/FDR/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
@@ -5622,7 +5597,7 @@ inline void requestRoutesCrashdumpService(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/Crashdump/")
         // This is incorrect, should be:
         //.privileges(redfish::privileges::getLogService)
@@ -5645,7 +5620,7 @@ inline void requestRoutesCrashdumpService(App& app)
         // Copy over the static data to include the entries added by
         // SubRoute
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/Crashdump";
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/Crashdump";
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogService.v1_2_0.LogService";
         asyncResp->res.jsonValue["Name"] = "Open BMC Oem Crashdump Service";
@@ -5661,23 +5636,23 @@ inline void requestRoutesCrashdumpService(App& app)
             redfishDateTimeOffset.second;
 
         asyncResp->res.jsonValue["Entries"] = {
-            {"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                           "/LogServices/Crashdump/Entries"}};
         asyncResp->res.jsonValue["Actions"] = {
             {"#LogService.ClearLog",
              {{"target",
-               "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+               "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                "/LogServices/Crashdump/Actions/LogService.ClearLog"}}},
             {"#LogService.CollectDiagnosticData",
              {{"target",
-               "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+               "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                "/LogServices/Crashdump/Actions/LogService.CollectDiagnosticData"}}}};
     });
 }
 
 void inline requestRoutesCrashdumpClear(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/Crashdump/Actions/LogService.ClearLog/")
         // This is incorrect, should be:
         //.privileges(redfish::privileges::postLogService)
@@ -5748,12 +5723,12 @@ static void
             return;
         }
 
-        std::string crashdumpURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        std::string crashdumpURI = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                    "/LogServices/Crashdump/Entries/" +
                                    logID + "/" + filename;
         nlohmann::json::object_t logEntry;
         logEntry["@odata.type"] = "#LogEntry.v1_13_0.LogEntry";
-        logEntry["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        logEntry["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                 "/LogServices/Crashdump/Entries/" +
                                 logID;
         logEntry["Name"] = "CPU Crashdump";
@@ -5791,7 +5766,7 @@ inline void requestRoutesCrashdumpEntryCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/Crashdump/Entries/")
         // This is incorrect, should be.
         //.privileges(redfish::privileges::postLogEntryCollection)
@@ -5831,7 +5806,7 @@ inline void requestRoutesCrashdumpEntryCollection(App& app)
             asyncResp->res.jsonValue["@odata.type"] =
                 "#LogEntryCollection.LogEntryCollection";
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                 "/LogServices/Crashdump/Entries";
             asyncResp->res.jsonValue["Name"] = "Open BMC Crashdump Entries";
             asyncResp->res.jsonValue["Description"] =
@@ -5861,7 +5836,7 @@ inline void requestRoutesCrashdumpEntry(App& app)
     // Note: Deviated from redfish privilege registry for GET & HEAD
     // method for security reasons.
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/Crashdump/Entries/<str>/")
         // this is incorrect, should be
         // .privileges(redfish::privileges::getLogEntry)
@@ -5890,7 +5865,7 @@ inline void requestRoutesCrashdumpFile(App& app)
 {
     // Note: Deviated from redfish privilege registry for GET & HEAD
     // method for security reasons.
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/Crashdump/Entries/<str>/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -6003,7 +5978,7 @@ inline void requestRoutesCrashdumpCollect(App& app)
     // Note: Deviated from redfish privilege registry for GET & HEAD
     // method for security reasons.
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
              "/LogServices/Crashdump/Actions/LogService.CollectDiagnosticData/")
         // The below is incorrect;  Should be ConfigureManager
         //.privileges(redfish::privileges::postLogService)
@@ -6134,7 +6109,7 @@ inline void requestRoutesDBusLogServiceActionsClear(App& app)
      * all entries found in the Entries collection for this Log Service.
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/Actions/LogService.ClearLog/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
@@ -6253,7 +6228,7 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
             int id = copyMfgTestOutputFile(output);
             if (id != -1)
             {
-                std::string path = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                std::string path = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                    "/LogServices/EventLog/DiagnosticData/" +
                                    std::to_string(id);
                 std::string location = "Location: " + path + "/attachment";
@@ -6288,7 +6263,7 @@ static void mfgTestProcExitHandler(int exitCode, const std::error_code& ec)
 inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
 {
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
              "/LogServices/EventLog/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
@@ -6381,7 +6356,7 @@ inline void requestRoutesEventLogDiagnosticDataCollect(App& app)
 
 inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/EventLog/DiagnosticData/<uint>/attachment")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -6425,7 +6400,7 @@ inline void requestRoutesEventLogDiagnosticDataEntry(App& app)
  ******************************************************/
 inline void requestRoutesPostCodesLogService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/PostCodes/")
         .privileges(redfish::privileges::getLogService)
         .methods(boost::beast::http::verb::get)(
@@ -6444,7 +6419,7 @@ inline void requestRoutesPostCodesLogService(App& app)
         }
 
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices/PostCodes";
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +"/LogServices/PostCodes";
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogService.v1_2_0.LogService";
         asyncResp->res.jsonValue["Name"] = "POST Code Log Service";
@@ -6452,7 +6427,7 @@ inline void requestRoutesPostCodesLogService(App& app)
         asyncResp->res.jsonValue["Id"] = "PostCodes";
         asyncResp->res.jsonValue["OverWritePolicy"] = "WrapsWhenFull";
         asyncResp->res.jsonValue["Entries"]["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/PostCodes/Entries";
 
         std::pair<std::string, std::string> redfishDateTimeOffset =
@@ -6462,14 +6437,14 @@ inline void requestRoutesPostCodesLogService(App& app)
             redfishDateTimeOffset.second;
 
         asyncResp->res.jsonValue["Actions"]["#LogService.ClearLog"] = {
-            {"target", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"target", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                        "/LogServices/PostCodes/Actions/LogService.ClearLog"}};
     });
 }
 
 inline void requestRoutesPostCodesClear(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/PostCodes/Actions/LogService.ClearLog/")
         // The following privilege is incorrect;  It should be ConfigureManager
         //.privileges(redfish::privileges::postLogService)
@@ -6652,7 +6627,7 @@ static bool fillPostCodeEntry(
         // Format entry
         nlohmann::json::object_t bmcLogEntry;
         bmcLogEntry["@odata.type"] = logEntryVersion;
-        bmcLogEntry["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        bmcLogEntry["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                    "/LogServices/PostCodes/Entries/" +
                                    postcodeEntryID;
         bmcLogEntry["Name"] = "POST Code Log Entry";
@@ -6666,7 +6641,7 @@ static bool fillPostCodeEntry(
         if (!std::get<std::vector<uint8_t>>(code.second).empty())
         {
             bmcLogEntry["AdditionalDataURI"] =
-                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                 "/LogServices/PostCodes/Entries/" +
                 postcodeEntryID + "/attachment";
         }
@@ -6966,7 +6941,7 @@ inline void requestRoutesPostCodesEntryAdditionalData(App& app)
 
 inline void requestRoutesPostCodesEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/PostCodes/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -7476,7 +7451,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                             message_registries::
                                                 generateMessageRegistry(
                                                     thisEntry,
-                                                    "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                                                    "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                                     "/LogServices/"
                                                     "EventLog/Entries/",
                                                     "v1_13_0",
@@ -7521,7 +7496,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                             thisEntry["@odata.type"] =
                                                 "#LogEntry.v1_13_0.LogEntry";
                                             thisEntry["@odata.id"] =
-                                                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                                                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                                 "/LogServices/"
                                                 "EventLog/"
                                                 "Entries/" +
@@ -7603,7 +7578,7 @@ static constexpr const uint32_t debugTokenTaskTimeoutSec{60};
 
 inline void requestRoutesDebugToken(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/DebugTokenService")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -7614,7 +7589,7 @@ inline void requestRoutesDebugToken(App& app)
             return;
         }
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/DebugTokenService";
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogService.v1_2_0.LogService";
@@ -7628,19 +7603,19 @@ inline void requestRoutesDebugToken(App& app)
         asyncResp->res.jsonValue["DateTimeLocalOffset"] =
             redfishDateTimeOffset.second;
         asyncResp->res.jsonValue["Entries"] = {
-            {"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                           "/LogServices/DebugTokenService/Entries"}};
         asyncResp->res.jsonValue["Actions"] = {
             {"#LogService.CollectDiagnosticData",
              {{"target",
-               "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+               "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                "/LogServices/DebugTokenService/LogService.CollectDiagnosticData"}}}};
     });
 }
 
 inline void requestRoutesDebugTokenServiceEntryCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/DebugTokenService/Entries/")
         .privileges(redfish::privileges::getLogEntryCollection)
         .methods(boost::beast::http::verb::get)(
@@ -7653,7 +7628,7 @@ inline void requestRoutesDebugTokenServiceEntryCollection(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#LogEntryCollection.LogEntryCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/DebugTokenService/Entries";
         asyncResp->res.jsonValue["Name"] = "Debug Token Service Entries";
         asyncResp->res.jsonValue["Description"] =
@@ -7668,7 +7643,7 @@ inline void requestRoutesDebugTokenServiceEntryCollection(App& app)
             nlohmann::json::object_t thisEntry;
 
             thisEntry["@odata.type"] = "#LogEntry.v1_15_0.LogEntry";
-            thisEntry["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            thisEntry["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                      "/LogServices/DebugTokenService/Entries/" +
                                      std::to_string(entryID);
             thisEntry["Id"] = std::to_string(entryID);
@@ -7679,7 +7654,7 @@ inline void requestRoutesDebugTokenServiceEntryCollection(App& app)
             thisEntry["AdditionalDataSizeBytes"] =
                 std::get<1>(objects).length();
             thisEntry["AdditionalDataURI"] =
-                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                 "/LogServices/DebugTokenService/Entries/" +
                 std::to_string(entryID) + "/attachment";
             entriesArray.push_back(std::move(thisEntry));
@@ -7690,7 +7665,7 @@ inline void requestRoutesDebugTokenServiceEntryCollection(App& app)
 
 inline void requestRoutesDebugTokenServiceEntry(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/DebugTokenService/Entries/<str>/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
@@ -7725,7 +7700,7 @@ inline void requestRoutesDebugTokenServiceEntry(App& app)
         }
         asyncResp->res.jsonValue["@odata.type"] = "#LogEntry.v1_15_0.LogEntry";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/DebugTokenService/Entries/" +
             std::to_string(id);
         asyncResp->res.jsonValue["Id"] = std::to_string(id);
@@ -7737,7 +7712,7 @@ inline void requestRoutesDebugTokenServiceEntry(App& app)
         asyncResp->res.jsonValue["AdditionalDataSizeBytes"] =
             std::get<1>(debugTokenData.at(id)).length();
         asyncResp->res.jsonValue["AdditionalDataURI"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
             "/LogServices/DebugTokenService/Entries/" +
             std::to_string(id) + "/attachment";
     });
@@ -7746,7 +7721,7 @@ inline void requestRoutesDebugTokenServiceEntry(App& app)
 inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
 {
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+        app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
              "/LogServices/DebugTokenService/LogService.CollectDiagnosticData")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
@@ -7901,7 +7876,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             {
                 debugTokenData.emplace_back(
                     make_tuple(oemDiagnosticDataType, result));
-                std::string path = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                std::string path = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                    "/LogServices/DebugTokenService/"
                                    "Entries/" +
                                    std::to_string(debugTokenData.size() - 1) +
@@ -7978,7 +7953,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
 
 inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                       "/LogServices/DebugTokenService"
                       "/Entries/<str>/attachment")
         .privileges(redfish::privileges::getLogEntry)

@@ -217,10 +217,6 @@ inline std::string toDurationString(std::chrono::milliseconds ms)
     {
         secStr = std::format("{}.{:03}S", seconds.count(), ms.count());
     }
-    else if (fmt == "PT")
-    {
-        fmt += "0S"; // Append "0S" when time is zero seconds
-    }
 
     return std::format("P{}T{}{}{}", daysStr, hoursStr, minStr, secStr);
 }

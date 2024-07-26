@@ -54,6 +54,7 @@
 #include <utils/conditions_utils.hpp>
 #include <utils/dbus_log_utils.hpp>
 #include <utils/fw_utils.hpp>
+#include "multipart_parser.hpp"
 
 #include <array>
 #include <cstddef>
@@ -391,6 +392,20 @@ inline void createTask(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     task->startTimer(std::chrono::minutes(updateServiceTaskTimeout));
     task->populateResp(asyncResp->res);
     task->payload.emplace(std::move(payload));
+    loggingMatch = std::make_unique<
+        sdbusplus::bus::match::match>(
+        *crow::connections::systemBus,
+        "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
+        "member='InterfacesAdded',"
+        "path='/xyz/openbmc_project/logging'",
+        [task](sdbusplus::message_t& msgLog) {
+        loggingMatchCallback(task, msgLog);
+    });
+    if (preTaskMessages.size() > 0)
+    {
+        task->messages.insert(task->messages.end(), preTaskMessages.begin(), preTaskMessages.end());
+    }
+    preTaskMessages = {};
 }
 
 // Note that asyncResp can be either a valid pointer or nullptr. If nullptr
@@ -487,20 +502,6 @@ static void
                         return message;
                     };
                     createTask(asyncResp, std::move(payload), objPath);
-                    loggingMatch = std::make_unique<
-                        sdbusplus::bus::match::match>(
-                        *crow::connections::systemBus,
-                        "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
-                        "member='InterfacesAdded',"
-                        "path='/xyz/openbmc_project/logging'",
-                        [task](sdbusplus::message_t& msgLog) {
-                        loggingMatchCallback(task, msgLog);
-                    });
-                    if (preTaskMessages.size() > 0)
-                    {
-                        task->messages.insert(task->messages.end(), preTaskMessages.begin(), preTaskMessages.end());
-                    }
-                    preTaskMessages = {};
                 }
                 fwUpdateInProgress = false;
                 activateImage(objPath.str, objInfo[0].first);
@@ -1560,7 +1561,7 @@ inline bool
 
                     if (content.is_discarded())
                     {
-                        return std::nullopt;
+                        return false;
                     }
                     json_util::readJson(content, asyncResp->res, "Targets",
                                         targets, "@Redfish.OperationApplyTime",
@@ -2969,7 +2970,7 @@ inline static void
             sdbusplus::message::object_path path(object);
             relatedItem.push_back(
                 {{"@odata.id", "/redfish/v1/"
-                               "Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/"
+                               "Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/"
                                "Storage/" +
                                    path.filename() + "/Drives/" +
                                    objPath.filename()}});
@@ -3029,7 +3030,7 @@ inline static void getRelatedItemsStorageController(
 
                     relatedItem.push_back(
                         {{"@odata.id",
-                          "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Storage/" +
+                          "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Storage/" +
                               path.filename() + "#/StorageControllers/" +
                               std::to_string(i)}});
                     break;
@@ -3264,7 +3265,7 @@ inline static void
                                   "Inventory.Item.Cpu")
                 {
                     relatedItem.push_back(
-                        {{"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                        {{"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
                                        "/Processors/" +
                                            association.filename()}});
                 }
@@ -3422,7 +3423,7 @@ inline static void
     {
         nlohmann::json& relatedItem = asyncResp->res.jsonValue["RelatedItem"];
         relatedItem.push_back(
-            {{"@odata.id", "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Bios"}});
+            {{"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Bios"}});
         asyncResp->res.jsonValue["Members@odata.count"] = relatedItem.size();
     }
     else if (purpose == fw_util::otherPurpose || purpose == fw_util::bmcPurpose)
@@ -5120,7 +5121,7 @@ inline void handleStageLocationErrors(
         {
             BMCWEB_LOG_INFO("PersistentStorage is not enabled.");
             messages::serviceDisabled(asyncResp->res,
-                                      "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME);
+                                      "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME));
         }
         return;
     };

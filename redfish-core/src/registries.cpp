@@ -3,6 +3,10 @@
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
 #include "registries/telemetry_message_registry.hpp"
+#include "registries/task_event_message_registry.hpp"
+#include "registries/resource_event_message_registry.hpp"
+#include "registries/update_message_registry.hpp"
+#include "registries/platform_message_registry.hpp"
 #include "str_utility.hpp"
 
 #include <algorithm>

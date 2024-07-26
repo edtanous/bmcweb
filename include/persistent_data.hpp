@@ -118,7 +118,7 @@ class ConfigFile
                     }
                     else if (item.first == "tls_auth_enabled")
                     {
-                        const bool* ptr = item.value().get_ptr<const bool*>();
+                        const bool* ptr = item.second.get_ptr<const bool*>();
                         if (ptr != nullptr)
                         {
                             tlsAuth = *ptr;

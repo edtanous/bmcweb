@@ -218,7 +218,7 @@ inline void updatePCIeSlotsProcessorLinks(
                 prcoessorsLinkArray = nlohmann::json::array();
 
                 std::string processorURI =
-                    "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors/";
+                    "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/";
 
                 processorURI += processorId;
                 prcoessorsLinkArray.push_back({{"@odata.id", processorURI}});
@@ -235,7 +235,7 @@ inline void updatePCIeSlotsProcessorLinks(
                     sdbusplus::message::object_path dbusObjPath(portPath);
                     const std::string& portId = dbusObjPath.filename();
 
-                    connectedPortsURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                    connectedPortsURI = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
                                         "/Processors/";
                     connectedPortsURI += processorId;
                     connectedPortsURI += "/Ports/";

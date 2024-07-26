@@ -1958,16 +1958,18 @@ inline void
     BMCWEB_LOG_DEBUG("DBUS boot source: {}", bootSourceStr);
     BMCWEB_LOG_DEBUG("DBUS boot mode: {}", bootModeStr);
 
-    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
+    setDbusProperty(asyncResp, "Boot/BootSourceOverrideTarget",
+                    "xyz.openbmc_project.Settings",
                     sdbusplus::message::object_path(
                         "/xyz/openbmc_project/control/host0/boot"),
                     "xyz.openbmc_project.Control.Boot.Source", "BootSource",
-                    "Boot/BootSourceOverrideTarget", bootSourceStr);
-    setDbusProperty(asyncResp, "xyz.openbmc_project.Settings",
+                    bootSourceStr);
+    setDbusProperty(asyncResp, "Boot/BootSourceOverrideTarget",
+                    "xyz.openbmc_project.Settings",
                     sdbusplus::message::object_path(
                         "/xyz/openbmc_project/control/host0/boot"),
                     "xyz.openbmc_project.Control.Boot.Mode", "BootMode",
-                    "Boot/BootSourceOverrideTarget", bootModeStr);
+                    bootModeStr);
 }
 
 /**
@@ -3488,9 +3490,9 @@ inline void getBootOrder(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 "#Settings.v1_3_5.Settings";
             aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"] = {
                 {"@odata.id",
-                 "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings"}};
+                 "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Settings"}};
             aResp->res.jsonValue["Boot"]["BootOptions"]["@odata.id"] =
-                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/BootOptions";
+                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/BootOptions";
             aResp->res.jsonValue["Boot"]["BootOrder"] = bootOrder;
         }
         else
@@ -3532,7 +3534,7 @@ inline void getSecureBoot(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
         }
         // SecureBoot object found
         aResp->res.jsonValue["SecureBoot"]["@odata.id"] =
-            "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/SecureBoot";
+            "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/SecureBoot";
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -3757,17 +3759,18 @@ inline void handleComputerSystemSettingsGet(
     }
     asyncResp->res.jsonValue["@odata.type"] =
         "#ComputerSystem.v1_17_0.ComputerSystem";
-    asyncResp->res.jsonValue["Name"] = BMCWEB_REDFISH_SYSTEM_URI_NAME " Pending Settings";
+    asyncResp->res.jsonValue["Name"] =
+        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + " Pending Settings";
     asyncResp->res.jsonValue["Id"] = "Settings";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Settings";
 
     getBootOrder(asyncResp, true);
     getBootProperties(asyncResp, true);
     getUefiPropertySettingsHost(asyncResp);
     getAutomaticRetry(asyncResp, true);
     asyncResp->res.jsonValue["Boot"]["BootOptions"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings/BootOptions";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Settings/BootOptions";
 }
 
 inline void handleComputerSystemSettingsPatch(
@@ -3918,12 +3921,12 @@ inline void
 #endif // #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["MemorySummary"]["TotalSystemMemoryGiB"] = int(0);
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME;
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
 
     asyncResp->res.jsonValue["Processors"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors";
     asyncResp->res.jsonValue["Memory"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Memory";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Memory";
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     ist_mode_utils::getIstMode(asyncResp);
@@ -3931,29 +3934,29 @@ inline void
 
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Storage"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Storage";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Storage";
 #endif
 #ifdef BMCWEB_ENABLE_FABRIC_ADAPTER
     asyncResp->res.jsonValue["FabricAdapters"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/FabricAdapters";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/FabricAdapters";
 #endif
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Actions"]["#ComputerSystem.Reset"]["target"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Actions/ComputerSystem.Reset";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Actions/ComputerSystem.Reset";
     asyncResp->res
         .jsonValue["Actions"]["#ComputerSystem.Reset"]["@Redfish.ActionInfo"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/ResetActionInfo";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/ResetActionInfo";
 #endif
 
     asyncResp->res.jsonValue["LogServices"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/LogServices";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/LogServices";
 #ifdef BMCWEB_ENABLE_BIOS
     asyncResp->res.jsonValue["Bios"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Bios";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Bios";
 #endif
     nlohmann::json::array_t managedBy;
     nlohmann::json& manager = managedBy.emplace_back();
-    manager["@odata.id"] = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME;
+    manager["@odata.id"] = "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME);
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
 
@@ -3974,11 +3977,11 @@ inline void
     health_utils::getDeviceHealthInfo(asyncResp->res, BMCWEB_REDFISH_SYSTEM_URI_NAME);
 #endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-    redfish::conditions_utils::populateServiceConditions(asyncResp,
-                                                         BMCWEB_REDFISH_SYSTEM_URI_NAME);
+    redfish::conditions_utils::populateServiceConditions(
+        asyncResp, std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME));
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
     asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Oem/Nvidia";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Oem/Nvidia";
 #endif
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     // Fill in SerialConsole info
@@ -3994,7 +3997,7 @@ inline void
 #ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
     asyncResp->res.jsonValue["EthernetInterfaces"] = {
         {"@odata.id",
-         "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/EthernetInterfaces"}};
+         "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/EthernetInterfaces"}};
 #endif
 
     getPortStatusAndPath(std::span{protocolToDBusForSystems},
@@ -4535,12 +4538,12 @@ inline void requestRoutesSystems(App& app)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleSystemCollectionResetActionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Settings/")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleComputerSystemSettingsGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Settings/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Settings/")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleComputerSystemSettingsPatch, std::ref(app)));

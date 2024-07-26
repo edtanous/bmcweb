@@ -1857,9 +1857,7 @@ inline void parseInterfaceData(
     const std::string& ifaceId, const EthernetInterfaceData& ethData,
     const std::vector<IPv4AddressData>& ipv4Data,
     const std::vector<IPv6AddressData>& ipv6Data,
-    const std::vector<StaticGatewayData>& ipv6GatewayData,
-    const std::string& route = "/redfish/v1/Managers/" BMCWEB_REDFISH_MANAGER_URI_NAME
-                               "/EthernetInterfaces/")
+    const std::vector<StaticGatewayData>& ipv6GatewayData)
 {
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;

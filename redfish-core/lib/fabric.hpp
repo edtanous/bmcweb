@@ -161,7 +161,7 @@ inline void
             sdbusplus::message::object_path objPath(portPath);
             const std::string& endpointId = objPath.filename();
             BMCWEB_LOG_DEBUG("{}", endpointId);
-            std::string endpointURI = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            std::string endpointURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                       "/Processors/";
             endpointURI += processorId;
             endpointURI += "/Ports/";
@@ -2949,7 +2949,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             sdbusplus::message::object_path objectPath(
                                 entityPath);
                             const std::string& entityLink =
-                                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                 "/Processors/" +
                                 objectPath.filename();
                             // Get processor PCIe device data
@@ -3032,7 +3032,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             sdbusplus::message::object_path objectPath(
                                 entityPath);
                             const std::string& entityLink =
-                                "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+                                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                 "/Processors/" +
                                 objectPath.filename();
                             // Add EntityLink

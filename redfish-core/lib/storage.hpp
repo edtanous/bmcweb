@@ -1539,7 +1539,7 @@ inline void
         "#DriveCollection.DriveCollection";
     asyncResp->res.jsonValue["Name"] = "Drive Collection";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Storage/1/Drives/";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Storage/1/Drives/";
 
     constexpr std::array<std::string_view, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Drive"};
@@ -1580,7 +1580,7 @@ inline void
             {
                 continue;
             }
-            member["@odata.id"] = "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
+            member["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
                                   "/Storage/1/Drives/" +
                                   id;
             members.emplace_back(member);

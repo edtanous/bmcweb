@@ -3158,7 +3158,7 @@ inline void
                     // Default is systems URI
                     itemsArray1.push_back(
                         {{"@odata.id",
-                          "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME}});
+                          std::format("/redfish/v1/Systems/{}", BMCWEB_REDFISH_SYSTEM_URI_NAME)}});
                     return;
                 }
                 std::vector<std::string>* data =
@@ -3171,9 +3171,9 @@ inline void
                 {
                     sdbusplus::message::object_path objectPath(processorPath);
                     std::string processorId = objectPath.filename();
-                    std::string processorURI =
-                        "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME "/Processors/" +
-                        processorId;
+                    std::string processorURI = std::format(
+                        "/redfish/v1/Systems/{}/Processors/{}",
+                        BMCWEB_REDFISH_SYSTEM_URI_NAME, processorId);
                     itemsArray1.push_back({{"@odata.id", processorURI}});
                 }
             },

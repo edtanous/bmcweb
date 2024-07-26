@@ -110,7 +110,7 @@ inline bool validateCertificate(X509* const cert)
     return false;
 }
 
-inline bool verifyOpensslKeyCert(const std::string& filepath,
+inline std::string verifyOpensslKeyCert(const std::string& filepath,
                                  pem_password_cb* pwdCb)
 {
     bool privateKeyValid = false;
@@ -285,9 +285,8 @@ inline void writeCertificateToFile(const std::string& filepath,
     }
 }
 
-inline void generateSslCertificate(const std::string& filepath,
-                                   const std::string& cn,
-                                   std::vector<char>* pkeyPwd)
+inline std::string generateSslCertificate(const std::string& cn,
+                                          std::vector<char>* pkeyPwd)
 {
     BMCWEB_LOG_INFO("Generating new keys");
     initOpenssl();
@@ -520,10 +519,10 @@ inline void encryptCredentials(const std::string& filename,
     X509_free(x509);
 }
 
-inline void ensureOpensslKeyPresentEncryptedAndValid(
+inline std::string ensureOpensslKeyPresentEncryptedAndValid(
     const std::string& filepath, std::vector<char>* pwd, pem_password_cb* pwdCb)
 {
-    bool pemFileValid = false;
+    std::string cert;
     bool pkeyIsEncrypted = false;
 
     auto ret = asn1::pemPkeyIsEncrypted(filepath.c_str(), &pkeyIsEncrypted);
@@ -546,13 +545,22 @@ inline void ensureOpensslKeyPresentEncryptedAndValid(
         BMCWEB_LOG_INFO("TLS key is encrypted.");
     }
 
-    pemFileValid = verifyOpensslKeyCert(filepath, pwdCb);
+    cert = verifyOpensslKeyCert(filepath, pwdCb);
 
-    if (!pemFileValid)
+    if (cert.empty())
     {
         BMCWEB_LOG_WARNING("Error in verifying signature, regenerating");
-        generateSslCertificate(filepath, "testhost");
+        cert = generateSslCertificate("testhost", pwd);
+        if (cert.empty())
+        {
+            BMCWEB_LOG_ERROR("Failed to generate cert");
+        }
+        else
+        {
+            writeCertificateToFile(filepath, cert);
+        }
     }
+    return cert;
 }
 
 inline std::string ensureCertificate()
@@ -615,16 +623,16 @@ inline bool getSslContext(boost::asio::ssl::context& mSslContext,
                           const std::string& sslPemFile)
 {
     mSslContext.set_options(boost::asio::ssl::context::default_workarounds |
-                             boost::asio::ssl::context::no_sslv2 |
-                             boost::asio::ssl::context::no_sslv3 |
-                             boost::asio::ssl::context::single_dh_use |
-                             boost::asio::ssl::context::no_tlsv1 |
-                             boost::asio::ssl::context::no_tlsv1_1);
+                            boost::asio::ssl::context::no_sslv2 |
+                            boost::asio::ssl::context::no_sslv3 |
+                            boost::asio::ssl::context::single_dh_use |
+                            boost::asio::ssl::context::no_tlsv1 |
+                            boost::asio::ssl::context::no_tlsv1_1);
 
-    SSL_CTX_set_default_passwd_cb(mSslContext->native_handle(),
+    SSL_CTX_set_default_passwd_cb(mSslContext.native_handle(),
                                   lsp::passwordCallback);
-    BMCWEB_LOG_DEBUG("Using default TrustStore location: {}", trustStorePath);
-    mSslContext.add_verify_path(trustStorePath);
+    BMCWEB_LOG_DEBUG("Using default TrustStore location: {}", ensuressl::trustStorePath);
+    mSslContext.add_verify_path(ensuressl::trustStorePath);
 
     if (!sslPemFile.empty())
     {
@@ -635,7 +643,7 @@ inline bool getSslContext(boost::asio::ssl::context& mSslContext,
         if (ec)
         {
             return false;
-    }
+        }
         mSslContext.use_private_key(buf, boost::asio::ssl::context::pem, ec);
         if (ec)
         {
@@ -648,7 +656,7 @@ inline bool getSslContext(boost::asio::ssl::context& mSslContext,
     // There is a pull request to add this.  Once this is included in an asio
     // drop, use the right way
     // http://stackoverflow.com/questions/18929049/boost-asio-with-ecdsa-certificate-issue
-    if (SSL_CTX_set_ecdh_auto(mSslContext->native_handle(), 1) != 1)
+    if (SSL_CTX_set_ecdh_auto(mSslContext.native_handle(), 1) != 1)
     {}
 
     // Mozilla intermediate cipher suites v5.7
@@ -670,7 +678,7 @@ inline bool getSslContext(boost::asio::ssl::context& mSslContext,
         return false;
     }
     return true;
-    }
+}
 
 inline std::shared_ptr<boost::asio::ssl::context> getSslServerContext()
 {
@@ -711,7 +719,7 @@ inline std::optional<boost::asio::ssl::context> getSSLClientContext()
     // NOTE, this path is temporary;  In the future it will need to change to
     // be set per subscription.  Do not rely on this.
     fs::path certPath = "/etc/ssl/certs/https/client.pem";
-    std::string cert = verifyOpensslKeyCert(certPath);
+    std::string cert = verifyOpensslKeyCert(certPath, lsp::passwordCallback);
 
     if (!getSslContext(sslCtx, cert))
     {

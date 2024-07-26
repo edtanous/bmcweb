@@ -141,16 +141,6 @@ conf_data.set(
 
 conf_data.set('TLS_CACERT_PATH', get_option('tls-cacert-path') )
 
-string_options_string += 'constexpr std::string_view  BMCWEB_LOGGING_LEVEL' + ' = "' + loglvlopt + '";\n'
-
-# NBD proxy is disabled due to lack of maintenance.  See meson_options.txt
-feature_options_string += 'constexpr const bool        BMCWEB_VM_NBDPROXY = false;\n'
-
-conf_data.set(
-    'BMCWEB_OPTIONS',
-    string_options_string + int_options_string + feature_options_string,
-)
-
 conf_h_dep = declare_dependency(
     include_directories: include_directories('.'),
     sources: configure_file(
