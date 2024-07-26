@@ -1646,66 +1646,90 @@ inline void requestRoutesSwitchMetrics(App& app)
                     continue;
                 }
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, fabricId, switchId](
-                        const boost::system::error_code ec,
-                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                    [asyncResp, fabricId,
+                     switchId](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
                     if (ec)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    // Iterate over all retrieved ObjectPaths.
-                    for (const std::pair<
-                             std::string,
-                             std::vector<std::pair<std::string,
-                                                   std::vector<std::string>>>>&
-                             object : subtree)
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR(
+                            "DBUS response error while getting switches");
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    for (const std::string& path : *data)
                     {
                         // Get the switchId object
-                        const std::string& path = object.first;
-                        const std::vector<
-                            std::pair<std::string, std::vector<std::string>>>&
-                            connectionNames = object.second;
-                        sdbusplus::message::object_path objPath(path);
-                        if (objPath.filename() != switchId)
+                        if (!boost::ends_with(path, switchId))
                         {
                             continue;
                         }
-                        if (connectionNames.size() < 1)
-                        {
-                            BMCWEB_LOG_ERROR("Got 0 Connection names");
-                            continue;
-                        }
-                        std::string switchURI = "/redfish/v1/Fabrics/";
-                        switchURI += fabricId;
-                        switchURI += "/Switches/";
-                        switchURI += switchId;
-                        std::string switchMetricURI = switchURI;
-                        switchMetricURI += "/SwitchMetrics";
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#SwitchMetrics.v1_0_0.SwitchMetrics";
-                        asyncResp->res.jsonValue["@odata.id"] = switchMetricURI;
-                        asyncResp->res.jsonValue["Id"] = switchId;
-                        asyncResp->res.jsonValue["Name"] = switchId +
-                                                           " Metrics";
-                        const std::string& connectionName =
-                            connectionNames[0].first;
-                        const std::vector<std::string>& interfaces =
-                            connectionNames[0].second;
-                        if (std::find(interfaces.begin(), interfaces.end(),
-                                      "xyz.openbmc_project.Memory.MemoryECC") !=
-                            interfaces.end())
-                        {
-                            getInternalMemoryMetrics(asyncResp, connectionName,
-                                                     path);
-                        }
-                        if (std::find(interfaces.begin(), interfaces.end(),
-                                      "xyz.openbmc_project.PCIe.PCIeECC") !=
-                            interfaces.end())
-                        {
-                            redfish::processor_utils::getPCIeErrorData(
-                                asyncResp, connectionName, path);
-                        }
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, fabricId, switchId,
+                             path](const boost::system::error_code ec,
+                                   const std::vector<std::pair<
+                                       std::string, std::vector<std::string>>>&
+                                       object) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_ERROR(
+                                    "Error while fetching service for {}",
+                                    path);
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+
+                            if (object.empty())
+                            {
+                                BMCWEB_LOG_ERROR("Empty response received");
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+
+                            std::string switchURI = "/redfish/v1/Fabrics/";
+                            switchURI += fabricId;
+                            switchURI += "/Switches/";
+                            switchURI += switchId;
+                            std::string switchMetricURI = switchURI;
+                            switchMetricURI += "/SwitchMetrics";
+                            asyncResp->res.jsonValue["@odata.type"] =
+                                "#SwitchMetrics.v1_0_0.SwitchMetrics";
+                            asyncResp->res.jsonValue["@odata.id"] =
+                                switchMetricURI;
+                            asyncResp->res.jsonValue["Id"] = switchId;
+                            asyncResp->res.jsonValue["Name"] = switchId +
+                                                               " Metrics";
+                            const std::string& connectionName =
+                                object.front().first;
+                            const std::vector<std::string>& interfaces =
+                                object.front().second;
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
+                                    "xyz.openbmc_project.Memory.MemoryECC") !=
+                                interfaces.end())
+                            {
+                                getInternalMemoryMetrics(asyncResp,
+                                                         connectionName, path);
+                            }
+                            if (std::find(interfaces.begin(), interfaces.end(),
+                                          "xyz.openbmc_project.PCIe.PCIeECC") !=
+                                interfaces.end())
+                            {
+                                redfish::processor_utils::getPCIeErrorData(
+                                    asyncResp, connectionName, path);
+                            }
+                        },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetObject",
+                            path, std::array<const char*, 0>());
 
                         return;
                     }
@@ -1715,10 +1739,8 @@ inline void requestRoutesSwitchMetrics(App& app)
                         asyncResp->res, "#Switch.v1_8_0.Switch", switchId);
                 },
                     "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", object, 0,
-                    std::array<const char*, 1>{
-                        "xyz.openbmc_project.Inventory.Item.Switch"});
+                    object + "/all_switches", "org.freedesktop.DBus.Properties",
+                    "Get", "xyz.openbmc_project.Association", "endpoints");
                 return;
             }
             // Couldn't find an object with that name. Return an error
