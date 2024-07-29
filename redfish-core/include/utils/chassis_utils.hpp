@@ -25,8 +25,8 @@ constexpr const char* cpuInvIntf = "xyz.openbmc_project.Inventory.Item.Cpu";
 constexpr const char* nvLinkMgmtInvIntf =
     "xyz.openbmc_project.Inventory.Item.NetworkInterface";
 
-constexpr const char* switchInvIntf =
-    "xyz.openbmc_project.Inventory.Item.Switch";
+constexpr const char* nvSwitchInvIntf =
+    "xyz.openbmc_project.Inventory.Item.NvSwitch";
 
 constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
 
@@ -1039,7 +1039,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                         return;
                     }
                 }
-                if (interface == switchInvIntf)
+                if (interface == nvSwitchInvIntf)
                 {
                     /* busctl call xyz.openbmc_project.ObjectMapper
                     /xyz/openbmc_project/object_mapper
