@@ -114,6 +114,12 @@ class AdditionalData
         return data.cend();
     }
 
+    std::map<std::string, std::string>::const_iterator
+        find(const std::string& key) const
+    {
+        return data.find(key);
+    }
+
   protected:
     std::map<std::string, std::string> data;
 };

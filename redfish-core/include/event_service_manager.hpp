@@ -246,9 +246,9 @@ enum redfish_bool
 static constexpr int redfishInvalidEvent = -1;
 static constexpr int redfishInvalidArgs = -2;
 
-void parseAdditionalDataForCPER(nlohmann::json& entry,
-                                const nlohmann::json& oem,
-                                AdditionalData& additional);
+void parseAdditionalDataForCPER(nlohmann::json::object_t& entry,
+                                const nlohmann::json::object_t& oem,
+                                const AdditionalData& additional);
 
 /*
  * Structure for an event which is based on Event v1.7.0 in "Redfish Schema
@@ -270,8 +270,8 @@ class Event
     std::string message = "";
     std::string messageSeverity = "";
     std::string originOfCondition = "";
-    nlohmann::json oem = nlohmann::json::object();
-    nlohmann::json cper = nlohmann::json::object();
+    nlohmann::json::object_t oem;
+    nlohmann::json::object_t cper;
     std::string eventResolution = "";
     std::string logEntryId = "";
     std::string satBMCLogEntryUrl = "";
@@ -2254,7 +2254,7 @@ class EventServiceManager
             std::string resolution;
             std::vector<std::string> messageArgs = {};
             const std::vector<std::string>* additionalDataPtr;
-            nlohmann::json cper = {};
+            nlohmann::json::object_t cper;
 
             msg.read(objPath, properties);
             for (const auto& [key, val] :
@@ -2338,16 +2338,11 @@ class EventServiceManager
                                     additional.count("REDFISH_MESSAGE_ID")));
                             return;
                         }
-                        if (additional.count("DiagnosticDataType") > 0)
-                        {
-                            nlohmann::json oem = {
-                                {"CPER",
-                                  {{"Oem",
-                                    {{"Nvidia",
-                                      {{"@odata.type",
-                                        "#NvidiaEvent.v1_0_0.CPER"}}}}}}}};
-                            parseAdditionalDataForCPER(cper, oem, additional);
-                        }
+
+                        nlohmann::json::object_t oem;
+                        oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
+                            "#NvidiaEvent.v1_0_0.CPER";
+                        parseAdditionalDataForCPER(cper, oem, additional);
                     }
                     else
                     {

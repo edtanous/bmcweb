@@ -2774,28 +2774,29 @@ inline void requestRoutesJournalEventLogEntry(App& app)
     });
 }
 
-inline void parseAdditionalDataForCPER(nlohmann::json& entry,
-                                       const nlohmann::json& oem,
-                                       AdditionalData& additional)
+inline void parseAdditionalDataForCPER(nlohmann::json::object_t& entry,
+                                       const nlohmann::json::object_t& oem,
+                                       const AdditionalData& additional)
 {
-
-    const std::string& type = additional["DiagnosticDataType"];
-    BMCWEB_LOG_DEBUG("Got {}", type);
-    if ("CPER" != type && "CPERSection" != type)
+    const auto& type = additional.find("DiagnosticDataType");
+    if (additional.end() == type ||
+        ("CPER" != type->second && "CPERSection" != type->second))
         return;
 
-    entry["DiagnosticDataType"] = type;
-    entry.update(oem);
+    BMCWEB_LOG_DEBUG("Got {}", type->second);
+
+    entry = oem;
+    entry["DiagnosticDataType"] = type->second;
 
     for (const auto& iter : additional)
     {
         if ("DiagnosticData" == iter.first)
             entry["DiagnosticData"] = iter.second;
 
-        if ("NotificationTypeGUID" == iter.first && "CPER" == type)
+        if ("NotificationTypeGUID" == iter.first && "CPER" == type->second)
             entry["CPER"]["NotificationType"] = iter.second;
 
-        if ("SectionTypeGUID" == iter.first && "CPERSection" == type)
+        if ("SectionTypeGUID" == iter.first && "CPERSection" == type->second)
             entry["CPER"]["SectionType"] = iter.second;
 
         // Common
@@ -2835,7 +2836,7 @@ inline void parseAdditionalDataForCPER(nlohmann::json& entry,
             entry["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] = iter.second;
     }
 
-    BMCWEB_LOG_DEBUG("Done {}", type);
+    BMCWEB_LOG_DEBUG("Done {}", type->second);
 }
 
 inline void requestRoutesDBusEventLogEntryCollection(App& app)
@@ -3016,7 +3017,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 std::string messageArgs;
                 std::string originOfCondition;
                 std::string deviceName;
-                nlohmann::json cper = {};
+                nlohmann::json::object_t cper;
                 if (additionalDataRaw != nullptr)
                 {
                     AdditionalData additional(*additionalDataRaw);
@@ -3040,16 +3041,12 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     {
                         deviceName = additional["DEVICE_NAME"];
                     }
-                    if (additional.count("DiagnosticDataType") > 0)
-                    {
-                        nlohmann::json oem = {
-                            {"CPER",
-                              {{"Oem",
-                                {{"Nvidia",
-                                  {{"@odata.type",
-                                    "#NvidiaLogEntry.v1_0_0.CPER"}}}}}}}};
-                        parseAdditionalDataForCPER(cper, oem, additional);
-                    }
+
+                    // populate CPER section (checks are in the fn)
+                    nlohmann::json::object_t oem;
+                    oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
+                            "#NvidiaLogEntry.v1_0_0.CPER";
+                    parseAdditionalDataForCPER(cper, oem, additional);
                 }
                 if (isMessageRegistry)
                 {
@@ -3118,6 +3115,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         thisEntry["ServiceProviderNotified"] = *notifyAction;
                     }
                 }
+                // add CPER to entry if it is present
                 if (!cper.empty())
                 {
                     thisEntry.update(cper);
@@ -3219,7 +3217,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             std::string messageArgs;
             std::string originOfCondition;
             std::string deviceName;
-            nlohmann::json cper = {};
+            nlohmann::json::object_t cper;
             if (additionalDataRaw != nullptr)
             {
                 AdditionalData additional(*additionalDataRaw);
@@ -3243,16 +3241,12 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 {
                     deviceName = additional["DEVICE_NAME"];
                 }
-                if (additional.count("DiagnosticDataType") > 0)
-                {
-                    nlohmann::json oem = {
-                        {"CPER",
-                          {{"Oem",
-                            {{"Nvidia",
-                              {{"@odata.type",
-                                "#NvidiaLogEntry.v1_0_0.CPER"}}}}}}}};
-                    parseAdditionalDataForCPER(cper, oem, additional);
-                }
+
+                // populate CPER section (checks are in the fn)
+                nlohmann::json::object_t oem;
+                oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
+                        "#NvidiaLogEntry.v1_0_0.CPER";
+                parseAdditionalDataForCPER(cper, oem, additional);
             }
 
             if (isMessageRegistry)
@@ -3341,6 +3335,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                     getLogEntryAdditionalDataURI(std::to_string(*id));
                 }
             }
+            // add CPER to entry if it is present
             if (!cper.empty())
             {
                 asyncResp->res.jsonValue.update(cper);
