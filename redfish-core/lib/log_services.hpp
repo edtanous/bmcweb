@@ -7455,7 +7455,7 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
 // vector containing debug token-related functionalities'
 // (GetDebugTokenRequest, GetDebugTokenStatus) output data
 static std::vector<std::tuple<std::string, std::string>> debugTokenData;
-static constexpr const uint32_t debugTokenTaskTimeoutSec{60};
+static constexpr const uint32_t debugTokenTaskTimeoutSec{300};
 
 inline void requestRoutesDebugToken(App& app)
 {
