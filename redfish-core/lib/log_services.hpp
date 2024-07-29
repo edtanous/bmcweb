@@ -1098,8 +1098,8 @@ inline void
                 fruid, severity, nvipSignature, nvSeverity, nvSocketNumber,
                 pcieVendorID, pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
-                pcieSecondaryBusNumber, pcieSlotNumber,
-                originatorId, originatorType, asyncResp);
+                pcieSecondaryBusNumber, pcieSlotNumber, originatorId,
+                originatorType, asyncResp);
 
             if (dumpStatus !=
                     "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -1168,8 +1168,7 @@ inline void
                 // CPER Properties
                 if (notificationType != "NA")
                 {
-                    thisEntry["CPER"]["NotificationType"] =
-                        notificationType;
+                    thisEntry["CPER"]["NotificationType"] = notificationType;
                 }
                 // CPER Oem properties
                 thisEntry["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
@@ -1181,13 +1180,11 @@ inline void
                 }
                 if (fruid != "NA")
                 {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["FruID"] =
-                        fruid;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["FruID"] = fruid;
                 }
                 if (severity != "NA")
                 {
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["Severity"] =
-                        severity;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["Severity"] = severity;
                 }
                 if (nvipSignature != "NA")
                 {
@@ -1242,7 +1239,8 @@ inline void
                 if (pcieSecondaryBusNumber != "NA")
                 {
                     thisEntry["CPER"]["Oem"]["Nvidia"]
-                             ["PCIeSecondaryBusNumber"] = pcieSecondaryBusNumber;
+                             ["PCIeSecondaryBusNumber"] =
+                                 pcieSecondaryBusNumber;
                 }
                 if (pcieSlotNumber != "NA")
                 {
@@ -1322,8 +1320,8 @@ inline void
                 fruid, severity, nvipSignature, nvSeverity, nvSocketNumber,
                 pcieVendorID, pcieDeviceID, pcieClassCode, pcieFunctionNumber,
                 pcieDeviceNumber, pcieSegmentNumber, pcieDeviceBusNumber,
-                pcieSecondaryBusNumber, pcieSlotNumber,
-                originatorId, originatorType, asyncResp);
+                pcieSecondaryBusNumber, pcieSlotNumber, originatorId,
+                originatorType, asyncResp);
 
             if (dumpStatus !=
                     "xyz.openbmc_project.Common.Progress.OperationStatus.Completed" &&
@@ -1414,97 +1412,88 @@ inline void
                         notificationType;
                 }
                 // CPER Oem properties
-                asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaLogEntry.v1_0_0.CPER";
+                asyncResp->res
+                    .jsonValue["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaLogEntry.v1_0_0.CPER";
                 if (sectionType != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["SectionType"] =
-                        sectionType;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["SectionType"] = sectionType;
                 }
                 if (fruid != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["FruID"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]["FruID"] =
                         fruid;
                 }
                 if (severity != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["Severity"] =
-                        severity;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["Severity"] = severity;
                 }
                 if (nvipSignature != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["NvIpSignature"] =
-                        nvipSignature;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["NvIpSignature"] = nvipSignature;
                 }
                 if (nvSeverity != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["NvSeverity"] =
-                        nvSeverity;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["NvSeverity"] = nvSeverity;
                 }
                 if (nvSocketNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["NvSocketNumber"] =
-                        nvSocketNumber;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["NvSocketNumber"] = nvSocketNumber;
                 }
                 if (pcieVendorID != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeVendorId"] =
-                        pcieVendorID;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeVendorId"] = pcieVendorID;
                 }
                 if (pcieDeviceID != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeDeviceId"] =
-                        pcieDeviceID;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeDeviceId"] = pcieDeviceID;
                 }
                 if (pcieClassCode != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeClassCode"] =
-                        pcieClassCode;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeClassCode"] = pcieClassCode;
                 }
                 if (pcieFunctionNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeFunctionNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeFunctionNumber"] =
                         pcieFunctionNumber;
                 }
                 if (pcieDeviceNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeDeviceNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeDeviceNumber"] =
                         pcieDeviceNumber;
                 }
                 if (pcieSegmentNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeSegmentNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeSegmentNumber"] =
                         pcieSegmentNumber;
                 }
                 if (pcieDeviceBusNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeDeviceBusNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeDeviceBusNumber"] =
                         pcieDeviceBusNumber;
                 }
                 if (pcieSecondaryBusNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeSecondaryBusNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeSecondaryBusNumber"] =
                         pcieSecondaryBusNumber;
                 }
                 if (pcieSlotNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] =
-                        pcieSlotNumber;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeSlotNumber"] = pcieSlotNumber;
                 }
             }
         }
@@ -2831,7 +2820,8 @@ inline void parseAdditionalDataForCPER(nlohmann::json::object_t& entry,
         if ("PCIeDeviceBusNumber" == iter.first)
             entry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceBusNumber"] = iter.second;
         if ("PCIeSecondaryBusNumber" == iter.first)
-            entry["CPER"]["Oem"]["Nvidia"]["PCIeSecondaryBusNumber"] = iter.second;
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeSecondaryBusNumber"] =
+                iter.second;
         if ("PCIeSlotNumber" == iter.first)
             entry["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] = iter.second;
     }
@@ -3045,7 +3035,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     // populate CPER section (checks are in the fn)
                     nlohmann::json::object_t oem;
                     oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
-                            "#NvidiaLogEntry.v1_0_0.CPER";
+                        "#NvidiaLogEntry.v1_0_0.CPER";
                     parseAdditionalDataForCPER(cper, oem, additional);
                 }
                 if (isMessageRegistry)
@@ -3245,7 +3235,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 // populate CPER section (checks are in the fn)
                 nlohmann::json::object_t oem;
                 oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
-                        "#NvidiaLogEntry.v1_0_0.CPER";
+                    "#NvidiaLogEntry.v1_0_0.CPER";
                 parseAdditionalDataForCPER(cper, oem, additional);
             }
 
