@@ -84,6 +84,11 @@ struct Request
         req.method(verb);
     }
 
+    std::string_view methodString()
+    {
+        return req.method_string();
+    }
+
     std::string_view getHeaderValue(std::string_view key) const
     {
         return req[key];
