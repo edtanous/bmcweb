@@ -1092,7 +1092,8 @@ inline void requestRoutesSwitchCollection(App& app)
                 collection_util::getCollectionMembersByAssociation(
                     asyncResp, "/redfish/v1/Fabrics/" + fabricId + "/Switches",
                     object + "/all_switches",
-                    {"xyz.openbmc_project.Inventory.Item.Switch"});
+                    {"xyz.openbmc_project.Inventory.Item.Switch",
+                     "xyz.openbmc_project.Inventory.Item.NvSwitch"});
                 return;
             }
             // Couldn't find an object with that name. Return an
