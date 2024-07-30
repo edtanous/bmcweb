@@ -161,8 +161,9 @@ inline void
             sdbusplus::message::object_path objPath(portPath);
             const std::string& endpointId = objPath.filename();
             BMCWEB_LOG_DEBUG("{}", endpointId);
-            std::string endpointURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                      "/Processors/";
+            std::string endpointURI =
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             endpointURI += processorId;
             endpointURI += "/Ports/";
             endpointURI += endpointId;
@@ -2650,38 +2651,38 @@ inline void getPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             crow::connections::systemBus->async_method_call(
                 [aResp](
                     const boost::system::error_code ec,
-                const boost::container::flat_map<
-                    std::string, std::variant<std::string, bool, size_t,
-                                              std::vector<std::string>>>&
-                    properties) {
-        if (ec)
-        {
-                    BMCWEB_LOG_ERROR("DBUS response error");
-            messages::internalError(aResp->res);
-            return;
-        }
-        // Get port protocol
-        for (const auto& property : properties)
-        {
-            if (property.first == "Protocol")
-            {
-                const std::string* value =
-                    std::get_if<std::string>(&property.second);
-                if (value == nullptr)
+                    const boost::container::flat_map<
+                        std::string, std::variant<std::string, bool, size_t,
+                                                  std::vector<std::string>>>&
+                        properties) {
+                if (ec)
                 {
-                            BMCWEB_LOG_ERROR("Null value returned "
-                                     "for protocol type");
+                    BMCWEB_LOG_ERROR("DBUS response error");
                     messages::internalError(aResp->res);
                     return;
                 }
-                aResp->res.jsonValue["EndpointProtocol"] =
-                    redfish::port_utils::getPortProtocol(*value);
-            }
-        }
-    },
+                // Get port protocol
+                for (const auto& property : properties)
+                {
+                    if (property.first == "Protocol")
+                    {
+                        const std::string* value =
+                            std::get_if<std::string>(&property.second);
+                        if (value == nullptr)
+                        {
+                            BMCWEB_LOG_ERROR("Null value returned "
+                                             "for protocol type");
+                            messages::internalError(aResp->res);
+                            return;
+                        }
+                        aResp->res.jsonValue["EndpointProtocol"] =
+                            redfish::port_utils::getPortProtocol(*value);
+                    }
+                }
+            },
                 object.front().first, objectPathToGetPortData,
                 "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.Inventory.Decorator.PortInfo");
+                "xyz.openbmc_project.Inventory.Decorator.PortInfo");
         },
             "xyz.openbmc_project.ObjectMapper",
             "/xyz/openbmc_project/object_mapper",
@@ -2830,7 +2831,7 @@ inline void getEndpointPortData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
         for (const std::string& portPath : *data)
         {
-                        // Get port protocol data
+            // Get port protocol data
             getPortData(aResp, portPath);
         }
         const std::vector<std::string> portPaths = *data;
@@ -2949,9 +2950,9 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             sdbusplus::message::object_path objectPath(
                                 entityPath);
                             const std::string& entityLink =
-                                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                "/Processors/" +
-                                objectPath.filename();
+                                "/redfish/v1/Systems/" +
+                                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                "/Processors/" + objectPath.filename();
                             // Get processor PCIe device data
                             getEndpointData(aResp, entityPath, entityLink,
                                             servName);
@@ -3032,9 +3033,9 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                             sdbusplus::message::object_path objectPath(
                                 entityPath);
                             const std::string& entityLink =
-                                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                "/Processors/" +
-                                objectPath.filename();
+                                "/redfish/v1/Systems/" +
+                                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                "/Processors/" + objectPath.filename();
                             // Add EntityLink
                             nlohmann::json& connectedEntitiesArray =
                                 aResp->res.jsonValue["ConnectedEntities"];

@@ -135,7 +135,7 @@ struct UserSubscription
                 const nlohmann::json::array_t* obj =
                     element.second.get_ptr<const nlohmann::json::array_t*>();
                 if (obj == nullptr)
-            {
+                {
                     continue;
                 }
                 for (const auto& val : *obj)
@@ -173,7 +173,7 @@ struct UserSubscription
                 const nlohmann::json::object_t* obj =
                     element.second.get_ptr<const nlohmann::json::object_t*>();
                 if (obj == nullptr)
-            {
+                {
                     continue;
                 }
                 for (const auto& val : *obj)

@@ -122,7 +122,8 @@ inline int onPropertyUpdate(sd_bus_message* m, void* /* userdata */,
                 *hostname);
 
             std::vector<char>& pwd = lsp::getLsp();
-            std::string certData = ensuressl::generateSslCertificate(*hostname, &pwd);
+            std::string certData = ensuressl::generateSslCertificate(*hostname,
+                                                                     &pwd);
             if (certData.empty())
             {
                 BMCWEB_LOG_ERROR("Failed to generate cert");

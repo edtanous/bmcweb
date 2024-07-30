@@ -1852,12 +1852,13 @@ inline std::string extractParentInterfaceName(const std::string& ifaceId)
     return ifaceId.substr(0, pos);
 }
 
-inline void parseInterfaceData(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& ifaceId, const EthernetInterfaceData& ethData,
-    const std::vector<IPv4AddressData>& ipv4Data,
-    const std::vector<IPv6AddressData>& ipv6Data,
-    const std::vector<StaticGatewayData>& ipv6GatewayData)
+inline void
+    parseInterfaceData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& ifaceId,
+                       const EthernetInterfaceData& ethData,
+                       const std::vector<IPv4AddressData>& ipv4Data,
+                       const std::vector<IPv6AddressData>& ipv6Data,
+                       const std::vector<StaticGatewayData>& ipv6GatewayData)
 {
     nlohmann::json& jsonResponse = asyncResp->res.jsonValue;
     jsonResponse["Id"] = ifaceId;
@@ -2130,12 +2131,12 @@ inline void requestEthernetInterfacesRoutes(App& app)
             ifaceArray = nlohmann::json::array();
             for (const std::string& ifaceItem : ifaceList)
             {
-                    nlohmann::json::object_t iface;
+                nlohmann::json::object_t iface;
                 iface["@odata.id"] = boost::urls::format(
                     "/redfish/v1/Managers/{}/EthernetInterfaces/{}",
                     BMCWEB_REDFISH_MANAGER_URI_NAME, ifaceItem);
-                    ifaceArray.push_back(std::move(iface));
-                }
+                ifaceArray.push_back(std::move(iface));
+            }
 
             asyncResp->res.jsonValue["Members@odata.count"] = ifaceArray.size();
             asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
@@ -2203,8 +2204,9 @@ inline void requestEthernetInterfacesRoutes(App& app)
 
         std::string parentInterface;
         if (!crow::utility::readUrlSegments(
-                *parsedUri, "redfish", "v1", "Managers", BMCWEB_REDFISH_MANAGER_URI_NAME,
-                "EthernetInterfaces", std::ref(parentInterface)))
+                *parsedUri, "redfish", "v1", "Managers",
+                BMCWEB_REDFISH_MANAGER_URI_NAME, "EthernetInterfaces",
+                std::ref(parentInterface)))
         {
             messages::propertyValueNotInList(
                 asyncResp->res, parentInterfaceUri,

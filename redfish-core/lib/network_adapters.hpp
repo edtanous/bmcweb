@@ -394,7 +394,7 @@ inline void doNDF(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "/redfish/v1/Chassis/" + chassisId +
         "/NetworkAdapters/" PLATFORMNETWORKADAPTER "/Ports/" + portId;
     links["OffloadSystem"]["@odata.id"] =
-        "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
     asyncResp->res.jsonValue["Name"] = "NetworkDeviceFunction";
     asyncResp->res.jsonValue["NetDevFuncType"] = "Ethernet";
     asyncResp->res.jsonValue["NetDevFuncCapabilities"] =

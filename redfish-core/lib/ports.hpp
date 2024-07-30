@@ -62,9 +62,9 @@ inline void getLldpStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res,
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/DedicatedNetworkPorts/" +
-                    ifaceId,
+                "/redfish/v1/Managers/" +
+                    std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                    "/DedicatedNetworkPorts/" + ifaceId,
                 " command failure");
             BMCWEB_LOG_ERROR("Error while running lldtool get status");
             if (ec)
@@ -102,9 +102,9 @@ inline void setLldpStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res,
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/DedicatedNetworkPorts/" +
-                    ifaceId,
+                "/redfish/v1/Managers/" +
+                    std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                    "/DedicatedNetworkPorts/" + ifaceId,
                 " command failure");
             BMCWEB_LOG_ERROR("Error while running lldtool set status");
             if (ec)
@@ -214,9 +214,9 @@ inline void
         {
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res,
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/DedicatedNetworkPorts/" +
-                    ifaceId,
+                "/redfish/v1/Managers/" +
+                    std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                    "/DedicatedNetworkPorts/" + ifaceId,
                 " command failure");
             BMCWEB_LOG_ERROR("Error while running lldtool enable TLV");
             if (ec)
@@ -241,9 +241,9 @@ inline void
         {
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res,
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/DedicatedNetworkPorts/" +
-                    ifaceId,
+                "/redfish/v1/Managers/" +
+                    std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                    "/DedicatedNetworkPorts/" + ifaceId,
                 " command failure");
             BMCWEB_LOG_ERROR("Error while running lldtool get TLV");
             if (ec)
@@ -267,9 +267,9 @@ inline void
         {
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res,
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/DedicatedNetworkPorts/" +
-                    ifaceId,
+                "/redfish/v1/Managers/" +
+                    std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                    "/DedicatedNetworkPorts/" + ifaceId,
                 " command failure");
             BMCWEB_LOG_ERROR("Error while running lldtool enable TLV");
             if (ec)
@@ -368,9 +368,9 @@ inline void getLldpTlvs(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             messages::resourceErrorsDetectedFormatError(
                 asyncResp->res,
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/DedicatedNetworkPorts/" +
-                    ifaceId,
+                "/redfish/v1/Managers/" +
+                    std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                    "/DedicatedNetworkPorts/" + ifaceId,
                 " command failure");
             BMCWEB_LOG_ERROR("Error while running lldtool get TLV");
             if (ec)
@@ -472,8 +472,9 @@ inline void
 
 inline void requestDedicatedPortsInterfacesRoutes(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/DedicatedNetworkPorts/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/DedicatedNetworkPorts/")
         .privileges(redfish::privileges::getEthernetInterfaceCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -486,7 +487,9 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#PortCollection.PortCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/DedicatedNetworkPorts";
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+            "/DedicatedNetworkPorts";
         asyncResp->res.jsonValue["Name"] =
             "Ethernet Dedicated Port Interface Collection";
         asyncResp->res.jsonValue["Description"] =
@@ -512,9 +515,10 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
                 if (found == std::string::npos)
                 {
                     nlohmann::json::object_t iface;
-                    iface["@odata.id"] = "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                                         "/DedicatedNetworkPorts/" +
-                                         std::to_string(entryIdx);
+                    iface["@odata.id"] =
+                        "/redfish/v1/Managers/" +
+                        std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                        "/DedicatedNetworkPorts/" + std::to_string(entryIdx);
                     ifaceArray.push_back(std::move(iface));
                     ++entryIdx;
                 }
@@ -523,8 +527,9 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
         });
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/DedicatedNetworkPorts/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/DedicatedNetworkPorts/<str>/")
         .privileges(redfish::privileges::getEthernetInterface)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -536,8 +541,9 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
         }
         asyncResp->res.jsonValue["@odata.type"] = "#Port.v1_9_0.Port";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/DedicatedNetworkPorts/" +
-            entryIdx;
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+            "/DedicatedNetworkPorts/" + entryIdx;
         asyncResp->res.jsonValue["Name"] = "Manager Dedicated Network Port";
         asyncResp->res.jsonValue["Id"] = entryIdx;
         getEthernetIfaceList(
@@ -564,9 +570,9 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
                         getLldpInformation(asyncResp, ifaceItem);
                         nlohmann::json::object_t iface;
                         iface["@odata.id"] =
-                            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                            "/EthernetInterfaces/" +
-                            ifaceItem;
+                            "/redfish/v1/Managers/" +
+                            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                            "/EthernetInterfaces/" + ifaceItem;
                         ifaceArray.push_back(std::move(iface));
                         return;
                     }
@@ -577,8 +583,9 @@ inline void requestDedicatedPortsInterfacesRoutes(App& app)
         });
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/DedicatedNetworkPorts/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/DedicatedNetworkPorts/<str>/")
         .privileges(redfish::privileges::patchEthernetInterface)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,

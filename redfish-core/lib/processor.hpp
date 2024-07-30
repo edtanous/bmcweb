@@ -666,9 +666,9 @@ inline void
                 return;
             }
             linksArray.push_back(
-                {{"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                               "/Memory/" +
-                                   memoryName}});
+                {{"@odata.id", "/redfish/v1/Systems/" +
+                                   std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                   "/Memory/" + memoryName}});
         }
     },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_memory",
@@ -1673,7 +1673,8 @@ inline void
             return;
         }
         nlohmann::json& json = aResp->res.jsonValue;
-        std::string metricsURI = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
+        std::string metricsURI = "/redfish/v1/Systems/" +
+                                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                  "/Processors/";
         metricsURI += cpuId;
         metricsURI += "/MemorySummary/MemoryMetrics";
@@ -1775,7 +1776,8 @@ inline void getProcessorEccModeData(
     const std::string& service, const std::string& objPath)
 {
     nlohmann::json& json = aResp->res.jsonValue;
-    std::string metricsURI = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
+    std::string metricsURI = "/redfish/v1/Systems/" +
+                             std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                              "/Processors/";
     metricsURI += cpuId;
     metricsURI += "/MemorySummary/MemoryMetrics";
@@ -1812,9 +1814,10 @@ inline void getProcessorResetTypeData(
                 const std::string processorResetTypeValue =
                     getProcessorResetType(*processorResetType);
                 aResp->res.jsonValue["Actions"]["#Processor.Reset"] = {
-                    {"target", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                               "/Processors/" +
-                                   cpuId + "/Actions/Processor.Reset"},
+                    {"target", "/redfish/v1/Systems/" +
+                                   std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                   "/Processors/" + cpuId +
+                                   "/Actions/Processor.Reset"},
                     {"ResetType@Redfish.AllowableValues",
                      {processorResetTypeValue}}};
             }
@@ -2733,20 +2736,23 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         }
     }
 
-        getComponentFirmwareVersion(aResp, objectPath);
+    getComponentFirmwareVersion(aResp, objectPath);
 
     aResp->res.jsonValue["EnvironmentMetrics"] = {
-        {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/" +
-                          processorId + "/EnvironmentMetrics"}};
+        {"@odata.id",
+         "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+             "/Processors/" + processorId + "/EnvironmentMetrics"}};
     aResp->res.jsonValue["@Redfish.Settings"]["@odata.type"] =
         "#Settings.v1_3_3.Settings";
     aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"] = {
-        {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/" +
-                          processorId + "/Settings"}};
+        {"@odata.id", "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/" + processorId + "/Settings"}};
 
     aResp->res.jsonValue["Ports"] = {
-        {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/" +
-                          processorId + "/Ports"}};
+        {"@odata.id", "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/" + processorId + "/Ports"}};
     // Links association to underneath memory
     getProcessorMemoryLinks(aResp, objectPath);
     // Link association to parent chassis
@@ -3316,8 +3322,9 @@ inline void patchAppliedOperatingConfig(
 
 inline void requestRoutesOperatingConfigCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/Processors/<str>/OperatingConfigs/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/OperatingConfigs/")
         .privileges(redfish::privileges::getOperatingConfigCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -3380,8 +3387,9 @@ inline void requestRoutesOperatingConfigCollection(App& app)
 
 inline void requestRoutesOperatingConfig(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/Processors/<str>/OperatingConfigs/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/OperatingConfigs/<str>/")
         .privileges(redfish::privileges::getOperatingConfig)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -3467,11 +3475,13 @@ inline void requestRoutesProcessorCollection(App& app)
         asyncResp->res.jsonValue["Name"] = "Processor Collection";
 
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors";
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors";
 
         collection_util::getCollectionMembers(
             asyncResp,
-            boost::urls::url("/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
+            boost::urls::url("/redfish/v1/Systems/" +
+                             std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                              "/Processors"),
             processorInterfaces, "/xyz/openbmc_project/inventory");
     });
@@ -3507,10 +3517,12 @@ inline void requestRoutesProcessor(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#Processor.v1_20_0.Processor";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/" +
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/" +
             processorId;
         std::string processorMetricsURI =
-            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/";
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
         processorMetricsURI += processorId;
         processorMetricsURI += "/ProcessorMetrics";
         asyncResp->res.jsonValue["Metrics"]["@odata.id"] = processorMetricsURI;
@@ -4118,7 +4130,8 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 continue;
             }
             std::string processorMetricsURI =
-                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             processorMetricsURI += processorId;
             processorMetricsURI += "/ProcessorMetrics";
             aResp->res.jsonValue["@odata.type"] =
@@ -4207,8 +4220,9 @@ inline void requestRoutesProcessorMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/Processors/<str>/ProcessorMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/ProcessorMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4394,7 +4408,8 @@ inline void getProcessorMemoryMetricsData(
                 continue;
             }
             std::string memoryMetricsURI =
-                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             memoryMetricsURI += processorId;
             memoryMetricsURI += "/MemorySummary/MemoryMetrics";
             aResp->res.jsonValue["@odata.type"] =
@@ -4515,9 +4530,10 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/<str>/"
-                 "MemorySummary/MemoryMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/"
+                          "MemorySummary/MemoryMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4568,9 +4584,9 @@ inline void
                 continue;
             }
             nlohmann::json& json = aResp->res.jsonValue;
-            json["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                "/Processors/" +
-                                processorId + "/Settings";
+            json["@odata.id"] = "/redfish/v1/Systems/" +
+                                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                "/Processors/" + processorId + "/Settings";
             json["@odata.type"] = "#Processor.v1_20_0.Processor";
             json["Id"] = "Settings";
             json["Name"] = processorId + "PendingSettings";
@@ -4724,9 +4740,10 @@ inline void requestRoutesProcessorSettings(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/<str>/"
-                 "Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/"
+                          "Settings")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4739,9 +4756,10 @@ inline void requestRoutesProcessorSettings(App& app)
         getProcessorSettingsData(asyncResp, processorId);
     });
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/<str>/"
-                 "Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/"
+                          "Settings")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
@@ -4906,9 +4924,10 @@ inline void requestRoutesProcessorReset(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/<str>/"
-                 "Actions/Processor.Reset")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/"
+                          "Actions/Processor.Reset")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -4945,9 +4964,10 @@ inline void requestRoutesProcessorPortCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/<str>/"
-                 "Ports")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/"
+                          "Ports")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -4979,16 +4999,18 @@ inline void requestRoutesProcessorPortCollection(App& app)
                     continue;
                 }
                 asyncResp->res.jsonValue["@odata.id"] =
-                    "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/" +
-                    processorId + "/Ports";
+                    "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/Processors/" + processorId + "/Ports";
                 asyncResp->res.jsonValue["@odata.type"] =
                     "#PortCollection.PortCollection";
                 asyncResp->res.jsonValue["Name"] = "NVLink Port Collection";
 
                 collection_util::getCollectionMembersByAssociation(
                     asyncResp,
-                    "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/" +
-                        processorId + "/Ports",
+                    "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/Processors/" + processorId + "/Ports",
                     path + "/all_states",
                     {"xyz.openbmc_project.Inventory.Item.Port"});
                 return;
@@ -5146,7 +5168,9 @@ inline void getConnectedProcessorPorts(
                 nlohmann::json thisProcessorPort = nlohmann::json::object();
 
                 std::string processorPortUri =
-                    "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/";
+                    "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/Processors/";
                 processorPortUri += processorName;
                 processorPortUri += "/Ports/";
                 processorPortUri += portNames[i];
@@ -5298,8 +5322,10 @@ inline void getProcessorPortData(
                     return;
                 }
 
-                std::string portUri = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                      "/Processors/";
+                std::string portUri =
+                    "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/Processors/";
                 portUri += processorId;
                 portUri += "/Ports/";
                 portUri += portId;
@@ -5387,7 +5413,9 @@ inline void getProcessorAcceleratorPortData(
                     }
 
                     std::string portUri =
-                        "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/";
+                        "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/Processors/";
                     portUri += processorId;
                     portUri += "/Ports/";
                     portUri += portId;
@@ -5428,9 +5456,10 @@ inline void requestRoutesProcessorPort(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/<str>/"
-                 "Ports/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/"
+                          "Ports/<str>")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -5957,9 +5986,10 @@ inline void requestRoutesProcessorPortMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Processors/<str>/"
-                 "Ports/<str>/Metrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/"
+                          "Ports/<str>/Metrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -6038,7 +6068,8 @@ inline void requestRoutesProcessorPortMetrics(App& app)
                             }
 
                             std::string portMetricUri =
-                                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
+                                "/redfish/v1/Systems/" +
+                                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                 "/Processors/";
                             portMetricUri += processorId;
                             portMetricUri += "/Ports/";

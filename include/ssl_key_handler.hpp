@@ -24,9 +24,9 @@ extern "C"
 
 #include <asn1.hpp>
 #include <boost/asio/ssl/context.hpp>
+#include <boost/system/error_code.hpp>
 #include <logging.hpp>
 #include <lsp.hpp>
-#include <boost/system/error_code.hpp>
 
 #include <filesystem>
 #include <memory>
@@ -111,7 +111,7 @@ inline bool validateCertificate(X509* const cert)
 }
 
 inline std::string verifyOpensslKeyCert(const std::string& filepath,
-                                 pem_password_cb* pwdCb)
+                                        pem_password_cb* pwdCb)
 {
     bool privateKeyValid = false;
 
@@ -631,7 +631,8 @@ inline bool getSslContext(boost::asio::ssl::context& mSslContext,
 
     SSL_CTX_set_default_passwd_cb(mSslContext.native_handle(),
                                   lsp::passwordCallback);
-    BMCWEB_LOG_DEBUG("Using default TrustStore location: {}", ensuressl::trustStorePath);
+    BMCWEB_LOG_DEBUG("Using default TrustStore location: {}",
+                     ensuressl::trustStorePath);
     mSslContext.add_verify_path(ensuressl::trustStorePath);
 
     if (!sslPemFile.empty())

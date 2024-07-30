@@ -349,53 +349,54 @@ inline void
             }
         }
         crow::connections::systemBus->async_method_call(
-        [asyncResp,
-         networkAdapterId](const boost::system::error_code& ec,
-                           std::variant<std::vector<std::string>>& resp) {
-        if (ec)
-        {
-            // no state sensors attached.
-                BMCWEB_LOG_DEBUG("DBUS response error");
-            return;
-        }
-
-        std::vector<std::string>* data =
-            std::get_if<std::vector<std::string>>(&resp);
-        if (data == nullptr)
-        {
-                BMCWEB_LOG_ERROR("DBUS response error while getting all_states");
-            messages::internalError(asyncResp->res);
-            return;
-        }
-
-        for (const std::string& sensorPath : *data)
-        {
-            if (!boost::ends_with(sensorPath, networkAdapterId))
+            [asyncResp,
+             networkAdapterId](const boost::system::error_code& ec,
+                               std::variant<std::vector<std::string>>& resp) {
+            if (ec)
             {
-                continue;
+                // no state sensors attached.
+                BMCWEB_LOG_DEBUG("DBUS response error");
+                return;
             }
-            // Check Interface in Object or not
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, sensorPath, networkAdapterId](
-                    const boost::system::error_code ec,
-                    const std::vector<std::pair<
-                        std::string, std::vector<std::string>>>& object) {
-                if (ec)
+
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_ERROR(
+                    "DBUS response error while getting all_states");
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            for (const std::string& sensorPath : *data)
+            {
+                if (!boost::ends_with(sensorPath, networkAdapterId))
                 {
-                    // the path does not implement Decorator Health
-                    // interfaces
-                        BMCWEB_LOG_DEBUG("No Health interface found");
-                    return;
+                    continue;
                 }
-                getHealthData(asyncResp, object.front().first, sensorPath);
-            },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
-                std::array<std::string, 1>(
-                    {"xyz.openbmc_project.State.Decorator.Health"}));
-        }
-    },
+                // Check Interface in Object or not
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, sensorPath, networkAdapterId](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                    if (ec)
+                    {
+                        // the path does not implement Decorator Health
+                        // interfaces
+                        BMCWEB_LOG_DEBUG("No Health interface found");
+                        return;
+                    }
+                    getHealthData(asyncResp, object.front().first, sensorPath);
+                },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                    std::array<std::string, 1>(
+                        {"xyz.openbmc_project.State.Decorator.Health"}));
+            }
+        },
             "xyz.openbmc_project.ObjectMapper",
             objectPathOfChassis + "/all_states",
             "org.freedesktop.DBus.Properties", "Get",
@@ -522,9 +523,12 @@ inline void
     asyncResp->res.jsonValue["Status"]["Conditions"] = nlohmann::json::array();
 #endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 
-    asyncResp->res.jsonValue["Controllers"]["PCIeInterface"] = nlohmann::json::array();
-    asyncResp->res.jsonValue["Controllers"]["Links"]["PCIeDevices"] = nlohmann::json::array();
-    asyncResp->res.jsonValue["Controllers"]["Links"]["Ports"] = nlohmann::json::array();
+    asyncResp->res.jsonValue["Controllers"]["PCIeInterface"] =
+        nlohmann::json::array();
+    asyncResp->res.jsonValue["Controllers"]["Links"]["PCIeDevices"] =
+        nlohmann::json::array();
+    asyncResp->res.jsonValue["Controllers"]["Links"]["Ports"] =
+        nlohmann::json::array();
 
     getAssetData(asyncResp, *validNetworkAdapterPath, networkAdapterId);
     getHealthByAssociation(asyncResp, *validNetworkAdapterPath,

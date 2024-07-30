@@ -382,7 +382,8 @@ static std::string
     // form redfish URI for sub device
     if (deviceType == "ProcessorPortMetrics")
     {
-        metricURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        metricURI = "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
         metricURI += "/Processors/";
         metricURI += deviceName;
         metricURI += "/Ports/";
@@ -391,7 +392,8 @@ static std::string
     }
     else if (deviceType == "ProcessorPortGpmMetrics")
     {
-        metricURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        metricURI = "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
         metricURI += "/Processors/";
         metricURI += deviceName;
         metricURI += "/Ports/";
@@ -410,7 +412,8 @@ static std::string
     }
     else if (deviceType == "ProcessorMetrics")
     {
-        metricURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        metricURI = "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
         metricURI += "/Processors/";
         metricURI += deviceName;
         metricURI += "/ProcessorMetrics#";
@@ -436,7 +439,8 @@ static std::string
         else if (ifaceName ==
                  "xyz.openbmc_project.State.Decorator.OperationalStatus")
         {
-            metricURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+            metricURI = "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
             metricURI += "/Processors/";
             metricURI += deviceName;
         }
@@ -444,7 +448,8 @@ static std::string
     }
     else if (deviceType == "ProcessorGpmMetrics")
     {
-        metricURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        metricURI = "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
         metricURI += "/Processors/";
         metricURI += deviceName;
         metricURI += "/ProcessorMetrics#";
@@ -464,7 +469,8 @@ static std::string
     }
     else if (deviceType == "MemoryMetrics")
     {
-        metricURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        metricURI = "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
         metricURI += "/Memory/";
         metricURI += deviceName;
         if (ifaceName == "com.nvidia.MemoryRowRemapping")

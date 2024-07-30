@@ -883,10 +883,11 @@ static inline void getPCIeDeviceFunctionsList(
                 else
                 {
                     pcieFunctionList.push_back(
-                        {{"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                       "/PCIeDevices/" +
-                                           device + "/PCIeFunctions/" +
-                                           std::to_string(functionNum)}});
+                        {{"@odata.id",
+                          "/redfish/v1/Systems/" +
+                              std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                              "/PCIeDevices/" + device + "/PCIeFunctions/" +
+                              std::to_string(functionNum)}});
                 }
             }
         }
@@ -1235,7 +1236,7 @@ inline void addPCIeDeviceProperties(
             asyncResp->res.jsonValue["PCIeInterface"]["LanesInUse"] = nullptr;
         }
         else
-    {
+        {
             asyncResp->res.jsonValue["PCIeInterface"]["LanesInUse"] =
                 *lanesInUse;
         }
@@ -1258,7 +1259,9 @@ inline void requestRoutesSystemPCIeDeviceCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/PCIeDevices/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/PCIeDevices/")
         .privileges(redfish::privileges::getPCIeDeviceCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1269,8 +1272,9 @@ inline void requestRoutesSystemPCIeDeviceCollection(App& app)
         }
         asyncResp->res.jsonValue = {
             {"@odata.type", "#PCIeDeviceCollection.PCIeDeviceCollection"},
-            {"@odata.id",
-             "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/PCIeDevices"},
+            {"@odata.id", "/redfish/v1/Systems/" +
+                              std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                              "/PCIeDevices"},
             {"Name", "PCIe Device Collection"},
             {"Description", "Collection of PCIe Devices"},
             {"Members", nlohmann::json::array()},
@@ -1281,8 +1285,9 @@ inline void requestRoutesSystemPCIeDeviceCollection(App& app)
 
 inline void requestRoutesSystemPCIeDevice(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/PCIeDevices/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/PCIeDevices/<str>/")
         .privileges(redfish::privileges::getPCIeDevice)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1295,14 +1300,15 @@ inline void requestRoutesSystemPCIeDevice(App& app)
 
         asyncResp->res.jsonValue = {
             {"@odata.type", "#PCIeDevice.v1_4_0.PCIeDevice"},
-            {"@odata.id",
-             "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/PCIeDevices/" + device},
+            {"@odata.id", "/redfish/v1/Systems/" +
+                              std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                              "/PCIeDevices/" + device},
             {"Name", "PCIe Device"},
             {"Id", device},
             {"PCIeFunctions",
-             {{"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                            "/PCIeDevices/" +
-                                device + "/PCIeFunctions"}}}};
+             {{"@odata.id", "/redfish/v1/Systems/" +
+                                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                "/PCIeDevices/" + device + "/PCIeFunctions"}}}};
         getPCIeDevice(asyncResp, device);
     });
 }
@@ -1487,8 +1493,9 @@ inline void requestRoutesSystemPCIeFunctionCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/PCIeDevices/<str>/PCIeFunctions/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/PCIeDevices/<str>/PCIeFunctions/")
         .privileges(redfish::privileges::getPCIeFunctionCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1501,9 +1508,9 @@ inline void requestRoutesSystemPCIeFunctionCollection(App& app)
 
         asyncResp->res.jsonValue = {
             {"@odata.type", "#PCIeFunctionCollection.PCIeFunctionCollection"},
-            {"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                          "/PCIeDevices/" +
-                              device + "/PCIeFunctions"},
+            {"@odata.id", "/redfish/v1/Systems/" +
+                              std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                              "/PCIeDevices/" + device + "/PCIeFunctions"},
             {"Name", "PCIe Function Collection"},
             {"Description",
              "Collection of PCIe Functions for PCIe Device " + device}};
@@ -1532,8 +1539,9 @@ inline bool validatePCIeFunctionId(
 
 inline void requestRoutesSystemPCIeFunction(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/PCIeDevices/<str>/PCIeFunctions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/PCIeDevices/<str>/PCIeFunctions/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

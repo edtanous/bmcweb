@@ -616,7 +616,7 @@ inline void handleManagersNetworkProtocolGet(
         boost::beast::http::field::link,
         "</redfish/v1/JsonSchemas/ManagerNetworkProtocol/ManagerNetworkProtocol.json>; rel=describedby");
     if (managerId != BMCWEB_REDFISH_MANAGER_URI_NAME)
-{
+    {
         messages::resourceNotFound(asyncResp->res, "Manager", managerId);
         return;
     }

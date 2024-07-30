@@ -321,15 +321,18 @@ inline std::string getRedfishFWHealth(const std::string& fwState)
  *
  * @return void
  */
-inline void getFwRecoveryStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+inline void
+    getFwRecoveryStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         const std::shared_ptr<std::string>& swId,
                         const std::string& dbusSvc)
 {
-    auto getLastSegnmentFromDotterString = [](const std::string input) -> std::string {
+    auto getLastSegnmentFromDotterString =
+        [](const std::string input) -> std::string {
         size_t pos = input.rfind(".");
         if (pos == std::string::npos)
         {
-            BMCWEB_LOG_ERROR("Unable to extract last segment from input {}", input);
+            BMCWEB_LOG_ERROR("Unable to extract last segment from input {}",
+                             input);
             return "";
         }
         return input.substr(pos + 1);
@@ -351,21 +354,23 @@ inline void getFwRecoveryStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncR
         const auto& it = propertiesList.find("Health");
         if (it == propertiesList.end())
         {
-            BMCWEB_LOG_ERROR("Can't find D-Bus property \"xyz.openbmc_project.State.Decorator.Health.Health\"!");
+            BMCWEB_LOG_ERROR(
+                "Can't find D-Bus property \"xyz.openbmc_project.State.Decorator.Health.Health\"!");
             messages::propertyMissing(asyncResp->res, "Health");
             return;
         }
 
-        const std::string* health =
-            std::get_if<std::string>(&it->second);
+        const std::string* health = std::get_if<std::string>(&it->second);
         if (health == nullptr)
         {
-            BMCWEB_LOG_ERROR("wrong types for D-Bus property \"xyz.openbmc_project.State.Decorator.Health.Health\"!");
+            BMCWEB_LOG_ERROR(
+                "wrong types for D-Bus property \"xyz.openbmc_project.State.Decorator.Health.Health\"!");
             messages::propertyValueTypeError(asyncResp->res, "", "Health");
             return;
         }
         BMCWEB_LOG_DEBUG("getFwRecoveryStatus: Health {}", *health);
-        asyncResp->res.jsonValue["Status"]["Health"] = getLastSegnmentFromDotterString(*health);
+        asyncResp->res.jsonValue["Status"]["Health"] =
+            getLastSegnmentFromDotterString(*health);
     },
         dbusSvc, "/xyz/openbmc_project/software/" + *swId,
         "org.freedesktop.DBus.Properties", "GetAll",
@@ -385,21 +390,23 @@ inline void getFwRecoveryStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncR
         const auto& it = propertiesList.find("State");
         if (it == propertiesList.end())
         {
-            BMCWEB_LOG_ERROR("Can't find property \"xyz.openbmc_project.State.Decorator.OperationalStatus.State\"!");
+            BMCWEB_LOG_ERROR(
+                "Can't find property \"xyz.openbmc_project.State.Decorator.OperationalStatus.State\"!");
             messages::propertyMissing(asyncResp->res, "State");
             return;
         }
 
-        const std::string* state =
-            std::get_if<std::string>(&it->second);
+        const std::string* state = std::get_if<std::string>(&it->second);
         if (state == nullptr)
         {
-            BMCWEB_LOG_ERROR("wrong types for property\"xyz.openbmc_project.State.Decorator.OperationalStatus.State\"!");
+            BMCWEB_LOG_ERROR(
+                "wrong types for property\"xyz.openbmc_project.State.Decorator.OperationalStatus.State\"!");
             messages::propertyValueTypeError(asyncResp->res, "", "State");
             return;
         }
         BMCWEB_LOG_DEBUG("getFwRecoveryStatus: State {}", *state);
-        asyncResp->res.jsonValue["Status"]["State"] = getLastSegnmentFromDotterString(*state);
+        asyncResp->res.jsonValue["Status"]["State"] =
+            getLastSegnmentFromDotterString(*state);
     },
         dbusSvc, "/xyz/openbmc_project/software/" + *swId,
         "org.freedesktop.DBus.Properties", "GetAll",

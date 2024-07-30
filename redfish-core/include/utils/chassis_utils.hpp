@@ -27,7 +27,8 @@ constexpr const char* switchInvIntf =
 
 constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
 
-constexpr const char* chassisInvInterf = "xyz.openbmc_project.Inventory.Item.Chassis";
+constexpr const char* chassisInvInterf =
+    "xyz.openbmc_project.Inventory.Item.Chassis";
 
 using Associations =
     std::vector<std::tuple<std::string, std::string, std::string>>;
@@ -1004,8 +1005,10 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                        - "xyz.openbmc_project.GpuMgr" ...
                        - "xyz.openbmc_project.ObjectMapper" ...
                     */
-                    url = std::string("/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                      "/Processors/") +
+                    url = std::string(
+                              "/redfish/v1/Systems/" +
+                              std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                              "/Processors/") +
                           invObjPath.filename().string();
                     BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface,
                                      url);
@@ -1065,7 +1068,9 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                 }
                 if (interface == bmcInvInterf)
                 {
-                    url = std::string("/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME));
+                    url = std::string(
+                        "/redfish/v1/Managers/" +
+                        std::string(BMCWEB_REDFISH_MANAGER_URI_NAME));
                     BMCWEB_LOG_DEBUG("{} {} => URL: {}", service, interface,
                                      url);
                     callback(true, url);

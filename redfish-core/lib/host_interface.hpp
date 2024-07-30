@@ -227,7 +227,9 @@ static void
 
 inline void requestHostInterfacesRoutes(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/HostInterfaces/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/HostInterfaces/")
         .privileges(redfish::privileges::getHostInterfaceCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -235,7 +237,8 @@ inline void requestHostInterfacesRoutes(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#HostInterfaceCollection.HostInterfaceCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/HostInterfaces";
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) + "/HostInterfaces";
         asyncResp->res.jsonValue["Name"] = "Host Interface Collection";
         asyncResp->res.jsonValue["Description"] =
             "Collection of HostInterfaces for this Manager";
@@ -272,9 +275,10 @@ inline void requestHostInterfacesRoutes(App& app)
                         {
                             ifaceArray.push_back(
                                 {{"@odata.id",
-                                  "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                                  "/HostInterfaces/" +
-                                      ifaceId}});
+                                  "/redfish/v1/Managers/" +
+                                      std::string(
+                                          BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                                      "/HostInterfaces/" + ifaceId}});
                         }
                         asyncResp->res.jsonValue["Members@odata.count"] =
                             ifaceArray.size();
@@ -286,8 +290,9 @@ inline void requestHostInterfacesRoutes(App& app)
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     });
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/HostInterfaces/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/HostInterfaces/<str>/")
         .privileges(redfish::privileges::getHostInterface)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -308,7 +313,9 @@ inline void requestHostInterfacesRoutes(App& app)
         asyncResp->res.jsonValue["Description"] = "Management Host Interface";
         asyncResp->res.jsonValue["Id"] = ifaceId;
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/HostInterfaces/" + ifaceId;
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) + "/HostInterfaces/" +
+            ifaceId;
 
         asyncResp->res.jsonValue["AuthenticationModes"] = {"BasicAuth"};
         asyncResp->res.jsonValue["ExternallyAccessible"] = false;
@@ -316,21 +323,24 @@ inline void requestHostInterfacesRoutes(App& app)
 
         asyncResp->res.jsonValue["Links"]["ComputerSystems@odata.count"] = 1;
         asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
-            {{"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)}}};
+            {{"@odata.id", "/redfish/v1/Systems/" +
+                               std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)}}};
 
         asyncResp->res.jsonValue["ManagerEthernetInterface"] = {
-            {"@odata.id", "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                          "/EthernetInterfaces/" +
-                              ifaceId}};
+            {"@odata.id", "/redfish/v1/Managers/" +
+                              std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                              "/EthernetInterfaces/" + ifaceId}};
         asyncResp->res.jsonValue["NetworkProtocol"] = {
-            {"@odata.id",
-             "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/NetworkProtocol/"}};
+            {"@odata.id", "/redfish/v1/Managers/" +
+                              std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                              "/NetworkProtocol/"}};
 
         getCredentialsBootStrap(asyncResp);
     });
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  + "/HostInterfaces/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/HostInterfaces/<str>/")
         .privileges(redfish::privileges::patchHostInterface)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,

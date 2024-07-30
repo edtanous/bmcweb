@@ -53,7 +53,8 @@ inline void handleMessageRegistryFileCollectionGet(
 
     nlohmann::json& members = asyncResp->res.jsonValue["Members"];
     for (const char* memberName : std::to_array(
-             {"Base", "TaskEvent", "ResourceEvent", "OpenBMC", "Telemetry", "Platform", "Update", "BiosAttributeRegistry"}))
+             {"Base", "TaskEvent", "ResourceEvent", "OpenBMC", "Telemetry",
+              "Platform", "Update", "BiosAttributeRegistry"}))
     {
         nlohmann::json::object_t member;
         member["@odata.id"] = boost::urls::format("/redfish/v1/Registries/{}",
@@ -106,8 +107,7 @@ inline void handleMessageRoutesMessageRegistryFileGet(
         header = &registries::resource_event::header;
         url = registries::resource_event::url;
     }
-    else if (registry == "Update" ||
-             registry == "UpdateEvent")
+    else if (registry == "Update" || registry == "UpdateEvent")
     {
         header = &registries::update::header;
         url = registries::update::url;
@@ -225,8 +225,7 @@ inline void handleMessageRegistryGet(
             registryEntries.emplace_back(&entry);
         }
     }
-    else if (registry == "Update" ||
-             registry == "UpdateEvent")
+    else if (registry == "Update" || registry == "UpdateEvent")
     {
         header = &registries::update::header;
         for (const registries::MessageEntry& entry :
@@ -238,8 +237,7 @@ inline void handleMessageRegistryGet(
     else if (registry == "BiosAttributeRegistry")
     {
         header = &registries::bios::header;
-        for (const registries::MessageEntry& entry :
-            registries::bios::registry)
+        for (const registries::MessageEntry& entry : registries::bios::registry)
         {
             registryEntries.emplace_back(&entry);
         }

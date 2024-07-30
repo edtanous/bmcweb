@@ -332,9 +332,10 @@ inline void getTotalPower(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         return;
                     }
                     relatedItemsArray.push_back(
-                        {{"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                       "/Processors/" +
-                                           gpuName}});
+                        {{"@odata.id",
+                          "/redfish/v1/Systems/" +
+                              std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                              "/Processors/" + gpuName}});
                 }
             },
                 "xyz.openbmc_project.ObjectMapper", path + "/all_processors",

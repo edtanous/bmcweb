@@ -205,7 +205,9 @@ inline void getChassisOEMComponentProtected(
                     .jsonValue["Links"]["Oem"]["Nvidia"]["ComponentsProtected"];
             componentsProtectedArray = nlohmann::json::array();
             componentsProtectedArray.push_back({nlohmann::json::array(
-                {"@odata.id", "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)})});
+                {"@odata.id",
+                 "/redfish/v1/Managers/" +
+                     std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)})});
 
             return;
         }
@@ -221,8 +223,9 @@ inline void getChassisOEMComponentProtected(
             {
                 if (url.empty())
                 {
-                    redfishURL =
-                        std::string("/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME));
+                    redfishURL = std::string(
+                        "/redfish/v1/Managers/" +
+                        std::string(BMCWEB_REDFISH_MANAGER_URI_NAME));
                 }
             }
             asyncResp->res.jsonValue["Links"]["Oem"]["Nvidia"]["@odata.type"] =
@@ -362,10 +365,14 @@ inline void getEROTChassis(const crow::Request& req,
 #endif
 
             asyncResp->res.jsonValue["Links"]["ManagedBy"] = {
-                {{"@odata.id", "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)}}};
+                {{"@odata.id",
+                  "/redfish/v1/Managers/" +
+                      std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)}}};
 
             asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
-                {{"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)}}};
+                {{"@odata.id",
+                  "/redfish/v1/Systems/" +
+                      std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)}}};
             redfish::chassis_utils::getChassisUUID(
                 req, asyncResp, connectionNames[0].first, path, true);
 

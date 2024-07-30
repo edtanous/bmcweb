@@ -2,11 +2,11 @@
 
 #include "registries/base_message_registry.hpp"
 #include "registries/openbmc_message_registry.hpp"
-#include "registries/telemetry_message_registry.hpp"
-#include "registries/task_event_message_registry.hpp"
-#include "registries/resource_event_message_registry.hpp"
-#include "registries/update_message_registry.hpp"
 #include "registries/platform_message_registry.hpp"
+#include "registries/resource_event_message_registry.hpp"
+#include "registries/task_event_message_registry.hpp"
+#include "registries/telemetry_message_registry.hpp"
+#include "registries/update_message_registry.hpp"
 #include "str_utility.hpp"
 
 #include <algorithm>
@@ -78,7 +78,8 @@ const Message* getMessage(std::string_view messageID)
     if (std::string(resource_event::header.registryPrefix) == registryName)
     {
         return getMessageFromRegistry(
-            messageKey, std::span<const MessageEntry>(resource_event::registry));
+            messageKey,
+            std::span<const MessageEntry>(resource_event::registry));
     }
     if (std::string(update::header.registryPrefix) == registryName)
     {
@@ -90,7 +91,7 @@ const Message* getMessage(std::string_view messageID)
         return getMessageFromRegistry(
             messageKey, std::span<const MessageEntry>(platform::registry));
     }
-    
+
     return nullptr;
 }
 

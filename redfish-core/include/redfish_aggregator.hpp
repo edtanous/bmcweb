@@ -367,7 +367,8 @@ static inline void addPrefixes(nlohmann::json& json, std::string_view prefix)
     nlohmann::json::iterator odataIdIt = json.find("@odata.id");
     if (odataIdIt != json.end())
     {
-        const std::string* odataIdStr = odataIdIt->get_ptr<const std::string*>();
+        const std::string* odataIdStr =
+            odataIdIt->get_ptr<const std::string*>();
         if (odataIdStr != nullptr)
         {
             odataProp = *odataIdStr;
@@ -393,9 +394,9 @@ static inline void addPrefixes(nlohmann::json& json, std::string_view prefix)
                 // resources.
                 std::string url = odataProp;
                 addPrefixToStringItem(url, prefix);
-                if(url != odataProp)
+                if (url != odataProp)
                 {
-                addPrefixToID(item.second, prefix);
+                    addPrefixToID(item.second, prefix);
                 }
                 continue;
             }

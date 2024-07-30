@@ -207,14 +207,16 @@ inline void handleBootOptionCollectionGet(
 
     aResp->res.jsonValue["@odata.type"] =
         "#BootOptionCollection.BootOptionCollection";
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                        "/BootOptions";
+    aResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/BootOptions";
     aResp->res.jsonValue["Name"] = "Boot Option Collection";
     constexpr std::array<std::string_view, 1> interfaces{
         "xyz.openbmc_project.BIOSConfig.BootOption"};
     collection_util::getCollectionMembers(
         aResp,
-        boost::urls::url("/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        boost::urls::url("/redfish/v1/Systems/" +
+                         std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                          "/BootOptions"),
         interfaces, "/xyz/openbmc_project/");
 }
@@ -297,7 +299,9 @@ inline void handleBootOptionCollectionPost(
             messages::created(aResp->res);
             aResp->res.addHeader(
                 boost::beast::http::field::location,
-                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/" + id);
+                "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/BootOptions/" + id);
         });
     });
 }
@@ -323,7 +327,8 @@ inline void handleBootOptionGet(crow::App& app, const crow::Request& req,
         }
         aResp->res.jsonValue["@odata.type"] = "#BootOption.v1_0_4.BootOption";
         aResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/" +
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/" +
             bootOptionName;
         aResp->res.jsonValue["Name"] = bootOptionName;
         aResp->res.jsonValue["Id"] = bootOptionName;
@@ -491,8 +496,8 @@ inline void handleComputerSystemSettingsBootOptionGet(
     }
     asyncResp->res.jsonValue["@odata.type"] = "#BootOption.v1_0_4.BootOption";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Settings/BootOptions/" +
-        bootOptionName;
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/Settings/BootOptions/" + bootOptionName;
     asyncResp->res.jsonValue["Name"] = bootOptionName;
     asyncResp->res.jsonValue["Id"] = bootOptionName;
     asyncResp->res.jsonValue["BootOptionReference"] = bootOptionName;
@@ -511,15 +516,18 @@ inline void handleComputerSystemSettingsBootOptionsCollectionGet(
     asyncResp->res.jsonValue["@odata.type"] =
         "#BootOptionCollection.BootOptionCollection";
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Settings/BootOptions";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/Settings/BootOptions";
     asyncResp->res.jsonValue["Name"] = "Settings Boot Option Collection";
     constexpr std::array<std::string_view, 1> interfaces{
         "xyz.openbmc_project.BIOSConfig.BootOption"};
     dbus::utility::getSubTreePaths(
         "/xyz/openbmc_project/", 0, interfaces,
-        std::bind_front(handleCollectionPendingBootOptionMembers, asyncResp,
-                        boost::urls::url("/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                         "/Settings/BootOptions")));
+        std::bind_front(
+            handleCollectionPendingBootOptionMembers, asyncResp,
+            boost::urls::url("/redfish/v1/Systems/" +
+                             std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                             "/Settings/BootOptions")));
 }
 
 inline void handleComputerSystemSettingsBootOptionPatch(
@@ -561,50 +569,60 @@ inline void handleComputerSystemSettingsBootOptionPatch(
 
 inline void requestRoutesBootOptions(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/BootOptions/")
         .privileges(redfish::privileges::getBootOptionCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             boot_options::handleBootOptionCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/BootOptions/")
         .privileges(redfish::privileges::postBootOptionCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             boot_options::handleBootOptionCollectionPost, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/BootOptions/<str>/")
         .privileges(redfish::privileges::getBootOption)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(boot_options::handleBootOptionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/BootOptions/<str>/")
         .privileges(redfish::privileges::patchBootOption)
         .methods(boost::beast::http::verb::patch)(std::bind_front(
             boot_options::handleBootOptionPatch, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/BootOptions/<str>/")
         .privileges(redfish::privileges::deleteBootOption)
         .methods(boost::beast::http::verb::delete_)(std::bind_front(
             boot_options::handleBootOptionDelete, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                      "/Settings/BootOptions")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Settings/BootOptions")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             boot_options::handleComputerSystemSettingsBootOptionsCollectionGet,
             std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                      "/Settings/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Settings/BootOptions/<str>/")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::patch)(std::bind_front(
             boot_options::handleComputerSystemSettingsBootOptionPatch,
             std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                      "/Settings/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Settings/BootOptions/<str>/")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             boot_options::handleComputerSystemSettingsBootOptionGet,

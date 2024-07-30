@@ -137,8 +137,9 @@ inline void handleSecureBootDatabaseCollectionGet(
     {
         return;
     }
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                        "/SecureBoot/SecureBootDatabases";
+    aResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases";
     aResp->res.jsonValue["@odata.type"] =
         "#SecureBootDatabaseCollection.SecureBootDatabaseCollection";
     aResp->res.jsonValue["Name"] = "UEFI SecureBoot Database Collection";
@@ -182,7 +183,8 @@ inline void handleSecureBootDatabaseCollectionGet(
         members = nlohmann::json::array();
         for (const std::string& leaf : pathNames)
         {
-            std::string newPath = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
+            std::string newPath = "/redfish/v1/Systems/" +
+                                  std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                   "/SecureBoot/SecureBootDatabases";
             newPath += '/';
             newPath += leaf;
@@ -208,9 +210,9 @@ inline void
     {
         return;
     }
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                        "/SecureBoot/SecureBootDatabases/" +
-                                        databaseId;
+    aResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId;
     aResp->res.jsonValue["@odata.type"] =
         "#SecureBootDatabase.v1_0_1.SecureBootDatabase";
     aResp->res.jsonValue["Id"] = databaseId;
@@ -219,23 +221,23 @@ inline void
                                           " Secure Boot Database";
     aResp->res.jsonValue["DatabaseId"] = databaseId;
     aResp->res.jsonValue["Certificates"]["@odata.id"] =
-        "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-        "/SecureBoot/SecureBootDatabases/" +
-        databaseId + "/Certificates";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId + "/Certificates";
     if (hasSignature(databaseId))
     {
         aResp->res.jsonValue["Signatures"]["@odata.id"] =
-            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-            "/SecureBoot/SecureBootDatabases/" +
-            databaseId + "/Signatures";
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/SecureBoot/SecureBootDatabases/" + databaseId + "/Signatures";
     }
     if (!isDefaultDatabase(databaseId))
     {
         aResp->res
             .jsonValue["Actions"]["#SecureBootDatabase.ResetKeys"]["target"] =
-            "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-            "/SecureBoot/SecureBootDatabases/" +
-            databaseId + "/Actions/SecureBootDatabase.ResetKeys";
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/SecureBoot/SecureBootDatabases/" + databaseId +
+            "/Actions/SecureBootDatabase.ResetKeys";
         aResp->res.jsonValue["Actions"]["#SecureBootDatabase.ResetKeys"]
                             ["ResetKeysType@Redfish.AllowableValues"] = {
             "DeleteAllKeys"};
@@ -330,16 +332,16 @@ inline void handleCertificateCollectionGet(
     {
         return;
     }
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                        "/SecureBoot/SecureBootDatabases/" +
-                                        databaseId + "/Certificates";
+    aResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId + "/Certificates";
     aResp->res.jsonValue["@odata.type"] =
         "#CertificateCollection.CertificateCollection";
     aResp->res.jsonValue["Name"] = "Certificate Collection";
     aResp->res.jsonValue["@Redfish.SupportedCertificates"] = {"PEM"};
-    std::string certURI = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                          "/SecureBoot/SecureBootDatabases/" +
-                          databaseId + "/Certificates";
+    std::string certURI =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId + "/Certificates";
     constexpr std::array<std::string_view, 1> interfaces{
         "xyz.openbmc_project.Certs.Certificate"};
     collection_util::getCollectionMembers(
@@ -420,10 +422,12 @@ inline void handleCertificateCollectionPost(
             sdbusplus::message::object_path path(objectPath);
             std::string certId = path.filename();
             messages::created(aResp->res);
-            aResp->res.addHeader(boost::beast::http::field::location,
-                                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                 "/SecureBoot/SecureBootDatabases/" +
-                                     databaseId + "/Certificates/" + certId);
+            aResp->res.addHeader(
+                boost::beast::http::field::location,
+                "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/SecureBoot/SecureBootDatabases/" + databaseId +
+                    "/Certificates/" + certId);
 
             if (owner)
             {
@@ -458,9 +462,10 @@ inline void
     {
         return;
     }
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                        "/SecureBoot/SecureBootDatabases/" +
-                                        databaseId + "/Certificates/" + certId;
+    aResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId + "/Certificates/" +
+        certId;
     aResp->res.jsonValue["@odata.type"] = "#Certificate.v1_7_0.Certificate";
     aResp->res.jsonValue["Id"] = certId;
     aResp->res.jsonValue["Name"] = databaseId + " Certificate";
@@ -601,16 +606,16 @@ inline void handleSignatureCollectionGet(
                                    databaseId);
         return;
     }
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                        "/SecureBoot/SecureBootDatabases/" +
-                                        databaseId + "/Signatures";
+    aResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId + "/Signatures";
     aResp->res.jsonValue["@odata.type"] =
         "#SignatureCollection.SignatureCollection";
     aResp->res.jsonValue["Name"] = "Signature Collection";
 
-    std::string signatureURL = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                               "/SecureBoot/SecureBootDatabases/" +
-                               databaseId + "/Signatures";
+    std::string signatureURL =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId + "/Signatures";
     constexpr std::array<std::string_view, 1> interfaces{
         "xyz.openbmc_project.BIOSConfig.SecureBootDatabase.Signature"};
     collection_util::getCollectionMembers(
@@ -702,10 +707,12 @@ inline void handleSignatureCollectionPost(
             sdbusplus::message::object_path path(objectPath);
             std::string sigId = path.filename();
             messages::created(aResp->res);
-            aResp->res.addHeader(boost::beast::http::field::location,
-                                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                 "/SecureBoot/SecureBootDatabases/" +
-                                     databaseId + "/Signatures/" + sigId);
+            aResp->res.addHeader(
+                boost::beast::http::field::location,
+                "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/SecureBoot/SecureBootDatabases/" + databaseId +
+                    "/Signatures/" + sigId);
 
             if (owner)
             {
@@ -744,9 +751,10 @@ inline void handleSignatureGet(crow::App& app, const crow::Request& req,
         messages::resourceNotFound(aResp->res, "Signature", sigId);
         return;
     }
-    aResp->res.jsonValue["@odata.id"] = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                        "/SecureBoot/SecureBootDatabases/" +
-                                        databaseId + "/Signatures/" + sigId;
+    aResp->res.jsonValue["@odata.id"] =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/SecureBoot/SecureBootDatabases/" + databaseId + "/Signatures/" +
+        sigId;
     aResp->res.jsonValue["@odata.type"] = "#Signature.v1_0_2.Signature";
     aResp->res.jsonValue["Name"] = "Signature Collection";
     aResp->res.jsonValue["Id"] = sigId;
@@ -852,72 +860,84 @@ inline void
 
 inline void requestRoutesSecureBootDatabase(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/SecureBoot/SecureBootDatabases/")
         .privileges(redfish::privileges::getSecureBootDatabaseCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleSecureBootDatabaseCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/SecureBoot/SecureBootDatabases/<str>/")
         .privileges(redfish::privileges::getSecureBootDatabase)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleSecureBootDatabaseGet, std::ref(app)));
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-        "/SecureBoot/SecureBootDatabases/<str>/Actions/SecureBootDatabase.ResetKeys/")
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/SecureBoot/SecureBootDatabases/<str>/Actions/SecureBootDatabase.ResetKeys/")
         .privileges(redfish::privileges::postSecureBootDatabase)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             secure_boot::handleSecureBootDatabaseResetKeys, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/<str>/Certificates/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/SecureBoot/SecureBootDatabases/<str>/Certificates/")
         .privileges(redfish::privileges::getCertificateCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleCertificateCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/<str>/Certificates/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/SecureBoot/SecureBootDatabases/<str>/Certificates/")
         .privileges(redfish::privileges::postCertificateCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             secure_boot::handleCertificateCollectionPost, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/" +
+                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                  "/SecureBoot/SecureBootDatabases/<str>/Certificates/<str>/")
         .privileges(redfish::privileges::getCertificate)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(secure_boot::handleCertificateGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/" +
+                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                  "/SecureBoot/SecureBootDatabases/<str>/Certificates/<str>/")
         .privileges(redfish::privileges::deleteCertificate)
         .methods(boost::beast::http::verb::delete_)(std::bind_front(
             secure_boot::handleCertificateDelete, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/<str>/Signatures/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/SecureBoot/SecureBootDatabases/<str>/Signatures/")
         .privileges(redfish::privileges::getSignatureCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleSignatureCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/<str>/Signatures/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/SecureBoot/SecureBootDatabases/<str>/Signatures/")
         .privileges(redfish::privileges::postSignatureCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             secure_boot::handleSignatureCollectionPost, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" +
+                     std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                     "/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
         .privileges(redfish::privileges::getSignature)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(secure_boot::handleSignatureGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" +
+                     std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                     "/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
         .privileges(redfish::privileges::deleteSignature)
         .methods(boost::beast::http::verb::delete_)(
             std::bind_front(secure_boot::handleSignatureDelete, std::ref(app)));

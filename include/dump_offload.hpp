@@ -252,8 +252,9 @@ static boost::container::flat_map<crow::streaming_response::Connection*,
 
 inline void requestRoutes(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/LogServices/Dump/Entries/<str>/attachment")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/LogServices/Dump/Entries/<str>/attachment")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {

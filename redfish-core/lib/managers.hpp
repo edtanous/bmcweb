@@ -438,8 +438,9 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
      *
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/Actions/Oem/NvidiaManager.ResetToDefaults")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/Actions/Oem/NvidiaManager.ResetToDefaults")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -502,8 +503,9 @@ inline void requestRoutesNvidiaManagerEmmcSecureErase(App& app)
      *
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/Actions/Oem/eMMC.SecureErase")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/Actions/Oem/eMMC.SecureErase")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -539,8 +541,9 @@ inline void requestRoutesManagerEmmcSecureEraseActionInfo(App& app)
      * Functions triggers appropriate requests on DBus
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/Oem/EmmcSecureEraseActionInfo/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/Oem/EmmcSecureEraseActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -553,7 +556,8 @@ inline void requestRoutesManagerEmmcSecureEraseActionInfo(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#ActionInfo.v1_1_2.ActionInfo";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
             "/Oem/EmmcSecureEraseActionInfo";
         asyncResp->res.jsonValue["Name"] = "Emmc Secure Erase Action Info";
         asyncResp->res.jsonValue["Id"] = "EmmcSecureEraseActionInfo";
@@ -590,8 +594,8 @@ inline void requestRoutesManagerResetActionInfo(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#ActionInfo.v1_1_2.ActionInfo";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-            "/ResetActionInfo";
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) + "/ResetActionInfo";
         asyncResp->res.jsonValue["Name"] = "Reset Action Info";
         asyncResp->res.jsonValue["Id"] = "ResetActionInfo";
         nlohmann::json::object_t parameter;
@@ -643,8 +647,9 @@ inline void
  */
 inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/Actions/Oem/Nvidia/SelCapacity/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/Actions/Oem/Nvidia/SelCapacity/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
@@ -700,8 +705,9 @@ inline void
  */
 inline void requestRoutesNvidiaManagerGetSelCapacity(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/Oem/Nvidia/SelCapacity/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/Oem/Nvidia/SelCapacity/")
         .privileges(redfish::privileges::getManager)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
@@ -925,8 +931,9 @@ void executeRawSynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
 inline void requestRouteSyncRawOobCommand(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/Actions/Oem/NvidiaManager.SyncOOBRawCommand")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/Actions/Oem/NvidiaManager.SyncOOBRawCommand")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -1170,8 +1177,9 @@ void executeRawAsynCommand(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
 inline void requestRouteAsyncRawOobCommand(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                      "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
+                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                          "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -1401,9 +1409,9 @@ inline void
                     zone["Chassis"] = {
                         {"@odata.id", "/redfish/v1/Chassis/" + chassis}};
                     zone["@odata.id"] =
-                        "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                        "#/Oem/OpenBmc/Fan/FanZones/" +
-                        name;
+                        "/redfish/v1/Managers/" +
+                        std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                        "#/Oem/OpenBmc/Fan/FanZones/" + name;
                     zone["@odata.type"] = "#OemManager.FanZone";
                     config = &zone;
                 }
@@ -1421,9 +1429,9 @@ inline void
                     config = &controller;
 
                     controller["@odata.id"] =
-                        "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                        "#/Oem/OpenBmc/Fan/StepwiseControllers/" +
-                        name;
+                        "/redfish/v1/Managers/" +
+                        std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                        "#/Oem/OpenBmc/Fan/StepwiseControllers/" + name;
                     controller["@odata.type"] =
                         "#OemManager.StepwiseController";
 
@@ -1445,17 +1453,17 @@ inline void
                     if (isFan)
                     {
                         element["@odata.id"] =
-                            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                            "#/Oem/OpenBmc/Fan/FanControllers/" +
-                            name;
+                            "/redfish/v1/Managers/" +
+                            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                            "#/Oem/OpenBmc/Fan/FanControllers/" + name;
                         element["@odata.type"] = "#OemManager.FanController";
                     }
                     else
                     {
                         element["@odata.id"] =
-                            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                            "#/Oem/OpenBmc/Fan/PidControllers/" +
-                            name;
+                            "/redfish/v1/Managers/" +
+                            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                            "#/Oem/OpenBmc/Fan/PidControllers/" + name;
                         element["@odata.type"] = "#OemManager.PidController";
                     }
                 }
@@ -3435,19 +3443,19 @@ inline void requestRoutesManager(App& app)
         oem["@odata.id"] = boost::urls::format("/redfish/v1/Managers/{}#/Oem",
                                                BMCWEB_REDFISH_MANAGER_URI_NAME);
         oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
-        oemOpenbmc["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-            "#/Oem/OpenBmc";
+        oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/" +
+                                  std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                                  "#/Oem/OpenBmc";
 
         oemOpenbmc["Certificates"] = {
-            {"@odata.id",
-             "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-             "/Truststore/Certificates"}};
+            {"@odata.id", "/redfish/v1/Managers/" +
+                              std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                              "/Truststore/Certificates"}};
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
         oem["Nvidia"]["@odata.id"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-            "/Oem/Nvidia";
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) + "/Oem/Nvidia";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_COMMON_PROPERTIES
 
 #endif // BMCWEB_ENABLE_HOST_OS_FEATURE
@@ -3476,7 +3484,8 @@ inline void requestRoutesManager(App& app)
             asyncResp->res
                 .jsonValue["Actions"]["Oem"]["#NvidiaManager.ResetToDefaults"];
         oemResetToDefaults["target"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
             "/Actions/Oem/NvidiaManager.ResetToDefaults";
 
         // build type
@@ -3590,26 +3599,32 @@ inline void requestRoutesManager(App& app)
         nlohmann::json& oemActionsNvidia = oemActions["Nvidia"];
 
         oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["target"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
             "/Actions/Oem/NvidiaManager.SyncOOBRawCommand";
-        oemActionsNvidia
-            ["#NvidiaManager.SyncOOBRawCommand"]["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/Oem/Nvidia/SyncOOBRawCommandActionInfo";
+        oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]
+                        ["@Redfish.ActionInfo"] =
+                            "/redfish/v1/Managers/" +
+                            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                            "/Oem/Nvidia/SyncOOBRawCommandActionInfo";
 
         oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]["target"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
             "/Actions/Oem/NvidiaManager.AsyncOOBRawCommand";
-        oemActionsNvidia
-            ["#NvidiaManager.AsyncOOBRawCommand"]["@Redfish.ActionInfo"] =
-                "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
-                "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
+        oemActionsNvidia["#NvidiaManager.AsyncOOBRawCommand"]
+                        ["@Redfish.ActionInfo"] =
+                            "/redfish/v1/Managers/" +
+                            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
+                            "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
 
         oemActions["#eMMC.SecureErase"]["target"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
             "/Actions/Oem/eMMC.SecureErase";
         oemActions["#eMMC.SecureErase"]["@Redfish.ActionInfo"] =
-            "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)  +
+            "/redfish/v1/Managers/" +
+            std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
             "/Oem/EmmcSecureEraseActionInfo";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
@@ -3655,8 +3670,8 @@ inline void requestRoutesManager(App& app)
 
         nlohmann::json::array_t managerForServers;
         nlohmann::json::object_t manager;
-        manager["@odata.id"] =
-            "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        manager["@odata.id"] = "/redfish/v1/Systems/" +
+                               std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
         managerForServers.push_back(std::move(manager));
 
         asyncResp->res.jsonValue["Links"]["ManagerForServers"] =
@@ -3785,7 +3800,7 @@ inline void requestRoutesManager(App& app)
             "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
             "Progress",
             [asyncResp, managerId](const boost::system::error_code& ec,
-                               double val) {
+                                   double val) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR("Error while getting progress");
@@ -4114,8 +4129,8 @@ inline void requestRoutesManagerCollection(App& app)
         members = nlohmann::json::array();
         // Add bmc path
         members.push_back(
-            {{"@odata.id",
-              "/redfish/v1/Managers/" + std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)}});
+            {{"@odata.id", "/redfish/v1/Managers/" +
+                               std::string(BMCWEB_REDFISH_MANAGER_URI_NAME)}});
         // Collect additional management services
         crow::connections::systemBus->async_method_call(
             [collectionPath,

@@ -3,6 +3,7 @@
 #include "nlohmann/json.hpp"
 
 #include <app.hpp>
+#include <boost/url/format.hpp>
 #include <dbus_utility.hpp>
 #include <query.hpp>
 #include <registries/privilege_registry.hpp>
@@ -10,8 +11,6 @@
 
 #include <fstream>
 #include <iostream>
-
-#include <boost/url/format.hpp>
 
 namespace redfish
 {
@@ -1861,24 +1860,28 @@ inline void
         return;
     }
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Bios";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/Bios";
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_2_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Configuration Service";
     asyncResp->res.jsonValue["Id"] = "BIOS";
     asyncResp->res.jsonValue["Actions"]["#Bios.ResetBios"] = {
-        {"target", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                   "/Bios/Actions/Bios.ResetBios"},
+        {"target", "/redfish/v1/Systems/" +
+                       std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                       "/Bios/Actions/Bios.ResetBios"},
     };
     asyncResp->res.jsonValue["Actions"]["#Bios.ChangePassword"] = {
-        {"target", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                   "/Bios/Actions/Bios.ChangePassword"},
+        {"target", "/redfish/v1/Systems/" +
+                       std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                       "/Bios/Actions/Bios.ChangePassword"},
     };
     nlohmann::json biosSettings;
     biosSettings["@odata.type"] = "#Settings.v1_3_5.Settings";
-    biosSettings["SettingsObject"] = {{"@odata.id",
-                                       "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                       "/Bios/Settings"}};
+    biosSettings["SettingsObject"] = {
+        {"@odata.id", "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Bios/Settings"}};
     asyncResp->res.jsonValue["@Redfish.Settings"] = biosSettings;
 
     // Get the ActiveSoftwareImage and SoftwareImages
@@ -1964,17 +1967,23 @@ inline void
 
 inline void requestRoutesBiosService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Bios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Bios/")
         .privileges(redfish::privileges::getBios)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleBiosServiceGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Bios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Bios/")
         .privileges(redfish::privileges::putBios)
         .methods(boost::beast::http::verb::put)(
             std::bind_front(handleBiosServicePut, std::ref(app)));
 #ifdef BMCWEB_ENABLE_DPU_BIOS
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Bios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Bios/")
         .privileges(redfish::privileges::patchBios)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleBiosServicePatch, std::ref(app)));
@@ -2016,7 +2025,8 @@ inline void
         return;
     }
     asyncResp->res.jsonValue["@odata.id"] =
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Bios/Settings";
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/Bios/Settings";
     asyncResp->res.jsonValue["@odata.type"] = "#Bios.v1_2_0.Bios";
     asyncResp->res.jsonValue["Name"] = "BIOS Configuration";
     asyncResp->res.jsonValue["Description"] = "BIOS Settings";
@@ -2029,12 +2039,16 @@ inline void
 
 inline void requestRoutesBiosSettings(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Bios/Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Bios/Settings")
         .privileges(redfish::privileges::getBios)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleBiosSettingsGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Bios/Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Bios/Settings")
         .privileges(redfish::privileges::patchBios)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleBiosSettingsPatch, std::ref(app)));

@@ -177,8 +177,9 @@ void getEthernetIfaceDataHost(
 
 inline void requestHostEthernetInterfacesRoutes(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/EthernetInterfaces/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/EthernetInterfaces/")
         .privileges(redfish::privileges::getEthernetInterfaceCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -191,7 +192,8 @@ inline void requestHostEthernetInterfacesRoutes(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#EthernetInterfaceCollection.EthernetInterfaceCollection";
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/EthernetInterfaces";
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/EthernetInterfaces";
         asyncResp->res.jsonValue["Name"] =
             "Ethernet Network Interface Collection";
         asyncResp->res.jsonValue["Description"] =
@@ -217,22 +219,26 @@ inline void requestHostEthernetInterfacesRoutes(App& app)
                 if (found == std::string::npos)
                 {
                     nlohmann::json::object_t iface;
-                    iface["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                         "/EthernetInterfaces/" +
-                                         ifaceItem;
+                    iface["@odata.id"] =
+                        "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/EthernetInterfaces/" + ifaceItem;
                     ifaceArray.push_back(std::move(iface));
                 }
             }
 
             asyncResp->res.jsonValue["Members@odata.count"] = ifaceArray.size();
             asyncResp->res.jsonValue["@odata.id"] =
-                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/EthernetInterfaces";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                "/EthernetInterfaces";
         },
             {"xyz.openbmc_project.Network.EthernetInterface"});
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/EthernetInterfaces/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/EthernetInterfaces/<str>/")
         .privileges(redfish::privileges::getEthernetInterface)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

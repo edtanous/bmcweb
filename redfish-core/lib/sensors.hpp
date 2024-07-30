@@ -3158,7 +3158,8 @@ inline void
                     // Default is systems URI
                     itemsArray1.push_back(
                         {{"@odata.id",
-                          std::format("/redfish/v1/Systems/{}", BMCWEB_REDFISH_SYSTEM_URI_NAME)}});
+                          std::format("/redfish/v1/Systems/{}",
+                                      BMCWEB_REDFISH_SYSTEM_URI_NAME)}});
                     return;
                 }
                 std::vector<std::string>* data =

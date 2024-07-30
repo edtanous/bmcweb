@@ -111,7 +111,7 @@ inline void
                 // Get interface properties
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, sensorPath](const boost::system::error_code ec,
-                                const PropertiesMap& properties) {
+                                            const PropertiesMap& properties) {
                     if (ec)
                     {
                         messages::internalError(asyncResp->res);
@@ -238,9 +238,9 @@ inline void
                 return;
             }
             linksArray.push_back(
-                {{"@odata.id", "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                               "/Processors/" +
-                                   processorName}});
+                {{"@odata.id", "/redfish/v1/Systems/" +
+                                   std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                   "/Processors/" + processorName}});
         }
     },
         "xyz.openbmc_project.ObjectMapper", objPath + "/all_processors",
@@ -1290,14 +1290,16 @@ inline void handleChassisGetAllProperties(
 
     nlohmann::json::array_t computerSystems;
     nlohmann::json::object_t system;
-    system["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+    system["@odata.id"] = "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
     computerSystems.emplace_back(std::move(system));
     asyncResp->res.jsonValue["Links"]["ComputerSystems"] =
         std::move(computerSystems);
 
     nlohmann::json::array_t managedBy;
     nlohmann::json::object_t manager;
-    manager["@odata.id"] = "/redfish/v1/Managers/"+ std::string(BMCWEB_REDFISH_MANAGER_URI_NAME);
+    manager["@odata.id"] = "/redfish/v1/Managers/" +
+                           std::string(BMCWEB_REDFISH_MANAGER_URI_NAME);
     managedBy.emplace_back(std::move(manager));
     asyncResp->res.jsonValue["Links"]["ManagedBy"] = std::move(managedBy);
 }

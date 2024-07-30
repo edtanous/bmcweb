@@ -792,9 +792,9 @@ inline void
                 return;
             }
             linksArray.push_back(
-                {{"@odata.id", "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                               "/Processors/" +
-                                   processorName}});
+                {{"@odata.id", "/redfish/v1/Systems/" +
+                                   std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                   "/Processors/" + processorName}});
         }
     },
         "xyz.openbmc_project.ObjectMapper", objPath + "/parent_processor",
@@ -905,10 +905,12 @@ inline void getDimmData(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
         }
         // Set @odata only if object is found
         asyncResp->res.jsonValue["@odata.type"] = "#Memory.v1_11_0.Memory";
-        asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
-            "/redfish/v1/Systems/{}/Memory/{}", BMCWEB_REDFISH_SYSTEM_URI_NAME, dimmId);
-        std::string memoryMetricsURI = "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                                       "/Memory/";
+        asyncResp->res.jsonValue["@odata.id"] =
+            boost::urls::format("/redfish/v1/Systems/{}/Memory/{}",
+                                BMCWEB_REDFISH_SYSTEM_URI_NAME, dimmId);
+        std::string memoryMetricsURI =
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Memory/";
         memoryMetricsURI += dimmId;
         std::string environmentMetricsURI = memoryMetricsURI;
         memoryMetricsURI += "/MemoryMetrics";
@@ -1194,7 +1196,8 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 continue;
             }
             std::string memoryMetricsURI =
-                "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  + "/Memory/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Memory/";
             memoryMetricsURI += dimmId;
             memoryMetricsURI += "/MemoryMetrics";
             aResp->res.jsonValue["@odata.type"] =
@@ -1257,8 +1260,9 @@ inline void requestRoutesMemoryMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/"+ std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)  +
-                      "/Memory/<str>/MemoryMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Memory/<str>/MemoryMetrics")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,

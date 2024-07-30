@@ -162,7 +162,9 @@ static void oocUtilServiceConditions(
          {"Message", message},
          {"MessageId", messageId},
          {"MessageArgs", msgArgs}};
-    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/"
+    j["LogEntry"]["@odata.id"] = "/redfish/v1/Systems/" +
+                                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                 "/"
                                  "LogServices/EventLog/Entries/" +
                                  id;
     if (ooc.size() > 0)
@@ -272,7 +274,8 @@ inline std::string getDeviceRedfishURI(const std::string& device)
 
     if (std::string_view(BMCWEB_REDFISH_SYSTEM_URI_NAME).ends_with(device))
     {
-        return systemsPrefixRedfish + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        return systemsPrefixRedfish +
+               std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
     }
     else
     {

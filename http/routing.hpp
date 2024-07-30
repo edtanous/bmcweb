@@ -451,14 +451,14 @@ class Router
         }
 
         if (ruleObject->isNotFound)
-                {
+        {
             notFoundRoutes.internalAdd(rule, ruleObject);
-                }
+        }
 
         if (ruleObject->isMethodNotAllowed)
         {
             methodNotAllowedRoutes.internalAdd(rule, ruleObject);
-            }
+        }
 
         if (ruleObject->isUpgrade)
         {

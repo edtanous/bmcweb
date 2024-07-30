@@ -4,11 +4,11 @@
 #include "logging.hpp"
 #include "utils/hex_utils.hpp"
 
+#include <fcntl.h>
+
 #include <boost/asio/buffer.hpp>
 #include <boost/beast/core/flat_static_buffer.hpp>
 #include <boost/beast/http/basic_dynamic_body.hpp>
-#include <fcntl.h>
-
 #include <boost/beast/http/message.hpp>
 #include <nlohmann/json.hpp>
 
