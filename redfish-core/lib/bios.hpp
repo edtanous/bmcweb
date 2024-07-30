@@ -2321,7 +2321,8 @@ inline void clearVariables(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  */
 inline void handleNvidiaBiosResetPost(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -2335,11 +2336,9 @@ inline void handleNvidiaBiosResetPost(
 }
 #endif
 
-/*
 inline void requestRoutesBiosReset(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" BMCWEB_REDFISH_SYSTEM_URI_NAME
-                      "/Bios/Actions/Bios.ResetBios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/Actions/Bios.ResetBios/")
         .privileges(redfish::privileges::postBios)
         .methods(boost::beast::http::verb::post)(
 #ifdef BMCWEB_RESET_BIOS_BY_CLEAR_NONVOLATILE
@@ -2349,7 +2348,6 @@ inline void requestRoutesBiosReset(App& app)
 #endif
         );
 }
-*/
 
 /**
  * ChangePassword class supports handle POST method for bios.

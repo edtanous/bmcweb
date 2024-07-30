@@ -102,7 +102,7 @@ void assertServiceRootGet(crow::Response& res)
         EXPECT_EQ(json["ProtocolFeaturesSupported"]["ExpandQuery"].size(), 4);
     }
     EXPECT_EQ(json["ProtocolFeaturesSupported"]["FilterQuery"],
-              bmcwebInsecureEnableQueryParams);
+              BMCWEB_INSECURE_ENABLE_REDFISH_QUERY);
     EXPECT_TRUE(json["ProtocolFeaturesSupported"]["OnlyMemberQuery"]);
     EXPECT_TRUE(json["ProtocolFeaturesSupported"]["SelectQuery"]);
     EXPECT_FALSE(
@@ -111,7 +111,7 @@ void assertServiceRootGet(crow::Response& res)
         json["ProtocolFeaturesSupported"]["DeepOperations"]["DeepPATCH"]);
     EXPECT_EQ(json["ProtocolFeaturesSupported"]["DeepOperations"].size(), 2);
 
-    size_t expectedSize = 21;
+    size_t expectedSize = 24;
 
     if (BMCWEB_REDFISH_AGGREGATION)
     {

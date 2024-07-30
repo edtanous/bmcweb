@@ -590,12 +590,12 @@ struct TftpUrl
     std::string tftpServer;
 };
 
-inline std::optional<TftpUrl>
-    parseTftpUrl(std::string imageURI,
-                 std::optional<std::string> transferProtocol,
-                 crow::Response& res)
+inline std::optional<boost::urls::url>
+    parseSimpleUpdateUrl(std::string imageURI,
+                         std::optional<std::string> transferProtocol,
+                         crow::Response& res)
 {
-    if (imageURI.find("://") == std::string::npos)
+        if (imageURI.find("://") == std::string::npos)
     {
         if (imageURI.starts_with("/"))
         {
@@ -609,8 +609,16 @@ inline std::optional<TftpUrl>
                 res, imageURI, "ImageURI", "UpdateService.SimpleUpdate");
             return std::nullopt;
         }
-        // OpenBMC currently only supports TFTP
-        if (*transferProtocol != "TFTP")
+        // OpenBMC currently only supports TFTP or HTTPS
+        if (*transferProtocol == "TFTP")
+        {
+            imageURI = "tftp://" + imageURI;
+        }
+        else if (*transferProtocol == "HTTPS")
+        {
+            imageURI = "https://" + imageURI;
+        }
+        else
         {
             messages::actionParameterNotSupported(res, "TransferProtocol",
                                                   *transferProtocol);
@@ -618,7 +626,6 @@ inline std::optional<TftpUrl>
                              *transferProtocol);
             return std::nullopt;
         }
-        imageURI = "tftp://" + imageURI;
     }
 
     boost::system::result<boost::urls::url> url =
@@ -632,20 +639,37 @@ inline std::optional<TftpUrl>
     }
     url->normalize();
 
-    if (url->scheme() != "tftp")
+    if (url->scheme() == "tftp")
+    {
+        if (url->encoded_path().size() < 2)
+        {
+            messages::actionParameterNotSupported(res, "ImageURI",
+                                                  url->buffer());
+            return std::nullopt;
+        }
+    }
+    else if (url->scheme() == "https")
+    {
+        // Empty paths default to "/"
+        if (url->encoded_path().empty())
+        {
+            url->set_encoded_path("/");
+        }
+    }
+    else
     {
         messages::actionParameterNotSupported(res, "ImageURI", imageURI);
         return std::nullopt;
     }
-    std::string path(url->encoded_path());
-    if (path.size() < 2)
+
+    if (url->encoded_path().empty())
     {
-        messages::actionParameterNotSupported(res, "ImageURI", imageURI);
+        messages::actionParameterValueTypeError(res, imageURI, "ImageURI",
+                                                "UpdateService.SimpleUpdate");
         return std::nullopt;
     }
-    path.erase(0, 1);
-    std::string host(url->encoded_host_and_port());
-    return TftpUrl{path, host};
+
+    return *url;
 }
 
 /**
