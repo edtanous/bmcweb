@@ -938,13 +938,13 @@ inline void requestRoutesUpdateServiceActionsSimpleUpdate(App& app)
  *
  * @return None
  */
-inline void uploadImageFile(const crow::Request& req,
+inline void uploadImageFile(const std::shared_ptr<const crow::Request>& req,
                             const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     std::filesystem::path filepath(updateServiceImageLocation +
                                    bmcweb::getRandomUUID());
 
-    monitorForSoftwareAvailable(asyncResp, req, fwObjectCreationDefaultTimeout,
+    monitorForSoftwareAvailable(asyncResp, *req, fwObjectCreationDefaultTimeout,
                                 filepath);
 
     BMCWEB_LOG_DEBUG("Writing file to {}", filepath.string());
@@ -956,7 +956,7 @@ inline void uploadImageFile(const crow::Request& req,
     std::filesystem::permissions(filepath, permission);
 
     MultipartParser parser;
-    ParserError ec = parser.parse(req);
+    ParserError ec = parser.parse(*req);
     if (ec != ParserError::PARSER_SUCCESS)
     {
         // handle error
@@ -1079,7 +1079,8 @@ inline bool areTargetsInvalidOrUnupdatable(
  */
 inline void validateUpdatePolicyCallback(
     const boost::system::error_code errorCode,
-    const dbus::utility::MapperServiceMap& objInfo, const crow::Request& req,
+    const dbus::utility::MapperServiceMap& objInfo,
+    const std::shared_ptr<const crow::Request>& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::vector<sdbusplus::message::object_path>& targets)
 {
@@ -1138,7 +1139,8 @@ inline void validateUpdatePolicyCallback(
  */
 inline void areTargetsUpdateableCallback(
     const boost::system::error_code& ec,
-    const std::vector<std::string>& objPaths, const crow::Request& req,
+    const std::vector<std::string>& objPaths,
+    const std::shared_ptr<const crow::Request>& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::vector<std::string>& uriTargets,
     const std::vector<std::string>& swInvPaths)
@@ -1230,7 +1232,7 @@ inline void
             [req, asyncResp, uriTargets,
              swInvPaths](const boost::system::error_code ec,
                          const std::vector<std::string>& objPaths) {
-            areTargetsUpdateableCallback(ec, objPaths, *req, asyncResp,
+            areTargetsUpdateableCallback(ec, objPaths, req, asyncResp,
                                          uriTargets, swInvPaths);
         });
     },
