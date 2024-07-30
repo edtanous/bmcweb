@@ -3991,8 +3991,8 @@ inline void
 #error "Conflicts! Please set disable-health-rollup=disabled."
 #endif
 
-    health_utils::getDeviceHealthInfo(asyncResp->res,
-                                      BMCWEB_REDFISH_SYSTEM_URI_NAME);
+    health_utils::getDeviceHealthInfo(
+        asyncResp->res, std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME));
 #endif // BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     redfish::conditions_utils::populateServiceConditions(
