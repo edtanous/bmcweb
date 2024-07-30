@@ -1269,10 +1269,10 @@ inline void getAcceleratorDataByService(
 #endif // ifndef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 
 #ifdef BMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE
-/** NOTES: This is a temporary solution to avoid performance issues may impact
- *  other Redfish services. Please call for architecture decisions from all
- *  NvBMC teams if want to use it in other places.
- */
+        /** NOTES: This is a temporary solution to avoid performance issues may
+         * impact other Redfish services. Please call for architecture decisions
+         * from all NvBMC teams if want to use it in other places.
+         */
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
 #error "Conflicts! Please set health-rollup-alternative=disabled."
@@ -1558,7 +1558,7 @@ inline void getOperatingConfigData(
         "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
         [aResp,
          deviceType](const boost::system::error_code ec,
-                const dbus::utility::DBusPropertiesMap& properties) {
+                     const dbus::utility::DBusPropertiesMap& properties) {
         if (ec)
         {
             BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
@@ -1896,7 +1896,7 @@ inline void getProcessorPerformanceData(
     crow::connections::systemBus->async_method_call(
         [aResp, objPath,
          deviceType](const boost::system::error_code ec,
-                         const OperatingConfigProperties& properties) {
+                     const OperatingConfigProperties& properties) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("DBUS response error");
@@ -2869,62 +2869,62 @@ inline void patchMigMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
         BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
 
-    // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId, migMode](boost::system::error_code ec,
-                                     sdbusplus::message::message& msg) {
-        if (!ec)
-        {
-            BMCWEB_LOG_DEBUG("Set MIG Mode property succeeded");
-            return;
-        }
+        // Set the property, with handler to check error responses
+        crow::connections::systemBus->async_method_call(
+            [resp, processorId, migMode](boost::system::error_code ec,
+                                         sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG("Set MIG Mode property succeeded");
+                return;
+            }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set MIG Mode  property failed: {}",
-                         processorId, ec);
-        // Read and convert dbus error message to redfish error
-        const sd_bus_error* dbusError = msg.get_error();
-        if (dbusError == nullptr)
-        {
-            messages::internalError(resp->res);
-            return;
-        }
+            BMCWEB_LOG_DEBUG("CPU:{} set MIG Mode  property failed: {}",
+                             processorId, ec);
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
 
-        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                    "Device.Error.WriteFailure") == 0)
-        {
-            // Service failed to change the config
-            messages::operationFailed(resp->res);
-        }
-        else if (strcmp(dbusError->name,
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else if (strcmp(dbusError->name,
                             "xyz.openbmc_project.Common.Error.Unavailable") ==
                      0)
-        {
-            std::string errBusy = "0x50A";
-            std::string errBusyResolution =
-                "SMBPBI Command failed with error busy, please try after 60 seconds";
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-            // busy error
-            messages::asyncError(resp->res, errBusy, errBusyResolution);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
-        {
-            std::string errTimeout = "0x600";
-            std::string errTimeoutResolution =
-                "Settings may/maynot have applied, please check get response before patching";
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
 
-            // timeout error
+                // timeout error
                 messages::asyncError(resp->res, errTimeout,
                                      errTimeoutResolution);
-        }
-        else
-        {
-            messages::internalError(resp->res);
-        }
-    },
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
             service, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
             "com.nvidia.MigMode", "MIGModeEnabled",
-        std::variant<bool>(migMode));
+            std::variant<bool>(migMode));
     });
 }
 
@@ -3685,9 +3685,9 @@ inline void requestRoutesProcessor(App& app)
                         asyncResp, processorId,
                         [migMode](
                             const std::shared_ptr<bmcweb::AsyncResp>&
-                                      asyncResp1,
-                                  const std::string& processorId1,
-                                  const std::string& objectPath,
+                                asyncResp1,
+                            const std::string& processorId1,
+                            const std::string& objectPath,
                             const MapperServiceMap& serviceMap,
                             [[maybe_unused]] const std::string& deviceType) {
                         patchMigMode(asyncResp1, processorId1, *migMode,
@@ -4060,7 +4060,7 @@ inline void
         std::string redirectObjPath;
 
         if (ec)
-{
+        {
             BMCWEB_LOG_DEBUG("DBUS response error");
             return;
         }
@@ -4081,81 +4081,81 @@ inline void
             objPath = path;
         }
 
-    crow::connections::systemBus->async_method_call(
+        crow::connections::systemBus->async_method_call(
             [aResp, service, objPath,
              deviceType](const boost::system::error_code& e,
-                  std::variant<std::vector<std::string>>& resp) {
-        if (e)
-        {
-            // No state sensors attached.
-            return;
-        }
-        std::vector<std::string>* data =
-            std::get_if<std::vector<std::string>>(&resp);
-        if (data == nullptr)
-        {
-            messages::internalError(aResp->res);
-            return;
-        }
+                         std::variant<std::vector<std::string>>& resp) {
+            if (e)
+            {
+                // No state sensors attached.
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                messages::internalError(aResp->res);
+                return;
+            }
 
-        for (const std::string& sensorPath : *data)
-        {
-            BMCWEB_LOG_DEBUG("State Sensor Object Path {}", sensorPath);
+            for (const std::string& sensorPath : *data)
+            {
+                BMCWEB_LOG_DEBUG("State Sensor Object Path {}", sensorPath);
 
-            const std::array<const char*, 3> sensorInterfaces = {
-                "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
-                "xyz.openbmc_project.State.ProcessorPerformance",
-                "com.nvidia.MemorySpareChannel"};
-            // Process sensor reading
-            crow::connections::systemBus->async_method_call(
+                const std::array<const char*, 3> sensorInterfaces = {
+                    "xyz.openbmc_project.State.Decorator.PowerSystemInputs",
+                    "xyz.openbmc_project.State.ProcessorPerformance",
+                    "com.nvidia.MemorySpareChannel"};
+                // Process sensor reading
+                crow::connections::systemBus->async_method_call(
                     [aResp, sensorPath, deviceType](
-                    const boost::system::error_code ec,
-                    const std::vector<std::pair<
-                        std::string, std::vector<std::string>>>& object) {
-                if (ec)
-                {
-                    // The path does not implement any state interfaces.
-                    return;
-                }
-
-                for (const auto& [service, interfaces] : object)
-                {
-                    if (std::find(
-                            interfaces.begin(), interfaces.end(),
-                            "xyz.openbmc_project.State.ProcessorPerformance") !=
-                        interfaces.end())
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                    if (ec)
                     {
+                        // The path does not implement any state interfaces.
+                        return;
+                    }
+
+                    for (const auto& [service, interfaces] : object)
+                    {
+                        if (std::find(
+                                interfaces.begin(), interfaces.end(),
+                                "xyz.openbmc_project.State.ProcessorPerformance") !=
+                            interfaces.end())
+                        {
                             getProcessorPerformanceData(aResp, service,
                                                         sensorPath, deviceType);
-                    }
-                    if (std::find(
-                            interfaces.begin(), interfaces.end(),
-                            "xyz.openbmc_project.State.Decorator.PowerSystemInputs") !=
-                        interfaces.end())
-                    {
+                        }
+                        if (std::find(
+                                interfaces.begin(), interfaces.end(),
+                                "xyz.openbmc_project.State.Decorator.PowerSystemInputs") !=
+                            interfaces.end())
+                        {
                             getPowerSystemInputsData(aResp, service,
                                                      sensorPath);
+                        }
+                        if (std::find(interfaces.begin(), interfaces.end(),
+                                      "com.nvidia.MemorySpareChannel") !=
+                            interfaces.end())
+                        {
+                            getMemorySpareChannelPresenceData(aResp, service,
+                                                              sensorPath);
+                        }
                     }
-                    if (std::find(interfaces.begin(), interfaces.end(),
-                                  "com.nvidia.MemorySpareChannel") !=
-                        interfaces.end())
-                    {
-                        getMemorySpareChannelPresenceData(aResp, service,
-                                                          sensorPath);
-                    }
-                }
-            },
-                "xyz.openbmc_project.ObjectMapper",
-                "/xyz/openbmc_project/object_mapper",
-                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
-                sensorInterfaces);
-        }
+                },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", sensorPath,
+                    sensorInterfaces);
+            }
 
-        getPowerBreakThrottle(aResp, service, objPath);
-    },
-        "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
-        "org.freedesktop.DBus.Properties", "Get",
-        "xyz.openbmc_project.Association", "endpoints");
+            getPowerBreakThrottle(aResp, service, objPath);
+        },
+            "xyz.openbmc_project.ObjectMapper", objPath + "/all_states",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
     });
 }
 
@@ -4956,9 +4956,9 @@ inline void requestRoutesProcessorSettings(App& app)
                         asyncResp, processorId,
                         [ccMode](
                             const std::shared_ptr<bmcweb::AsyncResp>&
-                                     asyncResp1,
-                                 const std::string& processorId1,
-                                 const std::string& objectPath,
+                                asyncResp1,
+                            const std::string& processorId1,
+                            const std::string& objectPath,
                             const MapperServiceMap& serviceMap,
                             [[maybe_unused]] const std::string& deviceType) {
                         redfish::nvidia_processor_utils::patchCCMode(
@@ -4972,9 +4972,9 @@ inline void requestRoutesProcessorSettings(App& app)
                         asyncResp, processorId,
                         [ccDevMode](
                             const std::shared_ptr<bmcweb::AsyncResp>&
-                                        asyncResp1,
-                                    const std::string& processorId1,
-                                    const std::string& objectPath,
+                                asyncResp1,
+                            const std::string& processorId1,
+                            const std::string& objectPath,
                             const MapperServiceMap& serviceMap,
                             [[maybe_unused]] const std::string& deviceType) {
                         redfish::nvidia_processor_utils::patchCCDevMode(

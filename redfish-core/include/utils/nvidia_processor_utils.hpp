@@ -323,8 +323,9 @@ inline void
     getPowerSmoothingInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                           const std::string& processorId)
 {
-    std::string powerSmoothingURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                    "/Processors/";
+    std::string powerSmoothingURI =
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+        "/Processors/";
     powerSmoothingURI += processorId;
     powerSmoothingURI += "/Oem/Nvidia/PowerSmoothing";
     aResp->res.jsonValue["Oem"]["Nvidia"]["PowerSmoothing"]["@odata.id"] =

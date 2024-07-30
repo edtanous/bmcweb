@@ -315,7 +315,8 @@ inline void
                 continue;
             }
             std::string pwrSmoothingURI =
-                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             pwrSmoothingURI += processorId;
             pwrSmoothingURI += "/Oem/Nvidia/PowerSmoothing";
             aResp->res.jsonValue["@odata.type"] =
@@ -485,7 +486,8 @@ inline void getProcessorPowerSmoothingAdminOverrideData(
                 continue;
             }
             std::string adminOverrideURI =
-                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             adminOverrideURI += processorId;
             adminOverrideURI +=
                 "/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile";
@@ -669,8 +671,9 @@ inline void getProcessorPowerSmoothingPresetProfileData(
             {
                 continue;
             }
-            std::string profileURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                     "/Processors/";
+            std::string profileURI =
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             profileURI += processorId;
             profileURI += "/Oem/Nvidia/PowerSmoothing/PresetProfiles/";
             profileURI += profileId;
@@ -807,7 +810,8 @@ inline void getProcessorPowerSmoothingPresetProfileCollectionData(
                 continue;
             }
             std::string profileCollectionURI =
-                "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             profileCollectionURI += processorId;
             profileCollectionURI += "/Oem/Nvidia/PowerSmoothing/PresetProfiles";
             aResp->res.jsonValue["@odata.type"] =
@@ -1443,8 +1447,9 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                      "/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1457,8 +1462,9 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
         getProcessorPowerSmoothingData(asyncResp, processorId);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                      "/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
@@ -1493,7 +1499,7 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
     BMCWEB_ROUTE(
         app,
         "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-        "/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ApplyAdminOverrides/")
+            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ApplyAdminOverrides/")
         .privileges(redfish::privileges::postProcessor)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -1510,7 +1516,7 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
     BMCWEB_ROUTE(
         app,
         "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-        "/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ActivatePresetProfile/")
+            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ActivatePresetProfile/")
         .privileges(redfish::privileges::postProcessor)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -1536,7 +1542,7 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
     BMCWEB_ROUTE(
         app,
         "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-        "/Processors/<str>/Oem/Nvidia/PowerSmoothing/ActivatePresetProfileActionInfo/")
+            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/ActivatePresetProfileActionInfo/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1546,8 +1552,9 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
         {
             return;
         }
-        std::string actionInfoURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                                    "/Processors/";
+        std::string actionInfoURI =
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
         actionInfoURI += processorId;
         actionInfoURI +=
             "/Oem/Nvidia/PowerSmoothing/ActivatePresetProfileActionInfo";
@@ -1571,8 +1578,9 @@ inline void requestRoutesProcessorPowerSmoothingAdminProfile(App& app)
      * Functions triggers appropriate requests on DBus
      */
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-             "/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
+        app,
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1586,8 +1594,9 @@ inline void requestRoutesProcessorPowerSmoothingAdminProfile(App& app)
     });
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-             "/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
+        app,
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
@@ -1639,8 +1648,9 @@ inline void
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/" +
+                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                  "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
@@ -1662,8 +1672,9 @@ inline void requestRoutesProcessorPowerSmoothingPresetProfile(App& app)
      * Functions triggers appropriate requests on DBus
      */
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-             "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
+        app,
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1679,8 +1690,9 @@ inline void requestRoutesProcessorPowerSmoothingPresetProfile(App& app)
     });
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-             "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
+        app,
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,

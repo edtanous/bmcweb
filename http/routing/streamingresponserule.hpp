@@ -17,8 +17,9 @@ class StreamingResponseRule : public BaseRule
     using self_t = StreamingResponseRule;
 
   public:
-    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn) {
-      isUpgrade = true;
+    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn)
+    {
+        isUpgrade = true;
     }
 
     void validate() override {}

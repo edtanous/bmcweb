@@ -1028,8 +1028,9 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
 }
 
-// The getMainChassisId() would get the Main Chassis ID but it's not suitable for the case of Drives under sub-chassis
-// Need to ensure this Chassis includes the drive endpoints
+// The getMainChassisId() would get the Main Chassis ID but it's not suitable
+// for the case of Drives under sub-chassis Need to ensure this Chassis includes
+// the drive endpoints
 inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::string& driveId)
 {
@@ -1872,7 +1873,8 @@ inline void requestRoutesChassisDriveName(App& app)
             std::bind_front(handleChassisDriveGet, std::ref(app)));
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase/")
+        app,
+        "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase/")
         .privileges(redfish::privileges::postDrive)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));

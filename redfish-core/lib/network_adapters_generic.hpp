@@ -93,52 +93,57 @@ void getValidNetworkAdapterPath(
             "/xyz/openbmc_project/object_mapper",
             "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
             "/xyz/openbmc_project/inventory", 0, interfaces);
-    } else {
-    crow::connections::systemBus->async_method_call(
-        [callback{std::forward<Callback>(callback)}, asyncResp, chassisObjPath,
-         networkAdapterId](const boost::system::error_code ec,
-                           std::variant<std::vector<std::string>>& resp) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR(
-                "getValidNetworkAdapterPath respHandler DBUS error: {}", ec);
-            messages::internalError(asyncResp->res);
-            return;
-        }
-        std::vector<std::string>* data =
-            std::get_if<std::vector<std::string>>(&resp);
-        if (data == nullptr)
-        {
-            BMCWEB_LOG_ERROR("no network_adapter found {}", chassisObjPath);
-            messages::internalError(asyncResp->res);
-            return;
-        }
+    }
+    else
+    {
+        crow::connections::systemBus->async_method_call(
+            [callback{std::forward<Callback>(callback)}, asyncResp,
+             chassisObjPath,
+             networkAdapterId](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR(
+                    "getValidNetworkAdapterPath respHandler DBUS error: {}",
+                    ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_ERROR("no network_adapter found {}", chassisObjPath);
+                messages::internalError(asyncResp->res);
+                return;
+            }
 
-        std::optional<std::string> validNetworkAdapterPath;
-        for (const std::string& networkAdapterPath : *data)
-        {
-            sdbusplus::message::object_path networkAdapterObjPath(
-                networkAdapterPath);
-            const std::string& networkAdapterName =
-                networkAdapterObjPath.filename();
-            if (networkAdapterName.empty())
+            std::optional<std::string> validNetworkAdapterPath;
+            for (const std::string& networkAdapterPath : *data)
             {
-                BMCWEB_LOG_ERROR("Failed to find '/' in {}",
-                                 networkAdapterPath);
-                continue;
+                sdbusplus::message::object_path networkAdapterObjPath(
+                    networkAdapterPath);
+                const std::string& networkAdapterName =
+                    networkAdapterObjPath.filename();
+                if (networkAdapterName.empty())
+                {
+                    BMCWEB_LOG_ERROR("Failed to find '/' in {}",
+                                     networkAdapterPath);
+                    continue;
+                }
+                if (networkAdapterName == networkAdapterId)
+                {
+                    validNetworkAdapterPath = networkAdapterPath;
+                    break;
+                }
             }
-            if (networkAdapterName == networkAdapterId)
-            {
-                validNetworkAdapterPath = networkAdapterPath;
-                break;
-            }
-        }
-        callback(validNetworkAdapterPath);
-    },
-        "xyz.openbmc_project.ObjectMapper",
-        chassisObjPath + "/network_adapters", "org.freedesktop.DBus.Properties",
-        "Get", "xyz.openbmc_project.Association", "endpoints");
-}
+            callback(validNetworkAdapterPath);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            chassisObjPath + "/network_adapters",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    }
 }
 
 inline void doNetworkAdaptersCollection(

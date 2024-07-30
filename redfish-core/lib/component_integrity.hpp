@@ -619,11 +619,13 @@ inline void requestRoutesComponentIntegrity(App& app)
         {
             return;
         }
-        constexpr std::array<std::string_view, 1> interfaces = {spdmResponderIntf};
+        constexpr std::array<std::string_view, 1> interfaces = {
+            spdmResponderIntf};
         dbus::utility::getSubTreePaths(
             rootSPDMDbusPath, 0, interfaces,
-            [compIntegrityID, asyncResp](const boost::system::error_code& ec,
-                   const dbus::utility::MapperGetSubTreePathsResponse& resp) {
+            [compIntegrityID, asyncResp](
+                const boost::system::error_code& ec,
+                const dbus::utility::MapperGetSubTreePathsResponse& resp) {
             if (ec)
             {
                 BMCWEB_LOG_ERROR("GetSubTreePaths error: {}", ec);
@@ -632,7 +634,8 @@ inline void requestRoutesComponentIntegrity(App& app)
             }
             if (resp.size() == 0)
             {
-                BMCWEB_LOG_ERROR("No objects with SPDM interface found for {}", compIntegrityID);
+                BMCWEB_LOG_ERROR("No objects with SPDM interface found for {}",
+                                 compIntegrityID);
                 messages::resourceMissingAtURI(
                     asyncResp->res,
                     boost::urls::format(
@@ -640,7 +643,7 @@ inline void requestRoutesComponentIntegrity(App& app)
                         compIntegrityID));
                 return;
             }
-            bool found {};
+            bool found{};
             for (const auto& path : resp)
             {
                 if (path.find(compIntegrityID) != std::string::npos)
@@ -651,7 +654,8 @@ inline void requestRoutesComponentIntegrity(App& app)
             }
             if (!found)
             {
-                BMCWEB_LOG_ERROR("SPDM interface not implemented for {}", compIntegrityID);
+                BMCWEB_LOG_ERROR("SPDM interface not implemented for {}",
+                                 compIntegrityID);
                 messages::resourceMissingAtURI(
                     asyncResp->res,
                     boost::urls::format(
@@ -659,27 +663,28 @@ inline void requestRoutesComponentIntegrity(App& app)
                         compIntegrityID));
                 return;
             }
-        asyncResp->res.jsonValue = {
-            {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
-            {"@odata.id", "/redfish/v1/ComponentIntegrity/" + compIntegrityID +
-                              "/SPDMGetSignedMeasurementsActionInfo"},
-            {"Name", "SPDMGetSignedMeasurementsActionInfo"},
-            {"Id", "SPDMGetSignedMeasurementsActionInfo"},
-            {"Parameters",
-             {{{"Name", "MeasurementIndices"},
-               {"Required", false},
-               {"DataType", "NumberArray"},
-               {"MinimumValue", 0},
-               {"MaximumValue", 255}},
-              {{"Name", "Nonce"}, {"Required", false}, {"DataType", "String"}},
-              {{"Name", "SlotId"},
-               {"Required", false},
-               {"DataType", "Number"},
-               {"MinimumValue", 0},
-               {"MaximumValue", 7}}}}};
-
+            asyncResp->res.jsonValue = {
+                {"@odata.type", "#ActionInfo.v1_1_2.ActionInfo"},
+                {"@odata.id", "/redfish/v1/ComponentIntegrity/" +
+                                  compIntegrityID +
+                                  "/SPDMGetSignedMeasurementsActionInfo"},
+                {"Name", "SPDMGetSignedMeasurementsActionInfo"},
+                {"Id", "SPDMGetSignedMeasurementsActionInfo"},
+                {"Parameters",
+                 {{{"Name", "MeasurementIndices"},
+                   {"Required", false},
+                   {"DataType", "NumberArray"},
+                   {"MinimumValue", 0},
+                   {"MaximumValue", 255}},
+                  {{"Name", "Nonce"},
+                   {"Required", false},
+                   {"DataType", "String"}},
+                  {{"Name", "SlotId"},
+                   {"Required", false},
+                   {"DataType", "Number"},
+                   {"MinimumValue", 0},
+                   {"MaximumValue", 7}}}}};
         });
-
     });
 
 } // routes component integrity

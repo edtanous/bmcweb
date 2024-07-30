@@ -65,8 +65,8 @@ inline void
 
     if (generation != nullptr)
     {
-        /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
-        * while upstream sync*/
+        /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken
+         * care while upstream sync*/
         // std::optional<pcie_device::PCIeTypes> pcieType =
         //     pcie_util::redfishPcieGenerationFromDbus(*generation);
 
@@ -78,8 +78,8 @@ inline void
         }
         else
         {
-            /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
-            * while upstream sync*/
+            /*TODO: Add support for Gen6 once DMTF schema is updated, to be
+             * taken care while upstream sync*/
             // if (*pcieType == pcie_device::PCIeTypes::Invalid)
             // {
             //     messages::internalError(asyncResp->res);

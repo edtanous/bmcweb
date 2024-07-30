@@ -951,7 +951,8 @@ inline void requestRoutesEROTChassisDOT(App& app)
 inline void requestRoutesEROTChassisManualBootMode(App& app)
 {
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Chassis/<str>/Actions/Oem/Nvidia/BootProtectedDevice/")
+        app,
+        "/redfish/v1/Chassis/<str>/Actions/Oem/Nvidia/BootProtectedDevice/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,

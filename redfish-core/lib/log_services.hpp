@@ -187,18 +187,21 @@ static void generateMessageRegistry(
                 {"Resolution", res},
                 {"Resolved", resolved}};
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    if ( !eventId.empty() || !deviceName.empty()) {
-    nlohmann::json oem = {
-        {"Oem",
-         {{"Nvidia",
-            {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-        if (!deviceName.empty()) {
+    if (!eventId.empty() || !deviceName.empty())
+    {
+        nlohmann::json oem = {
+            {"Oem",
+             {{"Nvidia",
+               {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+        if (!deviceName.empty())
+        {
             oem["Oem"]["Nvidia"]["Device"] = deviceName;
         }
-        if (!eventId.empty()) {
+        if (!eventId.empty())
+        {
             oem["Oem"]["Nvidia"]["ErrorId"] = eventId;
         }
-    logEntry.update(oem);
+        logEntry.update(oem);
     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 }
@@ -1420,9 +1423,9 @@ inline void
                 asyncResp->res.jsonValue["DiagnosticDataType"] = "OEM";
                 asyncResp->res.jsonValue["OEMDiagnosticDataType"] = "FDR";
                 asyncResp->res.jsonValue["AdditionalDataURI"] =
-                    "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                    "/LogServices/FDR/Entries/" +
-                    entryID + "/attachment";
+                    "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/LogServices/FDR/Entries/" + entryID + "/attachment";
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
             }
             else if (dumpType == "FaultLog")
@@ -1430,14 +1433,15 @@ inline void
                 asyncResp->res.jsonValue["DiagnosticDataType"] =
                     faultLogDiagnosticDataType;
                 asyncResp->res.jsonValue["AdditionalDataURI"] =
-                    "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                    "/LogServices/FaultLog/Entries/" +
-                    entryID + "/attachment";
+                    "/redfish/v1/Systems/" +
+                    std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                    "/LogServices/FaultLog/Entries/" + entryID + "/attachment";
 
                 std::string messageId = "Platform.1.0.PlatformError";
                 asyncResp->res.jsonValue["MessageId"] = messageId;
 
-                const registries::Message* msg = registries::getMessage(messageId);
+                const registries::Message* msg =
+                    registries::getMessage(messageId);
                 if (msg != nullptr)
                 {
                     asyncResp->res.jsonValue["Message"] = msg->message;
@@ -1476,24 +1480,22 @@ inline void
                 }
                 if (nvSocketNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["NvSocketNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvSocketNumber"] =
                         nvSocketNumber;
                 }
                 if (pcieVendorID != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]
-                                            ["PCIeVendorId"] = pcieVendorID;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeVendorId"] =
+                        pcieVendorID;
                 }
                 if (pcieDeviceID != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]
-                                            ["PCIeDeviceId"] = pcieDeviceID;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeDeviceId"] =
+                        pcieDeviceID;
                 }
                 if (pcieClassCode != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PCIeClassCode"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeClassCode"] =
                         pcieClassCode;
                 }
                 if (pcieFunctionNumber != "NA")
@@ -1522,14 +1524,13 @@ inline void
                 }
                 if (pcieSecondaryBusNumber != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]
-                                            ["PCIeSecondaryBusNumber"] =
+                    asyncResp->res
+                        .jsonValue["CPER"]["Oem"]["PCIeSecondaryBusNumber"] =
                         pcieSecondaryBusNumber;
                 }
                 if (pcieSlotNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] =
                         pcieSlotNumber;
                 }
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
@@ -3101,15 +3102,24 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                         redfish::time_utils::getDateTimeStdtime(
                             updateTimestamp);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                    if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
-                        nlohmann::json oem = {{"Oem", {{"Nvidia", {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-                        if (!deviceName.empty()) {
+                    if ((eventId != nullptr && !eventId->empty()) ||
+                        !deviceName.empty())
+                    {
+                        nlohmann::json oem = {
+                            {"Oem",
+                             {{"Nvidia",
+                               {{"@odata.type",
+                                 "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+                        if (!deviceName.empty())
+                        {
                             oem["Oem"]["Nvidia"]["Device"] = deviceName;
                         }
-                        if (eventId != nullptr && !eventId->empty()) {
-                            oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
+                        if (eventId != nullptr && !eventId->empty())
+                        {
+                            oem["Oem"]["Nvidia"]["ErrorId"] =
+                                std::string(*eventId);
                         }
-                    thisEntry.update(oem);
+                        thisEntry.update(oem);
                     }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     std::optional<bool> notifyAction =
@@ -3308,18 +3318,23 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 asyncResp->res.jsonValue["Modified"] =
                     redfish::time_utils::getDateTimeUintMs(*updateTimestamp);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
-                nlohmann::json oem = {
-                    {"Oem",
-                     {{"Nvidia",
-                        {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-                    if (!deviceName.empty()) {
+                if ((eventId != nullptr && !eventId->empty()) ||
+                    !deviceName.empty())
+                {
+                    nlohmann::json oem = {
+                        {"Oem",
+                         {{"Nvidia",
+                           {{"@odata.type",
+                             "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+                    if (!deviceName.empty())
+                    {
                         oem["Oem"]["Nvidia"]["Device"] = deviceName;
                     }
-                    if (eventId != nullptr && !eventId->empty()) {
+                    if (eventId != nullptr && !eventId->empty())
+                    {
                         oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
                     }
-                asyncResp->res.jsonValue.update(oem);
+                    asyncResp->res.jsonValue.update(oem);
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 if (filePath != nullptr)
@@ -3616,18 +3631,22 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
         thisEntry["Modified"] =
             redfish::time_utils::getDateTimeStdtime(updateTimestamp);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
-        nlohmann::json oem = {
-            {"Oem",
-             {{"Nvidia",
-                {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-            if (!deviceName.empty()) {
+        if ((eventId != nullptr && !eventId->empty()) || !deviceName.empty())
+        {
+            nlohmann::json oem = {
+                {"Oem",
+                 {{"Nvidia",
+                   {{"@odata.type",
+                     "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+            if (!deviceName.empty())
+            {
                 oem["Oem"]["Nvidia"]["Device"] = deviceName;
             }
-            if (eventId != nullptr && !eventId->empty()) {
+            if (eventId != nullptr && !eventId->empty())
+            {
                 oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
             }
-        thisEntry.update(oem);
+            thisEntry.update(oem);
         }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     }
@@ -7133,8 +7152,10 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                     std::pair<std::string, std::vector<std::string>>>&
                     connectionNames = object.second;
                 const std::string& connectionName = connectionNames[0].first;
-                
-                BMCWEB_LOG_DEBUG("XID Looking for PrettyName on service {} path {}", connectionName, path);
+
+                BMCWEB_LOG_DEBUG(
+                    "XID Looking for PrettyName on service {} path {}",
+                    connectionName, path);
                 sdbusplus::asio::getProperty<std::string>(
                     *crow::connections::systemBus, connectionName, path,
                     "xyz.openbmc_project.Inventory.Item", "PrettyName",
@@ -7142,24 +7163,26 @@ inline void requestRoutesChassisLogServiceCollection(App& app)
                         const boost::system::error_code ec,
                         const std::string& chassisName) {
                     if (!ec)
-                {
-                        BMCWEB_LOG_DEBUG("XID Looking for Namespace on {}_XID", chassisName);
+                    {
+                        BMCWEB_LOG_DEBUG("XID Looking for Namespace on {}_XID",
+                                         chassisName);
                         crow::connections::systemBus->async_method_call(
                             [asyncResp, chassisId(std::string(chassisId))](
                                 const boost::system::error_code ec,
-                                const std::tuple<uint32_t, uint64_t>& /*reqData*/) {
+                                const std::tuple<uint32_t,
+                                                 uint64_t>& /*reqData*/) {
                             if (!ec)
                             {
                                 nlohmann::json& logServiceArray =
                                     asyncResp->res.jsonValue["Members"];
-                    logServiceArray.push_back(
+                                logServiceArray.push_back(
                                     {{"@odata.id", "/redfish/v1/Chassis/" +
                                                        chassisId +
-                                           "/LogServices/XID"}});
+                                                       "/LogServices/XID"}});
                                 asyncResp->res
                                     .jsonValue["Members@odata.count"] =
                                     logServiceArray.size();
-                }
+                            }
                         },
                             "xyz.openbmc_project.Logging",
                             "/xyz/openbmc_project/logging",
@@ -7663,18 +7686,28 @@ inline void requestRoutesChassisXIDLogEntryCollection(App& app)
                                                     updateTimestamp);
                                         }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                                        if ( (eventId != nullptr && !eventId->empty()) || !deviceName.empty()) {
-                                        nlohmann::json oem = {
-                                            {"Oem",
-                                             {{"Nvidia",
-                                                {{"@odata.type", "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
-                                            if (!deviceName.empty()) {
-                                                oem["Oem"]["Nvidia"]["Device"] = deviceName;
+                                        if ((eventId != nullptr &&
+                                             !eventId->empty()) ||
+                                            !deviceName.empty())
+                                        {
+                                            nlohmann::json oem = {
+                                                {"Oem",
+                                                 {{"Nvidia",
+                                                   {{"@odata.type",
+                                                     "#NvidiaLogEntry.v1_1_0.NvidiaLogEntry"}}}}}};
+                                            if (!deviceName.empty())
+                                            {
+                                                oem["Oem"]["Nvidia"]["Device"] =
+                                                    deviceName;
                                             }
-                                            if (eventId != nullptr && !eventId->empty()) {
-                                                oem["Oem"]["Nvidia"]["ErrorId"] = std::string(*eventId);
+                                            if (eventId != nullptr &&
+                                                !eventId->empty())
+                                            {
+                                                oem["Oem"]["Nvidia"]
+                                                   ["ErrorId"] =
+                                                       std::string(*eventId);
                                             }
-                                        thisEntry.update(oem);
+                                            thisEntry.update(oem);
                                         }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                                         if (filePath != nullptr)
@@ -8115,7 +8148,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataEntryDownload(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
                           std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                           "/LogServices/DebugTokenService"
-                      "/Entries/<str>/attachment/")
+                          "/Entries/<str>/attachment/")
         .privileges(redfish::privileges::getLogEntry)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

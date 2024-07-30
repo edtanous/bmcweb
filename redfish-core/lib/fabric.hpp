@@ -519,9 +519,8 @@ inline void updateSwitchDataByAssociation(
                         std::string, std::vector<std::string>>>& object) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR(
-                        "Error no Switch interface on {} path",
-                        switchPath);
+                    BMCWEB_LOG_ERROR("Error no Switch interface on {} path",
+                                     switchPath);
                     messages::internalError(aResp->res);
                     return;
                 }
@@ -1677,13 +1676,13 @@ inline void requestRoutesSwitchMetrics(App& app)
                                        std::string, std::vector<std::string>>>&
                                        object) {
                             if (ec)
-                        {
+                            {
                                 BMCWEB_LOG_ERROR(
                                     "Error while fetching service for {}",
                                     path);
                                 messages::internalError(asyncResp->res);
                                 return;
-                        }
+                            }
 
                             if (object.empty())
                             {
@@ -1692,38 +1691,38 @@ inline void requestRoutesSwitchMetrics(App& app)
                                 return;
                             }
 
-                        std::string switchURI = "/redfish/v1/Fabrics/";
-                        switchURI += fabricId;
-                        switchURI += "/Switches/";
-                        switchURI += switchId;
-                        std::string switchMetricURI = switchURI;
-                        switchMetricURI += "/SwitchMetrics";
-                        asyncResp->res.jsonValue["@odata.type"] =
-                            "#SwitchMetrics.v1_0_0.SwitchMetrics";
+                            std::string switchURI = "/redfish/v1/Fabrics/";
+                            switchURI += fabricId;
+                            switchURI += "/Switches/";
+                            switchURI += switchId;
+                            std::string switchMetricURI = switchURI;
+                            switchMetricURI += "/SwitchMetrics";
+                            asyncResp->res.jsonValue["@odata.type"] =
+                                "#SwitchMetrics.v1_0_0.SwitchMetrics";
                             asyncResp->res.jsonValue["@odata.id"] =
                                 switchMetricURI;
-                        asyncResp->res.jsonValue["Id"] = switchId;
-                        asyncResp->res.jsonValue["Name"] = switchId +
-                                                           " Metrics";
-                        const std::string& connectionName =
+                            asyncResp->res.jsonValue["Id"] = switchId;
+                            asyncResp->res.jsonValue["Name"] = switchId +
+                                                               " Metrics";
+                            const std::string& connectionName =
                                 object.front().first;
-                        const std::vector<std::string>& interfaces =
+                            const std::vector<std::string>& interfaces =
                                 object.front().second;
                             if (std::find(
                                     interfaces.begin(), interfaces.end(),
-                                      "xyz.openbmc_project.Memory.MemoryECC") !=
-                            interfaces.end())
-                        {
+                                    "xyz.openbmc_project.Memory.MemoryECC") !=
+                                interfaces.end())
+                            {
                                 getInternalMemoryMetrics(asyncResp,
                                                          connectionName, path);
-                        }
-                        if (std::find(interfaces.begin(), interfaces.end(),
-                                      "xyz.openbmc_project.PCIe.PCIeECC") !=
-                            interfaces.end())
-                        {
-                            redfish::processor_utils::getPCIeErrorData(
-                                asyncResp, connectionName, path);
-                        }
+                            }
+                            if (std::find(interfaces.begin(), interfaces.end(),
+                                          "xyz.openbmc_project.PCIe.PCIeECC") !=
+                                interfaces.end())
+                            {
+                                redfish::processor_utils::getPCIeErrorData(
+                                    asyncResp, connectionName, path);
+                            }
                         },
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
@@ -3880,8 +3879,8 @@ inline void getFabricsPortMetricsData(
  */
 inline void requestRoutesPortMetrics(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics/")
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

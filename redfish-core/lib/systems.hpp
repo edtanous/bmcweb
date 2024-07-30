@@ -506,15 +506,15 @@ inline void afterSystemGetSubTree(
                     sdbusplus::message::object_path uuidPath(path);
                     if (uuidPath.filename() == "bios")
                     {
-                    sdbusplus::asio::getAllProperties(
-                        *crow::connections::systemBus, connection.first, path,
-                        "xyz.openbmc_project.Common.UUID",
-                        [asyncResp](const boost::system::error_code& ec3,
-                                    const dbus::utility::DBusPropertiesMap&
-                                        properties) {
-                        afterGetUUID(asyncResp, ec3, properties);
-                    });
-                }
+                        sdbusplus::asio::getAllProperties(
+                            *crow::connections::systemBus, connection.first,
+                            path, "xyz.openbmc_project.Common.UUID",
+                            [asyncResp](const boost::system::error_code& ec3,
+                                        const dbus::utility::DBusPropertiesMap&
+                                            properties) {
+                            afterGetUUID(asyncResp, ec3, properties);
+                        });
+                    }
 #endif
                 }
                 else if (interfaceName ==

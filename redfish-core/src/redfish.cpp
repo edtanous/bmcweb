@@ -27,9 +27,9 @@
 #include "metadata.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
-#include "nvidia_power_smoothing.hpp"
 #include "network_protocol.hpp"
 #include "nvidia_oem_dpu.hpp"
+#include "nvidia_power_smoothing.hpp"
 #include "pcie.hpp"
 #include "power.hpp"
 #include "power_subsystem.hpp"
@@ -105,13 +105,13 @@ RedfishService::RedfishService(App& app)
     requestDedicatedPortsInterfacesRoutes(app);
 #endif
 
-if constexpr (BMCWEB_REDFISH_ALLOW_DEPRECATED_POWER_THERMAL)
-{
+    if constexpr (BMCWEB_REDFISH_ALLOW_DEPRECATED_POWER_THERMAL)
+    {
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-    requestRoutesThermal(app);
-    requestRoutesPower(app);
+        requestRoutesThermal(app);
+        requestRoutesPower(app);
 #endif
-}
+    }
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
     requestRoutesNetworkAdapters(app);
