@@ -28,12 +28,12 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
-#include <boost/bind.hpp>
 
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -109,11 +109,8 @@ class InotifyFileWatcher
 
         sd->async_read_some(
             boost::asio::buffer(buf),
-            // NOLINTNEXTLINE(modernize-avoid-bind)
-            boost::bind(&InotifyFileWatcher::asyncReadHandler, this,
-                        boost::asio::placeholders::error,
-                        boost::asio::placeholders::bytes_transferred,
-                        std::move(handler)));
+            std::bind_front(&InotifyFileWatcher::asyncReadHandler, this,
+                            std::move(handler)));
     }
 
   private:
@@ -124,8 +121,8 @@ class InotifyFileWatcher
     std::map<int, std::string> watchedDirs;
 
     void asyncReadHandler(
-        boost::system::error_code ec, std::size_t bytes,
-        const std::function<void(std::vector<FileWatcherEvent>)>& handler)
+        const std::function<void(std::vector<FileWatcherEvent>)>& handler,
+        boost::system::error_code ec, std::size_t bytes)
     {
         if (ec)
         {

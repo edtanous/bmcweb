@@ -131,8 +131,7 @@ inline void getBMCObject(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
             // Ignore any objects which don't end with our desired bmcid
             if (!boost::ends_with(objectPath, BMCWEB_REDFISH_MANAGER_URI_NAME))
             {
-                BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
-                return;
+                continue;
             }
 
             bool found = false;
@@ -236,7 +235,6 @@ inline void handleServiceRootGetImpl(
         "/redfish/v1/EventService";
     asyncResp->res.jsonValue["TelemetryService"]["@odata.id"] =
         "/redfish/v1/TelemetryService";
-    getServiceIdentification(asyncResp);
 
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     asyncResp->res.jsonValue["Cables"]["@odata.id"] = "/redfish/v1/Cables";
@@ -267,7 +265,6 @@ inline void handleServiceRootGetImpl(
     protocolFeatures["SelectQuery"] = true;
     protocolFeatures["DeepOperations"]["DeepPOST"] = false;
     protocolFeatures["DeepOperations"]["DeepPATCH"] = false;
-    getBMCObject(asyncResp);
 }
 inline void
     handleServiceRootGet(App& app, const crow::Request& req,
@@ -279,6 +276,8 @@ inline void
     }
 
     handleServiceRootGetImpl(asyncResp);
+    getBMCObject(asyncResp);
+    getServiceIdentification(asyncResp);
 }
 
 inline void requestRoutesServiceRoot(App& app)

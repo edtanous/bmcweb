@@ -22,6 +22,9 @@ constexpr const char* acceleratorInvIntf =
 
 constexpr const char* cpuInvIntf = "xyz.openbmc_project.Inventory.Item.Cpu";
 
+constexpr const char* nvLinkMgmtInvIntf =
+    "xyz.openbmc_project.Inventory.Item.NetworkInterface";
+
 constexpr const char* switchInvIntf =
     "xyz.openbmc_project.Inventory.Item.Switch";
 
@@ -573,7 +576,7 @@ inline void
                         }
                     }
 
-                    if ((*uuid) == chassisUUID && supportedMsgTypes)
+                    if (uuid && (*uuid) == chassisUUID && supportedMsgTypes)
                     {
                         if (std::find(supportedMsgTypes->begin(),
                                       supportedMsgTypes->end(),
@@ -1023,6 +1026,20 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                                      url);
                     callback(true, url);
                     return;
+                }
+                if (interface == nvLinkMgmtInvIntf)
+                {
+                    const std::string chassisPrefixDbus =
+                        "/xyz/openbmc_project/inventory/system/chassis/";
+                    if (invObjPath.string().find(chassisPrefixDbus) !=
+                        std::string::npos)
+                    {
+                        std::string url = std::string("/redfish/v1/Chassis/");
+                        url += invObjPath.string().substr(
+                            chassisPrefixDbus.size());
+                        callback(true, url);
+                        return;
+                    }
                 }
                 if (interface == switchInvIntf)
                 {

@@ -213,7 +213,7 @@ inline void handleChassisCollectionGet(
 inline void getChassisContainedBy(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId, const boost::system::error_code& ec,
-    const dbus::utility::MapperEndPoints& upstreamChassisPaths)
+    const dbus::utility::MapperGetSubTreePathsResponse& upstreamChassisPaths)
 {
     if (ec)
     {
@@ -252,7 +252,7 @@ inline void getChassisContainedBy(
 inline void getChassisContains(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId, const boost::system::error_code& ec,
-    const dbus::utility::MapperEndPoints& downstreamChassisPaths)
+    const dbus::utility::MapperGetSubTreePathsResponse& downstreamChassisPaths)
 {
     if (ec)
     {
@@ -298,13 +298,20 @@ inline void
 {
     BMCWEB_LOG_DEBUG("Get chassis connectivity");
 
-    dbus::utility::getAssociationEndPoints(
+    constexpr std::array<std::string_view, 2> interfaces{
+        "xyz.openbmc_project.Inventory.Item.Board",
+        "xyz.openbmc_project.Inventory.Item.Chassis"};
+
+    dbus::utility::getAssociatedSubTreePaths(
         chassisPath + "/contained_by",
+        sdbusplus::message::object_path("/xyz/openbmc_project/inventory"), 0,
+        interfaces,
         std::bind_front(getChassisContainedBy, asyncResp, chassisId));
 
-    dbus::utility::getAssociationEndPoints(
+    dbus::utility::getAssociatedSubTreePaths(
         chassisPath + "/containing",
-        std::bind_front(getChassisContains, asyncResp, chassisId));
+        sdbusplus::message::object_path("/xyz/openbmc_project/inventory"), 0,
+        interfaces, std::bind_front(getChassisContains, asyncResp, chassisId));
 }
 
 /**
@@ -1301,7 +1308,7 @@ inline void requestRoutesChassisResetAction(App& app)
 #ifdef BMCWEB_ENABLE_HOST_AUX_POWER
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaChassis.AuxPowerReset")
+        "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaChassis.AuxPowerReset/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             handleOemChassisResetActionInfoPost, std::ref(app)));

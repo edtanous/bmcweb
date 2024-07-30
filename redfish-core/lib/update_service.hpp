@@ -30,6 +30,7 @@
 #endif
 
 #include "app.hpp"
+#include "component_integrity.hpp"
 #include "dbus_utility.hpp"
 #include "multipart_parser.hpp"
 #include "ossl_random.hpp"
@@ -515,12 +516,13 @@ inline void afterAvailbleTimerAsyncWait(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& imagePath, const boost::system::error_code& ec)
 {
-    cleanUp();
+    fwUpdateMatcher = nullptr;
     if (ec == boost::asio::error::operation_aborted)
     {
         // expected, we were canceled before the timer completed.
         return;
     }
+    fwUpdateInProgress = false;
     BMCWEB_LOG_ERROR("Timed out waiting for firmware object being created");
     BMCWEB_LOG_ERROR("FW image may has already been uploaded to server");
     if (ec)
@@ -1147,8 +1149,8 @@ inline bool areTargetsInvalidOrUnupdatable(
  * @return None
  */
 inline void validateUpdatePolicyCallback(
-    const boost::system::error_code errorCode, const MapperServiceMap& objInfo,
-    const crow::Request& req,
+    const boost::system::error_code errorCode,
+    const dbus::utility::MapperServiceMap& objInfo, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::vector<sdbusplus::message::object_path>& targets)
 {
@@ -1253,8 +1255,9 @@ inline void areTargetsUpdateableCallback(
     }
 
     crow::connections::systemBus->async_method_call(
-        [req, asyncResp, targets](const boost::system::error_code errorCode,
-                                  const MapperServiceMap& objInfo) mutable {
+        [req, asyncResp,
+         targets](const boost::system::error_code errorCode,
+                  const dbus::utility::MapperServiceMap& objInfo) mutable {
         validateUpdatePolicyCallback(errorCode, objInfo, req, asyncResp,
                                      targets);
     },
@@ -2534,7 +2537,8 @@ inline void requestRoutesUpdateService(App& app)
 
         crow::connections::systemBus->async_method_call(
             [getUpdateStatus](boost::system::error_code ec,
-                              const MapperGetSubTreeResponse& subtree) mutable {
+                              const dbus::utility::MapperGetSubTreeResponse&
+                                  subtree) mutable {
             if (ec || !subtree.size())
             {
                 getUpdateStatus->mctp_serviceStatus = false;
@@ -4636,7 +4640,7 @@ inline void requestRoutesUpdateServiceCommitImage(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage")
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.CommitImage/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
@@ -4704,7 +4708,7 @@ inline void requestRoutesUpdateServicePublicKeyExchange(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.PublicKeyExchange")
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.PublicKeyExchange/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -4812,7 +4816,7 @@ inline void requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys")
+        "/redfish/v1/UpdateService/Actions/Oem/NvidiaUpdateService.RevokeAllRemoteServerPublicKeys/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,

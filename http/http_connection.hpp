@@ -354,12 +354,6 @@ class Connection :
         }
         std::string url(req->target());
         std::size_t dumpPos = url.rfind("Dump");
-        std::string_view expected =
-            req->getHeaderValue(boost::beast::http::field::if_none_match);
-        if (!expected.empty())
-        {
-            res.setExpectedHash(expected);
-        }
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
 
@@ -372,6 +366,14 @@ class Connection :
         std::size_t attachmentPos = url.rfind("attachment");
         std::size_t satellitesPos = std::string::npos;
 
+#ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+
+        if (dumpPos == std::string::npos)
+        {
+            dumpPos = url.rfind("FaultLog");
+        }
+#endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
+
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
         satellitesPos = url.rfind(redfishAggregationPrefix);
 #endif
@@ -383,6 +385,13 @@ class Connection :
             BMCWEB_LOG_DEBUG("upgrade stream connection");
             handler->handleUpgrade(req, asyncResp, std::move(adaptor));
             return;
+        }
+
+        std::string_view expected =
+            req->getHeaderValue(boost::beast::http::field::if_none_match);
+        if (!expected.empty())
+        {
+            res.setExpectedHash(expected);
         }
 
         handler->handle(req, asyncResp);

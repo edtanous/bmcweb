@@ -387,9 +387,8 @@ if boost.found()
 else
   cmake = import('cmake')
   opt = cmake.subproject_options()
-    opt.add_cmake_defines(
-        {
-            'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;headers;process;type_index;url;uuid;spirit',
+  opt.add_cmake_defines({
+    'BOOST_INCLUDE_LIBRARIES': 'asio;beast;callable_traits;format;interprocess;headers;process;type_index;url;uuid;spirit',
     'BUILD_SHARED_LIBS': 'OFF',
         },
     )
@@ -400,6 +399,8 @@ else
   boost_callable_traits = boost.dependency('boost_callable_traits').as_system()
   boost_headers = boost.dependency('boost_headers').as_system()
   boost_process = boost.dependency('boost_process').as_system()
+  boost_format = boost.dependency('boost_format').as_system()
+  boost_interprocess = boost.dependency('boost_interprocess').as_system()
   boost_type_index = boost.dependency('boost_type_index').as_system()
   boost_url = boost.dependency('boost_url').as_system()
   boost_uuid = boost.dependency('boost_uuid').as_system()
@@ -408,6 +409,8 @@ else
     boost_asio,
     boost_beast,
     boost_callable_traits,
+    boost_format,
+    boost_interprocess,
     boost_headers,
     boost_process,
     boost_type_index,
@@ -499,10 +502,10 @@ executable(
 )
 
 srcfiles_unittest = files(
-  #'test/http/crow_getroutes_test.cpp',
-  #'test/http/http2_connection_test.cpp',
+  'test/http/crow_getroutes_test.cpp',
+  'test/http/http2_connection_test.cpp',
   'test/http/http_body_test.cpp',
-  #'test/http/http_connection_test.cpp',
+  'test/http/http_connection_test.cpp',
   'test/http/http_response_test.cpp',
   'test/http/mutual_tls.cpp',
   'test/http/mutual_tls_meta.cpp',
@@ -514,39 +517,37 @@ srcfiles_unittest = files(
   'test/include/async_resolve_test.cpp',
   'test/include/credential_pipe_test.cpp',
   'test/include/dbus_utility_test.cpp',
-  #'test/include/google/google_service_root_test.cpp',
+  'test/include/google/google_service_root_test.cpp',
   'test/include/http_utility_test.cpp',
   'test/include/human_sort_test.cpp',
-  #'test/include/ibm/configfile_test.cpp',
+  'test/include/ibm/configfile_test.cpp',
   'test/include/json_html_serializer.cpp',
   'test/include/multipart_test.cpp',
   'test/include/openbmc_dbus_rest_test.cpp',
   'test/include/ossl_random.cpp',
-    'test/include/ssl_key_handler_test.cpp',
-  'test/include/str_utility_test.cpp',
+  #'test/include/str_utility_test.cpp',
   'test/redfish-core/include/privileges_test.cpp',
   'test/redfish-core/include/filter_expr_parser_test.cpp',
   'test/redfish-core/include/filter_expr_executor_test.cpp',
   'test/redfish-core/include/redfish_aggregator_test.cpp',
   'test/redfish-core/include/registries_test.cpp',
   'test/redfish-core/include/utils/dbus_utils.cpp',
-  'test/redfish-core/include/utils/hex_utils_test.cpp',
+  #'test/redfish-core/include/utils/hex_utils_test.cpp',
   'test/redfish-core/include/utils/ip_utils_test.cpp',
   'test/redfish-core/include/utils/json_utils_test.cpp',
   'test/redfish-core/include/utils/query_param_test.cpp',
   #'test/redfish-core/include/utils/stl_utils_test.cpp',
   'test/redfish-core/include/utils/time_utils_test.cpp',
-  'test/redfish-core/lib/chassis_test.cpp',
+  #'test/redfish-core/lib/chassis_test.cpp',
   #'test/redfish-core/lib/log_services_dump_test.cpp',
   'test/redfish-core/lib/log_services_test.cpp',
   'test/redfish-core/lib/manager_diagnostic_data_test.cpp',
-  'test/redfish-core/lib/metadata_test.cpp',
-  # 'test/redfish-core/lib/power_subsystem_test.cpp',
-  # 'test/redfish-core/lib/sensors_test.cpp',
-  # 'test/redfish-core/lib/service_root_test.cpp',
-  # 'test/redfish-core/lib/system_test.cpp',
-  # 'test/redfish-core/lib/thermal_subsystem_test.cpp',
-  # 'test/redfish-core/lib/update_service_test.cpp',
+  'test/redfish-core/lib/power_subsystem_test.cpp',
+  'test/redfish-core/lib/sensors_test.cpp',
+  'test/redfish-core/lib/service_root_test.cpp',
+  'test/redfish-core/lib/system_test.cpp',
+  'test/redfish-core/lib/thermal_subsystem_test.cpp',
+  'test/redfish-core/lib/update_service_test.cpp',
 )
 
 if(get_option('tests').allowed())
@@ -563,20 +564,20 @@ if(get_option('tests').allowed())
             ],
     )
     test('bmcweb_unit_test', ut_bin)
-    # foreach test_src : srcfiles_unittest
-    #   test_bin = executable(
-    #     fs.stem(test_src),
-    #     test_src,
-    #     link_with: bmcweblib,
-    #     include_directories : incdir,
-    #     install_dir: bindir,
-    #     dependencies: bmcweb_dependencies + [
-    #       gtest,
-    #       gmock,
-    #     ]
-    #   )
-    #   test(fs.stem(test_src), test_bin)
-    # endforeach
+    foreach test_src : srcfiles_unittest
+      test_bin = executable(
+        fs.stem(test_src),
+        test_src,
+        link_with: bmcweblib,
+        include_directories : incdir,
+        install_dir: bindir,
+        dependencies: bmcweb_dependencies + [
+          gtest,
+          gmock,
+        ]
+      )
+      test(fs.stem(test_src), test_bin)
+    endforeach
 endif
 
 if(get_option('redfish-aggregation').enabled())

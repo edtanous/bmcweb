@@ -479,6 +479,165 @@ inline void
  * @brief Get all switch info by requesting data
  * from the given D-Bus object.
  *
+ * @param[in,out]   aResp   Async HTTP response.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void updateSwitchDataByAssociation(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("Get Switch Data by associate object");
+
+    using PropertyType = std::variant<std::string, bool, double, size_t,
+                                      std::vector<std::string>>;
+    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                         std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("Dbus response error: associated switch");
+            return; // no endpoint = no failures
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_DEBUG(
+                "No response data on {} associated_switch association",
+                objPath);
+            return;
+        }
+        for (const std::string& switchPath : *data)
+        {
+            // make onject call to get service
+            //  then get all the data
+            crow::connections::systemBus->async_method_call(
+                [aResp, switchPath](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<
+                        std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR(
+                        "Error no Switch interface on {} path",
+                        switchPath);
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                auto service = object.front().first;
+
+                // Get interface properties
+                crow::connections::systemBus->async_method_call(
+                    [aResp, switchPath](const boost::system::error_code ec,
+                                        const PropertiesMap& properties) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR(
+                            "Error while fetching peoperties on {} path",
+                            switchPath);
+                        messages::internalError(aResp->res);
+                        return;
+                    }
+
+                    for (const auto& property : properties)
+                    {
+                        const std::string& propertyName = property.first;
+                        if (propertyName == "Type")
+                        {
+                            const std::string* value =
+                                std::get_if<std::string>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_ERROR("Null value returned "
+                                                 "for switch type");
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+                            aResp->res.jsonValue["SwitchType"] =
+                                getSwitchType(*value);
+                        }
+                        else if (propertyName == "SupportedProtocols")
+                        {
+                            nlohmann::json& protoArray =
+                                aResp->res.jsonValue["SupportedProtocols"];
+                            protoArray = nlohmann::json::array();
+                            const std::vector<std::string>* protocols =
+                                std::get_if<std::vector<std::string>>(
+                                    &property.second);
+                            if (protocols == nullptr)
+                            {
+                                BMCWEB_LOG_ERROR("Null value returned "
+                                                 "for supported protocols");
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+                            for (const std::string& protocol : *protocols)
+                            {
+                                protoArray.push_back(getSwitchType(protocol));
+                            }
+                        }
+                        else if (propertyName == "Enabled")
+                        {
+                            const bool* value =
+                                std::get_if<bool>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_ERROR("Null value returned "
+                                                 "for enabled");
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+                            aResp->res.jsonValue["Enabled"] = *value;
+                        }
+                        else if (propertyName == "CurrentBandwidth")
+                        {
+                            const double* value =
+                                std::get_if<double>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_ERROR("Null value returned "
+                                                 "for CurrentBandwidth");
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+                            aResp->res.jsonValue["CurrentBandwidthGbps"] =
+                                *value;
+                        }
+                        else if (propertyName == "MaxBandwidth")
+                        {
+                            const double* value =
+                                std::get_if<double>(&property.second);
+                            if (value == nullptr)
+                            {
+                                BMCWEB_LOG_ERROR("Null value returned "
+                                                 "for MaxBandwidth");
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+                            aResp->res.jsonValue["MaxBandwidthGbps"] = *value;
+                        }
+                    }
+                },
+                    service, switchPath, "org.freedesktop.DBus.Properties",
+                    "GetAll", "");
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", switchPath,
+                std::array<std::string, 1>(
+                    {"xyz.openbmc_project.Inventory.Item.Switch"}));
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/associated_switch_obj",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
+/**
+ * @brief Get all switch info by requesting data
+ * from the given D-Bus object.
+ *
  * @param[in,out]   asyncResp   Async HTTP response.
  * @param[in]       service     D-Bus service to query.
  * @param[in]       objPath     D-Bus object to query.
@@ -676,6 +835,7 @@ inline void
         }
 
         getComponentFirmwareVersion(asyncResp, objPath);
+        updateSwitchDataByAssociation(asyncResp, objPath);
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 
@@ -1268,7 +1428,7 @@ inline void
  */
 inline void requestRoutesSwitch(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1367,9 +1527,7 @@ inline void requestRoutesSwitch(App& app)
                             "xyz.openbmc_project.ObjectMapper",
                             "/xyz/openbmc_project/object_mapper",
                             "xyz.openbmc_project.ObjectMapper", "GetObject",
-                            path,
-                            std::array<std::string, 1>(
-                                {"xyz.openbmc_project.Inventory.Item.Switch"}));
+                            path, std::array<const char*, 0>());
 
                         // Link association to parent chassis
                         getSwitchChassisLink(asyncResp, path);
@@ -1459,7 +1617,7 @@ inline void
 
 inline void requestRoutesSwitchMetrics(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/SwitchMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/SwitchMetrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1487,36 +1645,53 @@ inline void requestRoutesSwitchMetrics(App& app)
                     continue;
                 }
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, fabricId, switchId](
-                        const boost::system::error_code ec,
-                        const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                    [asyncResp, fabricId,
+                     switchId](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
                     if (ec)
                     {
                         messages::internalError(asyncResp->res);
                         return;
                     }
-                    // Iterate over all retrieved ObjectPaths.
-                    for (const std::pair<
-                             std::string,
-                             std::vector<std::pair<std::string,
-                                                   std::vector<std::string>>>>&
-                             object : subtree)
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR(
+                            "DBUS response error while getting switches");
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    for (const std::string& path : *data)
                     {
                         // Get the switchId object
-                        const std::string& path = object.first;
-                        const std::vector<
-                            std::pair<std::string, std::vector<std::string>>>&
-                            connectionNames = object.second;
-                        sdbusplus::message::object_path objPath(path);
-                        if (objPath.filename() != switchId)
+                        if (!boost::ends_with(path, switchId))
                         {
                             continue;
                         }
-                        if (connectionNames.size() < 1)
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp, fabricId, switchId,
+                             path](const boost::system::error_code ec,
+                                   const std::vector<std::pair<
+                                       std::string, std::vector<std::string>>>&
+                                       object) {
+                            if (ec)
                         {
-                            BMCWEB_LOG_ERROR("Got 0 Connection names");
-                            continue;
+                                BMCWEB_LOG_ERROR(
+                                    "Error while fetching service for {}",
+                                    path);
+                                messages::internalError(asyncResp->res);
+                                return;
                         }
+
+                            if (object.empty())
+                            {
+                                BMCWEB_LOG_ERROR("Empty response received");
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+
                         std::string switchURI = "/redfish/v1/Fabrics/";
                         switchURI += fabricId;
                         switchURI += "/Switches/";
@@ -1525,20 +1700,22 @@ inline void requestRoutesSwitchMetrics(App& app)
                         switchMetricURI += "/SwitchMetrics";
                         asyncResp->res.jsonValue["@odata.type"] =
                             "#SwitchMetrics.v1_0_0.SwitchMetrics";
-                        asyncResp->res.jsonValue["@odata.id"] = switchMetricURI;
+                            asyncResp->res.jsonValue["@odata.id"] =
+                                switchMetricURI;
                         asyncResp->res.jsonValue["Id"] = switchId;
                         asyncResp->res.jsonValue["Name"] = switchId +
                                                            " Metrics";
                         const std::string& connectionName =
-                            connectionNames[0].first;
+                                object.front().first;
                         const std::vector<std::string>& interfaces =
-                            connectionNames[0].second;
-                        if (std::find(interfaces.begin(), interfaces.end(),
+                                object.front().second;
+                            if (std::find(
+                                    interfaces.begin(), interfaces.end(),
                                       "xyz.openbmc_project.Memory.MemoryECC") !=
                             interfaces.end())
                         {
-                            getInternalMemoryMetrics(asyncResp, connectionName,
-                                                     path);
+                                getInternalMemoryMetrics(asyncResp,
+                                                         connectionName, path);
                         }
                         if (std::find(interfaces.begin(), interfaces.end(),
                                       "xyz.openbmc_project.PCIe.PCIeECC") !=
@@ -1547,6 +1724,11 @@ inline void requestRoutesSwitchMetrics(App& app)
                             redfish::processor_utils::getPCIeErrorData(
                                 asyncResp, connectionName, path);
                         }
+                        },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetObject",
+                            path, std::array<const char*, 0>());
 
                         return;
                     }
@@ -1556,10 +1738,8 @@ inline void requestRoutesSwitchMetrics(App& app)
                         asyncResp->res, "#Switch.v1_8_0.Switch", switchId);
                 },
                     "xyz.openbmc_project.ObjectMapper",
-                    "/xyz/openbmc_project/object_mapper",
-                    "xyz.openbmc_project.ObjectMapper", "GetSubTree", object, 0,
-                    std::array<const char*, 1>{
-                        "xyz.openbmc_project.Inventory.Item.Switch"});
+                    object + "/all_switches", "org.freedesktop.DBus.Properties",
+                    "Get", "xyz.openbmc_project.Association", "endpoints");
                 return;
             }
             // Couldn't find an object with that name. Return an error
@@ -1681,7 +1861,7 @@ inline void nvswitchPostResetType(
 inline void requestRoutesNVSwitchReset(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/"
-                      "Actions/Switch.Reset")
+                      "Actions/Switch.Reset/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -1882,7 +2062,7 @@ inline void requestRoutesPortCollection(App& app)
  */
 inline void requestRoutesPort(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -2046,19 +2226,19 @@ inline void requestRoutesPort(App& app)
                                         "GetObject", objectPathToGetPortData,
                                         std::array<std::string, 1>(
                                             {"xyz.openbmc_project.Inventory.Item.Port"}));
+
+                                    updateProcessorPortLinks(
+                                        asyncResp, portPath, fabricId);
+                                    updateNetworkAdapterPortLinks(asyncResp,
+                                                                  portPath);
+                                    updateSwitchPortLinks(asyncResp, portPath,
+                                                          fabricId);
                                 },
                                     "xyz.openbmc_project.ObjectMapper",
                                     portPath + "/associated_port",
                                     "org.freedesktop.DBus.Properties", "Get",
                                     "xyz.openbmc_project.Association",
                                     "endpoints");
-
-                                updateProcessorPortLinks(asyncResp, portPath,
-                                                         fabricId);
-                                updateNetworkAdapterPortLinks(asyncResp,
-                                                              portPath);
-                                updateSwitchPortLinks(asyncResp, portPath,
-                                                      fabricId);
                                 return;
                             }
                             // Couldn't find an object with that
@@ -2155,7 +2335,7 @@ inline void requestRoutesZoneCollection(App& app)
 
 inline void requestRoutesZone(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Zones/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Zones/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -3072,7 +3252,7 @@ inline void updateEndpointData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  */
 inline void requestRoutesEndpoint(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Endpoints/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Fabrics/<str>/Endpoints/<str>/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -3701,7 +3881,7 @@ inline void getFabricsPortMetricsData(
 inline void requestRoutesPortMetrics(App& app)
 {
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics")
+                 "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Metrics/")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

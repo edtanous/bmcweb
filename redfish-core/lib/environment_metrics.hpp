@@ -238,7 +238,7 @@ inline void requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(App& app)
 inline void requestRoutesChassisEnvironmentMetricsClearOOBSetPoint(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/EnvironmentMetrics/Actions/Oem"
-                      "/NvidiaEnvironmentMetrics.ClearOOBSetPoint")
+                      "/NvidiaEnvironmentMetrics.ClearOOBSetPoint/")
         .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -645,7 +645,9 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                                     asyncResp,
                                 const std::string& processorId,
                                 const std::string& objectPath,
-                                const MapperServiceMap& serviceMap) {
+                                const MapperServiceMap& serviceMap,
+                                [[maybe_unused]] const std::string&
+                                    deviceType) {
                             redfish::nvidia_env_utils::patchEdppSetPoint(
                                 asyncResp, processorId, *setPoint, *persistency,
                                 objectPath, serviceMap);
@@ -659,7 +661,9 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                                            asyncResp,
                                        const std::string& processorId,
                                        const std::string& objectPath,
-                                       const MapperServiceMap& serviceMap) {
+                                       const MapperServiceMap& serviceMap,
+                                       [[maybe_unused]] const std::string&
+                                           deviceType) {
                             redfish::nvidia_env_utils::patchEdppSetPoint(
                                 asyncResp, processorId, *setPoint, false,
                                 objectPath, serviceMap);
@@ -799,7 +803,8 @@ inline void requestRoutesEdppReset(App& app)
             asyncResp, processorId,
             [](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                const std::string& processorId, const std::string& objectPath,
-               const MapperServiceMap& serviceMap) {
+               const MapperServiceMap& serviceMap,
+               [[maybe_unused]] const std::string& deviceType) {
             redfish::nvidia_env_utils::postEdppReset(asyncResp, processorId,
                                                      objectPath, serviceMap);
         });

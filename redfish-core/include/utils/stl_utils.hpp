@@ -1,9 +1,10 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <vector>
-
 namespace redfish
 {
 

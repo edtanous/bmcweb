@@ -219,7 +219,7 @@ inline nlohmann::json componentUpdateSkipped(const std::string& arg1,
 {
     return nlohmann::json{
         {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
-        {"MessageId", "OpenBMC.0.4.ComponentUpdateSkipped"},
+        {"MessageId", "NvidiaUpdate.1.0.ComponentUpdateSkipped"},
         {"Message", "The update operation for the component '" + arg1 +
                         "' is skipped because '" + arg2 + "'."},
         {"MessageArgs", {arg1, arg2}},
@@ -231,7 +231,7 @@ inline nlohmann::json recoveryStarted(const std::string& arg1)
 {
     return nlohmann::json{
         {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
-        {"MessageId", "OpenBMC.0.4.RecoveryStarted"},
+        {"MessageId", "NvidiaUpdate.1.0.RecoveryStarted"},
         {"Message", "Firmware Recovery Started on '" + arg1 + "'."},
         {"MessageArgs", {arg1}},
         {"Severity", "OK"},
@@ -242,7 +242,7 @@ inline nlohmann::json recoverySuccessful(const std::string& arg1)
 {
     return nlohmann::json{
         {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
-        {"MessageId", "OpenBMC.0.4.RecoverySuccessful"},
+        {"MessageId", "NvidiaUpdate.1.0.RecoverySuccessful"},
         {"Message", "Firmware '" + arg1 + "' is successfully recovered."},
         {"MessageArgs", {arg1}},
         {"Severity", "OK"},
@@ -253,7 +253,7 @@ inline nlohmann::json firmwareNotInRecovery(const std::string& arg1)
 {
     return nlohmann::json{
         {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
-        {"MessageId", "OpenBMC.0.4.FirmwareNotInRecovery"},
+        {"MessageId", "NvidiaUpdate.1.0.FirmwareNotInRecovery"},
         {"Message", "Firmware '" + arg1 + "' is not in Recovery."},
         {"MessageArgs", {arg1}},
         {"Severity", "OK"},
@@ -338,19 +338,19 @@ inline nlohmann::json getUpdateMessage(const std::string& msgId,
     {
         return resourceErrorsDetected(arg0, arg1);
     }
-    if (msgId == "OpenBMC.0.4.ComponentUpdateSkipped")
+    if (msgId == "NvidiaUpdate.1.0.ComponentUpdateSkipped")
     {
         return componentUpdateSkipped(arg0, arg1);
     }
-    if (msgId == "OpenBMC.0.4.RecoveryStarted")
+    if (msgId == "NvidiaUpdate.1.0.RecoveryStarted")
     {
         return recoveryStarted(arg0);
     }
-    if (msgId == "OpenBMC.0.4.RecoverySuccessful")
+    if (msgId == "NvidiaUpdate.1.0.RecoverySuccessful")
     {
         return recoverySuccessful(arg0);
     }
-    if (msgId == "OpenBMC.0.4.FirmwareNotInRecovery")
+    if (msgId == "NvidiaUpdate.1.0.FirmwareNotInRecovery")
     {
         return firmwareNotInRecovery(arg0);
     }

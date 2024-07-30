@@ -65,19 +65,26 @@ inline void
 
     if (generation != nullptr)
     {
-        std::optional<pcie_device::PCIeTypes> pcieType =
-            pcie_util::redfishPcieGenerationFromDbus(*generation);
+        /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+        * while upstream sync*/
+        // std::optional<pcie_device::PCIeTypes> pcieType =
+        //     pcie_util::redfishPcieGenerationFromDbus(*generation);
+
+        std::optional<std::string> pcieType =
+            pcie_util::redfishPcieGenerationStringFromDbus(*generation);
         if (!pcieType)
         {
             BMCWEB_LOG_WARNING("Unknown PCIe Slot Generation: {}", *generation);
         }
         else
         {
-            if (*pcieType == pcie_device::PCIeTypes::Invalid)
-            {
-                messages::internalError(asyncResp->res);
-                return;
-            }
+            /*TODO: Add support for Gen6 once DMTF schema is updated, to be taken care
+            * while upstream sync*/
+            // if (*pcieType == pcie_device::PCIeTypes::Invalid)
+            // {
+            //     messages::internalError(asyncResp->res);
+            //     return;
+            // }
             slot["PCIeType"] = *pcieType;
         }
     }

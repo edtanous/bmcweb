@@ -59,6 +59,8 @@ inline void getDeviceHealthInfo(crow::Response& resp,
     {
         BMCWEB_LOG_ERROR("Health: read {} status file failed!", deviceId);
         // No need to report error since no status file means device is OK.
+        resp.jsonValue["Status"]["Health"] = health;
+        resp.jsonValue["Status"]["HealthRollup"] = rollup;
         return;
     }
 

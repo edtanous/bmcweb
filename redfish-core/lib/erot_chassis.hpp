@@ -352,7 +352,7 @@ inline void getEROTChassis(const crow::Request& req,
             asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
 
             asyncResp->res.jsonValue["@odata.type"] =
-                "#Chassis.v1_17_0.Chassis";
+                "#Chassis.v1_22_0.Chassis";
             asyncResp->res.jsonValue["@odata.id"] = "/redfish/v1/Chassis/" +
                                                     chassisId;
             asyncResp->res.jsonValue["Name"] = chassisId;
@@ -408,7 +408,7 @@ inline void getEROTChassis(const crow::Request& req,
         }
 
         // Couldn't find an object with that name.  return an error
-        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_17_0.Chassis",
+        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_22_0.Chassis",
                                    chassisId);
     },
 
@@ -775,7 +775,7 @@ void executeDotCommand(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
 inline void requestRoutesEROTChassisDOT(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKInstall")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKInstall/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -842,7 +842,7 @@ inline void requestRoutesEROTChassisDOT(App& app)
                           dot::DotMctpVdmUtilCommand::CAKInstall, data);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKLock")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKLock/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -875,7 +875,7 @@ inline void requestRoutesEROTChassisDOT(App& app)
                           dot::DotMctpVdmUtilCommand::CAKLock, binaryKey);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKTest")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/CAKTest/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -890,7 +890,7 @@ inline void requestRoutesEROTChassisDOT(App& app)
                           dot::DotMctpVdmUtilCommand::CAKTest, data);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTDisable")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTDisable/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -923,7 +923,7 @@ inline void requestRoutesEROTChassisDOT(App& app)
                           dot::DotMctpVdmUtilCommand::DOTDisable, binaryKey);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTTokenInstall")
+    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/Actions/Oem/DOTTokenInstall/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -951,7 +951,7 @@ inline void requestRoutesEROTChassisDOT(App& app)
 inline void requestRoutesEROTChassisManualBootMode(App& app)
 {
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Chassis/<str>/Actions/Oem/Nvidia/BootProtectedDevice")
+        app, "/redfish/v1/Chassis/<str>/Actions/Oem/Nvidia/BootProtectedDevice/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,

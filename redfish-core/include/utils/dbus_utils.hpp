@@ -249,6 +249,11 @@ inline const char* toPhysicalContext(const std::string& physicalContext)
     {
         return "VoltageRegulator";
     }
+    if (physicalContext ==
+        "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType.Board")
+    {
+        return "Board";
+    }
     return "";
 }
 

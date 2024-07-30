@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "async_resp.hpp"
+#include "dbus_singleton.hpp"
 #include "logging.hpp"
 
 #include <boost/asio.hpp>

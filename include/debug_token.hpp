@@ -58,7 +58,7 @@ inline int getMeasurementIndex(const std::string& requestType)
 
 // mctp-vdm-util's output size per endpoint
 constexpr const size_t statusQueryOutputSize = 256;
-constexpr const int statusQueryTimeoutSeconds = 10;
+constexpr const int statusQueryTimeoutSeconds = 60;
 constexpr const size_t statusQueryResponseLength = 19;
 constexpr const size_t statusQueryDebugTokenStatusOctet = 9;
 

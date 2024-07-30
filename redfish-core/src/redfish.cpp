@@ -10,6 +10,7 @@
 #include "cable.hpp"
 #include "certificate_service.hpp"
 #include "chassis.hpp"
+#include "component_integrity.hpp"
 #include "control.hpp"
 #include "environment_metrics.hpp"
 #include "ethernet.hpp"
@@ -26,6 +27,7 @@
 #include "metadata.hpp"
 #include "metric_report.hpp"
 #include "metric_report_definition.hpp"
+#include "nvidia_power_smoothing.hpp"
 #include "network_protocol.hpp"
 #include "nvidia_oem_dpu.hpp"
 #include "pcie.hpp"
@@ -57,13 +59,17 @@
 #include "fabric.hpp"
 #include "fabric_adapters.hpp"
 #include "host_interface.hpp"
+#ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
 #include "network_adapters.hpp"
+#endif
 #include "pcie_slots.hpp"
 #include "pcieslots.hpp"
 #include "ports.hpp"
 #include "secure_boot.hpp"
 #include "secure_boot_database.hpp"
+#ifdef BMCWEB_ENABLE_HOST_ETH_IFACE
 #include "system_host_eth.hpp"
+#endif
 #include "trusted_components.hpp"
 
 namespace redfish
@@ -77,16 +83,16 @@ RedfishService::RedfishService(App& app)
     {
         requestAccountServiceRoutes(app);
     }
+    if (persistent_data::getConfig().isTLSAuthEnabled())
+    {
+        requestRoutesRoles(app);
+        requestRoutesRoleCollection(app);
+    }
     if constexpr (BMCWEB_REDFISH_AGGREGATION)
     {
         requestRoutesAggregationService(app);
         requestRoutesAggregationSourceCollection(app);
         requestRoutesAggregationSource(app);
-    }
-    if (persistent_data::getConfig().isTLSAuthEnabled())
-    {
-        requestRoutesRoles(app);
-        requestRoutesRoleCollection(app);
     }
     requestRoutesServiceRoot(app);
     requestRoutesNetworkProtocol(app);
@@ -98,6 +104,14 @@ RedfishService::RedfishService(App& app)
 #ifdef BMCWEB_ENABLE_LLDP_DEDICATED_PORTS
     requestDedicatedPortsInterfacesRoutes(app);
 #endif
+
+if constexpr (BMCWEB_REDFISH_ALLOW_DEPRECATED_POWER_THERMAL)
+{
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+    requestRoutesThermal(app);
+    requestRoutesPower(app);
+#endif
+}
 
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS
     requestRoutesNetworkAdapters(app);
@@ -113,20 +127,11 @@ RedfishService::RedfishService(App& app)
     requestRoutesNetworkAdapters(app);
 #endif
 
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    requestRoutesChassisEnvironmentMetricsClearOOBSetPoint(app);
-    requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(app);
-#endif
-    if constexpr (BMCWEB_REDFISH_ALLOW_DEPRECATED_POWER_THERMAL)
-    {
-#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-        requestRoutesThermal(app);
-        requestRoutesPower(app);
-#endif
-    }
     if constexpr (BMCWEB_REDFISH_NEW_POWERSUBSYSTEM_THERMALSUBSYSTEM)
     {
         requestRoutesEnvironmentMetrics(app);
+        requestRoutesProcessorEnvironmentMetrics(app);
+        requestRoutesMemoryEnvironmentMetrics(app);
         requestRoutesPowerSubsystem(app);
         requestRoutesPowerSupply(app);
         requestRoutesPowerSupplyCollection(app);
@@ -143,23 +148,23 @@ RedfishService::RedfishService(App& app)
     requestRoutesManagerDiagnosticData(app);
     requestRoutesChassisCollection(app);
     requestRoutesChassis(app);
-#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
-    requestRoutesThermal(app);
-    requestRoutesPower(app);
-#endif
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    requestRoutesSplitUpdateService(app);
+    requestRoutesChassisEnvironmentMetricsClearOOBSetPoint(app);
+    requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(app);
 #endif
-#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
-    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE) ||                            \
-    defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
-    requestRoutesUpdateServiceActionsSimpleUpdate(app);
+
+#ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
+    requestRoutesChassisResetAction(app);
+    requestRoutesChassisResetActionInfo(app);
+#endif
+    requestRoutesUpdateService(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    requestRoutesSplitUpdateService(app);
 #endif
 
     requestRoutesChassisDrive(app);
     requestRoutesChassisDriveName(app);
-    requestRoutesUpdateService(app);
     requestRoutesStorageCollection(app);
     requestRoutesStorage(app);
     requestRoutesStorageControllerCollection(app);
@@ -167,27 +172,32 @@ RedfishService::RedfishService(App& app)
     requestRoutesDrive(app);
     requestRoutesCable(app);
     requestRoutesCableCollection(app);
+#if defined(BMCWEB_INSECURE_ENABLE_REDFISH_FW_TFTP_UPDATE) ||                  \
+    defined(BMCWEB_ENABLE_REDFISH_FW_SCP_UPDATE) ||                            \
+    defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
+    requestRoutesUpdateServiceActionsSimpleUpdate(app);
+#endif
     requestRoutesInventorySoftwareCollection(app);
     requestRoutesInventorySoftware(app);
     requestRoutesSystemLogServiceCollection(app);
-    requestRoutesEventLogService(app);
-    requestRoutesPostCodesEntryAdditionalData(app);
-    requestRoutesSELLogService(app);
-    requestRoutesChassisLogServiceCollection(app);
-    requestRoutesPostCodesLogService(app);
-    requestRoutesPostCodesClear(app);
-    requestRoutesPostCodesEntry(app);
-    requestRoutesPostCodesEntryCollection(app);
 
 #ifdef BMCWEB_ENABLE_MFG_TEST_API
     requestRoutesEventLogDiagnosticDataCollect(app);
     requestRoutesEventLogDiagnosticDataEntry(app);
 #endif
-
+    requestRoutesEventLogService(app);
+    requestRoutesSELLogService(app);
+    requestRoutesChassisLogServiceCollection(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_LOGSERVICES
     requestRoutesChassisXIDLogService(app);
     requestRoutesChassisXIDLogEntryCollection(app);
 #endif
+
+    requestRoutesPostCodesEntryAdditionalData(app);
+    requestRoutesPostCodesLogService(app);
+    requestRoutesPostCodesClear(app);
+    requestRoutesPostCodesEntry(app);
+    requestRoutesPostCodesEntryCollection(app);
 
     requestRoutesDebugToken(app);
     requestRoutesDebugTokenServiceEntry(app);
@@ -198,12 +208,14 @@ RedfishService::RedfishService(App& app)
     if constexpr (BMCWEB_REDFISH_DUMP_LOG)
     {
         requestRoutesSystemDumpService(app);
+        requestRoutesSystemDumpServiceActionInfo(app);
         requestRoutesSystemDumpEntryCollection(app);
         requestRoutesSystemDumpEntry(app);
         requestRoutesSystemDumpCreate(app);
         requestRoutesSystemDumpClear(app);
 
         requestRoutesBMCDumpService(app);
+        requestRoutesBMCDumpServiceActionInfo(app);
         requestRoutesBMCDumpEntryCollection(app);
         requestRoutesBMCDumpEntry(app);
         requestRoutesBMCDumpEntryDownload(app);
@@ -277,7 +289,7 @@ RedfishService::RedfishService(App& app)
     requestRouteAsyncRawOobCommand(app);
     requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
     requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
-#endif
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
     requestRoutesProcessorPortCollection(app);
     requestRoutesProcessorPort(app);
@@ -287,11 +299,14 @@ RedfishService::RedfishService(App& app)
     requestRoutesMemoryMetrics(app);
 
     requestRoutesSystems(app);
-
+    // The routes requestRoutesSystemActionsReset(app); and
+    // requestRoutesSystemResetActionInfo(app) are enabled in
+    // requestRoutesSystems(app) function as per upstream sync threfore
+    // removed from here
 #ifdef BMCWEB_ENABLE_BIOS
     requestRoutesBiosService(app);
     requestRoutesBiosSettings(app);
-    // requestRoutesBiosReset(app);
+    requestRoutesBiosReset(app);
     requestRoutesBiosChangePassword(app);
     requestRoutesBiosAttrRegistryService(app);
     requestRoutesBootOptions(app);
@@ -367,8 +382,8 @@ RedfishService::RedfishService(App& app)
 
     requestRoutesTelemetryService(app);
     requestRoutesMetricReportDefinitionCollection(app);
-    requestRoutesMetricReportDefinition(app);
     requestRoutesMetricReportCollection(app);
+    requestRoutesMetricReportDefinition(app);
     requestRoutesMetricReport(app);
 
     requestRoutesFabricCollection(app);
@@ -418,6 +433,10 @@ RedfishService::RedfishService(App& app)
     requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
 #endif
 
+    requestRoutesProcessorPowerSmoothing(app);
+    requestRoutesProcessorPowerSmoothingAdminProfile(app);
+    requestRoutesProcessorPowerSmoothingPresetProfileCollection(app);
+    requestRoutesProcessorPowerSmoothingPresetProfile(app);
     // Note, this must be the last route registered
     requestRoutesRedfish(app);
 }

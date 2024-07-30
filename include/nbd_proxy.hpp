@@ -373,7 +373,7 @@ inline void onMessage(crow::websocket::Connection& conn, std::string_view data,
 
 inline void requestRoutes(App& app)
 {
-    BMCWEB_ROUTE(app, "/nbd/<str>")
+    BMCWEB_ROUTE(app, "/nbd/<str>/")
         .websocket()
         .onopen(onOpen)
         .onclose(onClose)

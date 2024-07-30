@@ -175,7 +175,7 @@ inline void getCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
+                "#NvidiaProcessor.v1_2_0.NvidiaGPU";
             if (property.first == "CCModeEnabled")
             {
                 const bool* ccModeEnabled = std::get_if<bool>(&property.second);
@@ -229,6 +229,8 @@ inline void
             return;
         }
         nlohmann::json& json = aResp->res.jsonValue;
+        json["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaProcessor.v1_2_0.NvidiaGPU";
         for (const auto& property : properties)
         {
             if (property.first == "PendingCCModeState")
@@ -241,8 +243,6 @@ inline void
                     messages::internalError(aResp->res);
                     return;
                 }
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
                 json["Oem"]["Nvidia"]["CCModeEnabled"] = *pendingCCState;
             }
             else if (property.first == "PendingCCDevModeState")
@@ -256,8 +256,6 @@ inline void
                     messages::internalError(aResp->res);
                     return;
                 }
-                json["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaProcessor.v1_0_0.NvidiaProcessor";
                 json["Oem"]["Nvidia"]["CCDevModeEnabled"] = *pendingCCDevState;
             }
         }
@@ -309,6 +307,28 @@ inline void getSMUtilizationData(std::shared_ptr<bmcweb::AsyncResp> aResp,
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig");
+}
+
+/**
+ * @brief Fill out processor nvidia specific info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       cpuId       Processor ID.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+
+inline void
+    getPowerSmoothingInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          const std::string& processorId)
+{
+    std::string powerSmoothingURI = "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                                    "/Processors/";
+    powerSmoothingURI += processorId;
+    powerSmoothingURI += "/Oem/Nvidia/PowerSmoothing";
+    aResp->res.jsonValue["Oem"]["Nvidia"]["PowerSmoothing"]["@odata.id"] =
+        powerSmoothingURI;
 }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES

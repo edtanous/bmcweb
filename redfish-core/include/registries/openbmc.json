@@ -476,33 +476,6 @@
             "Resolution": "None.",
             "Severity": "OK"
         },
-        "RecoveryStarted": {
-            "Description": "Indicates that recovery has started on a component",
-            "Message": "Firmware Recovery Started on %1.",
-            "MessageSeverity": "OK",
-            "NumberOfArgs": 1,
-            "ParamTypes": ["string"],
-            "Resolution": "None.",
-            "Severity": "OK"
-        },
-        "RecoverySuccessful": {
-            "Description": "Indicates that recovery has successfully completed on a component",
-            "Message": "Firmware %1 is successfully recovered.",
-            "MessageSeverity": "OK",
-            "NumberOfArgs": 1,
-            "ParamTypes": ["string"],
-            "Resolution": "None.",
-            "Severity": "OK"
-        },
-        "FirmwareNotInRecovery": {
-            "Description": "Indicates that a firmware is not in Recovery Mode",
-            "Message": "Firmware %1 is not in Recovery.",
-            "MessageSeverity": "OK",
-            "NumberOfArgs": 1,
-            "ParamTypes": ["string"],
-            "Resolution": "None.",
-            "Severity": "OK"
-        },
         "GeneralFirmwareSecurityViolation": {
             "Description": "Indicates a general firmware security violation has occurred.",
             "Message": "Firmware security violation: %1.",

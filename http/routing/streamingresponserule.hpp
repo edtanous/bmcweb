@@ -1,6 +1,7 @@
 #pragma once
 #include "baserule.hpp"
 #include "dynamicrule.hpp"
+#include "http_stream.hpp"
 
 #include <boost/beast/http/verb.hpp>
 
@@ -16,7 +17,9 @@ class StreamingResponseRule : public BaseRule
     using self_t = StreamingResponseRule;
 
   public:
-    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn) {}
+    StreamingResponseRule(const std::string& ruleIn) : BaseRule(ruleIn) {
+      isUpgrade = true;
+    }
 
     void validate() override {}
 

@@ -1028,7 +1028,8 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
 }
 
-// ToDo: get ChassisID vs. getMainChassisId
+// The getMainChassisId() would get the Main Chassis ID but it's not suitable for the case of Drives under sub-chassis
+// Need to ensure this Chassis includes the drive endpoints
 inline void getChassisID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::string& driveId)
 {
@@ -1470,12 +1471,7 @@ inline void afterGetSubtreeSystemsStorageDrive(
         return;
     }
 
-    getMainChassisId(asyncResp,
-                     [](const std::string& chassisId,
-                        const std::shared_ptr<bmcweb::AsyncResp>& aRsp) {
-        aRsp->res.jsonValue["Links"]["Chassis"]["@odata.id"] =
-            boost::urls::format("/redfish/v1/Chassis/{}", chassisId);
-    });
+    getChassisID(asyncResp, driveId);
 
     // default it to Enabled
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
@@ -1604,14 +1600,14 @@ inline void requestRoutesDrive(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/Actions/Drive.SecureErase")
+        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/Actions/Drive.SecureErase/")
         .privileges(redfish::privileges::postDrive)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/SanitizeActionInfo")
+        "/redfish/v1/Systems/<str>/Storage/1/Drives/<str>/SanitizeActionInfo/")
         .privileges(redfish::privileges::getDrive)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleSystemDriveSanitizetActionInfoGet, std::ref(app)));
@@ -1876,13 +1872,13 @@ inline void requestRoutesChassisDriveName(App& app)
             std::bind_front(handleChassisDriveGet, std::ref(app)));
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase")
+        app, "/redfish/v1/Chassis/<str>/Drives/<str>/Actions/Drive.SecureErase/")
         .privileges(redfish::privileges::postDrive)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleDriveSanitizePost, std::ref(app)));
 
     BMCWEB_ROUTE(app,
-                 "/redfish/v1/Chassis/<str>/Drives/<str>/SanitizeActionInfo")
+                 "/redfish/v1/Chassis/<str>/Drives/<str>/SanitizeActionInfo/")
         .privileges(redfish::privileges::getDrive)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleChassisDriveSanitizetActionInfoGet, std::ref(app)));
@@ -2124,7 +2120,7 @@ inline void requestRoutesStorageControllerCollection(App& app)
 
 inline void requestRoutesStorageController(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Controllers/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Storage/1/Controllers/<str>/")
         .privileges(redfish::privileges::getStorageController)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleSystemsStorageControllerGet, std::ref(app)));

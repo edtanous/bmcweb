@@ -110,6 +110,11 @@ inline std::string dbusPcieTypesToRedfish(const std::string& pcieType)
     {
         return "Gen5";
     }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen6")
+    {
+        return "Gen6";
+    }
 
     // Unknown or others
     return "";

@@ -74,19 +74,25 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             }
 
             bool found = false;
+            std::string deviceType = "";
             // Filter out objects that don't have the CPU-specific
             // interfaces to make sure we can return 404 on non-CPUs
             // (e.g. /redfish/../Processors/dimm0)
             for (const auto& [serviceName, interfaceList] : serviceMap)
             {
-                if (std::find_first_of(
-                        interfaceList.begin(), interfaceList.end(),
-                        processorInterfaces.begin(),
-                        processorInterfaces.end()) != interfaceList.end())
+                for (const auto& iface : processorInterfaces)
                 {
-                    found = true;
-                    break;
+                    auto it = std::find(interfaceList.begin(), interfaceList.end(), iface);
+                    if (it != interfaceList.end())
+                    {
+                        deviceType = *it;
+                        found = true;
+                        break;
+                    }
                 }
+
+                if (found)
+                    break;
             }
 
             if (!found)
@@ -99,7 +105,7 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             // matching objects. Assume all interfaces we want to process
             // must be on the same object path.
 
-            handler(resp, processorId, objectPath, serviceMap);
+            handler(resp, processorId, objectPath, serviceMap, deviceType);
 
             return;
         }

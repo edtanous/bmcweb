@@ -363,10 +363,6 @@ inline void afterGetUUID(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         BMCWEB_LOG_DEBUG("UUID = {}", valueStr);
         asyncResp->res.jsonValue["UUID"] = valueStr;
     }
-#ifdef BMCWEB_ENABLE_BIOS
-    // UUID from smbios if exist
-    sw_util::getSwBIOSUUID(asyncResp);
-#endif
 }
 
 inline void
@@ -505,6 +501,11 @@ inline void afterSystemGetSubTree(
                 {
                     BMCWEB_LOG_DEBUG("Found UUID, now get its properties.");
 
+#ifdef BMCWEB_ENABLE_BIOS
+                    // Make sure to get SMBIOS UUID
+                    sdbusplus::message::object_path uuidPath(path);
+                    if (uuidPath.filename() == "bios")
+                    {
                     sdbusplus::asio::getAllProperties(
                         *crow::connections::systemBus, connection.first, path,
                         "xyz.openbmc_project.Common.UUID",
@@ -513,6 +514,8 @@ inline void afterSystemGetSubTree(
                                         properties) {
                         afterGetUUID(asyncResp, ec3, properties);
                     });
+                }
+#endif
                 }
                 else if (interfaceName ==
                          "xyz.openbmc_project.Inventory.Item.System")
@@ -4456,7 +4459,6 @@ inline void afterGetAllowedHostTransitions(
     nlohmann::json::array_t parameters;
     parameters.emplace_back(std::move(parameter));
     asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
-    redfish::nvidia_systems_utils::getChassisNMIStatus(asyncResp);
 }
 
 inline void handleSystemCollectionResetActionGet(
@@ -4499,6 +4501,8 @@ inline void handleSystemCollectionResetActionGet(
     asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_1_2.ActionInfo";
     asyncResp->res.jsonValue["Name"] = "Reset Action Info";
     asyncResp->res.jsonValue["Id"] = "ResetActionInfo";
+
+    redfish::nvidia_systems_utils::getChassisNMIStatus(asyncResp);
 
     // Look to see if system defines AllowedHostTransitions
     sdbusplus::asio::getProperty<std::vector<std::string>>(

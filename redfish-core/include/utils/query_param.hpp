@@ -537,7 +537,7 @@ inline bool processOnly(crow::App& app, crow::Response& res,
     auto asyncResp = std::make_shared<bmcweb::AsyncResp>();
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
     auto needToCallHandlers = RedfishAggregator::beginAggregation(
-                                  newReq, asyncResp) == Result::LocalHandle;
+                                  *newReq, asyncResp) == Result::LocalHandle;
 #endif
 
     BMCWEB_LOG_DEBUG("setting completion handler on {}",
