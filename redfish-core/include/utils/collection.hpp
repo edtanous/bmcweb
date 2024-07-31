@@ -60,7 +60,7 @@ inline void handleCollectionMembers(
     std::ranges::sort(pathNames, AlphanumLess<std::string>());
 
     nlohmann::json& members = asyncResp->res.jsonValue[jsonKeyName];
-    members = nlohmann::json::array();
+
     for (const std::string& leaf : pathNames)
     {
         boost::urls::url url = collectionPath;

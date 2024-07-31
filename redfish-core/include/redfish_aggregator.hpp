@@ -1090,17 +1090,6 @@ class RedfishAggregator
             }
             else
             {
-                // We only want to aggregate collections that contain a
-                // "Members" array
-                if ((!asyncResp->res.jsonValue.contains("Members")) &&
-                    (!asyncResp->res.jsonValue["Members"].is_array()))
-
-                {
-                    BMCWEB_LOG_DEBUG(
-                        "Skipping aggregating unsupported resource");
-                    return;
-                }
-
                 BMCWEB_LOG_DEBUG(
                     "Adding aggregated resources from \"{}\" to collection",
                     prefix);
