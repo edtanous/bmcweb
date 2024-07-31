@@ -784,7 +784,8 @@ inline void resetTorSwitch(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 
 inline void handleTruststoreCertificatesCollectionGet(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -824,7 +825,8 @@ inline void
 
 inline void handleTruststoreCertificatesCollectionPost(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -916,7 +918,7 @@ inline void handleTruststoreCertificatesCollectionPost(
 inline void handleTruststoreCertificatesGet(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& certId)
+    [[maybe_unused]] const std::string& systemName, const std::string& certId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1010,7 +1012,7 @@ inline void handleTruststoreCertificatesGet(
 inline void handleTruststoreCertificatesDelete(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& certId)
+    [[maybe_unused]] const std::string& systemName, const std::string& certId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1051,7 +1053,8 @@ inline void handleTruststoreCertificatesDelete(
 
 inline void handleTruststoreCertificatesResetKeys(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1106,26 +1109,24 @@ inline void handleTruststoreCertificatesResetKeys(
 
 inline void requestRoutesNvidiaOemBf(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/Oem/Nvidia")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/Oem/Nvidia")
         .privileges(redfish::privileges::getManager)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& managerName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
         }
         bluefield::getIsOemNvidiaRshimEnable(asyncResp);
     });
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/Oem/Nvidia/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/Oem/Nvidia/")
         .privileges(redfish::privileges::patchManager)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& managerName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -1157,26 +1158,24 @@ inline void requestRoutesNvidiaOemBf(App& app)
             bluefield::requestOemNvidiaRshim(asyncResp, *bmcRshimEnabled);
         }
     });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/Switch")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/Switch")
         .privileges(redfish::privileges::getSwitch)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
         }
         bluefield::getOemNvidiaSwitchStatus(asyncResp);
     });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/Switch")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/Switch")
         .privileges(redfish::privileges::patchSwitch)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -1209,13 +1208,12 @@ inline void requestRoutesNvidiaOemBf(App& app)
                                               *dpuOobEnabled);
         }
     });
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/Switch.Reset")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/Switch.Reset")
         .privileges(redfish::privileges::postSwitch)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -1223,51 +1221,47 @@ inline void requestRoutesNvidiaOemBf(App& app)
         bluefield::resetTorSwitch(asyncResp);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/Truststore/Certificates")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/<str>/Oem/Nvidia/Truststore/Certificates")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             bluefield::handleTruststoreCertificatesCollectionGet,
             std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/Truststore/Certificates")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/<str>/Oem/Nvidia/Truststore/Certificates")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             bluefield::handleTruststoreCertificatesCollectionPost,
             std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/Truststore/Certificates/<str>")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Oem/Nvidia/Truststore/Certificates/<str>")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             bluefield::handleTruststoreCertificatesGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/Truststore/Certificates/<str>")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Oem/Nvidia/Truststore/Certificates/<str>")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::delete_)(std::bind_front(
             bluefield::handleTruststoreCertificatesDelete, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" +
-                     std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                     "/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Oem/Nvidia/Actions/TruststoreCertificates.ResetKeys")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             bluefield::handleTruststoreCertificatesResetKeys, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia/SOC.ForceReset")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia/SOC.ForceReset")
         .privileges(redfish::privileges::postComputerSystem)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -1318,13 +1312,12 @@ inline void requestRoutesNvidiaOemBf(App& app)
                             &bluefield::externalHostPrivilege, std::ref(app)));
 #endif
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Oem/Nvidia")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Oem/Nvidia")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;

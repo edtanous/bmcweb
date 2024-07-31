@@ -198,7 +198,8 @@ inline void handleCollectionPendingBootOptionMembers(
 
 inline void handleBootOptionCollectionGet(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
     {
@@ -223,7 +224,8 @@ inline void handleBootOptionCollectionGet(
 
 inline void handleBootOptionCollectionPost(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
     {
@@ -308,6 +310,7 @@ inline void handleBootOptionCollectionPost(
 
 inline void handleBootOptionGet(crow::App& app, const crow::Request& req,
                                 const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                [[maybe_unused]] const std::string& systemName,
                                 const std::string& bootOptionName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -411,6 +414,7 @@ inline void
 inline void
     handleBootOptionPatch(crow::App& app, const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          [[maybe_unused]] const std::string& systemName,
                           const std::string& bootOptionName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -456,6 +460,7 @@ inline void
 inline void
     handleBootOptionDelete(crow::App& app, const crow::Request& req,
                            const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                           [[maybe_unused]] const std::string& systemName,
                            const std::string& bootOptionName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -488,6 +493,7 @@ inline void
 inline void handleComputerSystemSettingsBootOptionGet(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName,
     const std::string& bootOptionName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -506,7 +512,8 @@ inline void handleComputerSystemSettingsBootOptionGet(
 
 inline void handleComputerSystemSettingsBootOptionsCollectionGet(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -533,6 +540,7 @@ inline void handleComputerSystemSettingsBootOptionsCollectionGet(
 inline void handleComputerSystemSettingsBootOptionPatch(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName,
     const std::string& bootOptionName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -569,60 +577,44 @@ inline void handleComputerSystemSettingsBootOptionPatch(
 
 inline void requestRoutesBootOptions(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/BootOptions/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/BootOptions/")
         .privileges(redfish::privileges::getBootOptionCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             boot_options::handleBootOptionCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/BootOptions/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/BootOptions/")
         .privileges(redfish::privileges::postBootOptionCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             boot_options::handleBootOptionCollectionPost, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/BootOptions/<str>/")
         .privileges(redfish::privileges::getBootOption)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(boot_options::handleBootOptionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/BootOptions/<str>/")
         .privileges(redfish::privileges::patchBootOption)
         .methods(boost::beast::http::verb::patch)(std::bind_front(
             boot_options::handleBootOptionPatch, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/BootOptions/<str>/")
         .privileges(redfish::privileges::deleteBootOption)
         .methods(boost::beast::http::verb::delete_)(std::bind_front(
             boot_options::handleBootOptionDelete, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Settings/BootOptions")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Settings/BootOptions")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             boot_options::handleComputerSystemSettingsBootOptionsCollectionGet,
             std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Settings/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Settings/BootOptions/<str>/")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::patch)(std::bind_front(
             boot_options::handleComputerSystemSettingsBootOptionPatch,
             std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Settings/BootOptions/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Settings/BootOptions/<str>/")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             boot_options::handleComputerSystemSettingsBootOptionGet,

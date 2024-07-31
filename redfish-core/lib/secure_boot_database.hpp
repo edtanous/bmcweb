@@ -131,7 +131,8 @@ inline void
 
 inline void handleSecureBootDatabaseCollectionGet(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
     {
@@ -204,6 +205,7 @@ inline void handleSecureBootDatabaseCollectionGet(
 inline void
     handleSecureBootDatabaseGet(crow::App& app, const crow::Request& req,
                                 const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                [[maybe_unused]] const std::string& systemName,
                                 const std::string& databaseId)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -274,6 +276,7 @@ inline void
 inline void handleSecureBootDatabaseResetKeys(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName,
     const std::string& databaseId)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -326,6 +329,7 @@ inline void handleSecureBootDatabaseResetKeys(
 inline void handleCertificateCollectionGet(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName,
     const std::string& databaseId)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -354,6 +358,7 @@ inline void handleCertificateCollectionGet(
 inline void handleCertificateCollectionPost(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName,
     const std::string& databaseId)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -455,6 +460,7 @@ inline void handleCertificateCollectionPost(
 inline void
     handleCertificateGet(crow::App& app, const crow::Request& req,
                          const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         [[maybe_unused]] const std::string& systemName,
                          const std::string& databaseId,
                          const std::string& certId)
 {
@@ -550,6 +556,7 @@ inline void
 inline void
     handleCertificateDelete(crow::App& app, const crow::Request& req,
                             const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                            [[maybe_unused]] const std::string& systemName,
                             const std::string& databaseId,
                             const std::string& certId)
 {
@@ -594,6 +601,7 @@ inline void
 inline void handleSignatureCollectionGet(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName,
     const std::string& databaseId)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -628,6 +636,7 @@ inline void handleSignatureCollectionGet(
 inline void handleSignatureCollectionPost(
     crow::App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    [[maybe_unused]] const std::string& systemName,
     const std::string& databaseId)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
@@ -739,6 +748,7 @@ inline void handleSignatureCollectionPost(
 
 inline void handleSignatureGet(crow::App& app, const crow::Request& req,
                                const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                               [[maybe_unused]] const std::string& systemName,
                                const std::string& databaseId,
                                const std::string& sigId)
 {
@@ -810,6 +820,7 @@ inline void handleSignatureGet(crow::App& app, const crow::Request& req,
 inline void
     handleSignatureDelete(crow::App& app, const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          [[maybe_unused]] const std::string& systemName,
                           const std::string& databaseId,
                           const std::string& sigId)
 {
@@ -860,84 +871,77 @@ inline void
 
 inline void requestRoutesSecureBootDatabase(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/SecureBootDatabases/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/")
         .privileges(redfish::privileges::getSecureBootDatabaseCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleSecureBootDatabaseCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/SecureBootDatabases/<str>/")
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/")
         .privileges(redfish::privileges::getSecureBootDatabase)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleSecureBootDatabaseGet, std::ref(app)));
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/SecureBoot/SecureBootDatabases/<str>/Actions/SecureBootDatabase.ResetKeys/")
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Actions/SecureBootDatabase.ResetKeys/")
         .privileges(redfish::privileges::postSecureBootDatabase)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             secure_boot::handleSecureBootDatabaseResetKeys, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/SecureBootDatabases/<str>/Certificates/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Certificates/")
         .privileges(redfish::privileges::getCertificateCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleCertificateCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/SecureBootDatabases/<str>/Certificates/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Certificates/")
         .privileges(redfish::privileges::postCertificateCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             secure_boot::handleCertificateCollectionPost, std::ref(app)));
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" +
-                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                 "/SecureBoot/SecureBootDatabases/<str>/Certificates/<str>/")
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Certificates/<str>/")
         .privileges(redfish::privileges::getCertificate)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(secure_boot::handleCertificateGet, std::ref(app)));
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" +
-                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                 "/SecureBoot/SecureBootDatabases/<str>/Certificates/<str>/")
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Certificates/<str>/")
         .privileges(redfish::privileges::deleteCertificate)
         .methods(boost::beast::http::verb::delete_)(std::bind_front(
             secure_boot::handleCertificateDelete, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/SecureBootDatabases/<str>/Signatures/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Signatures/")
         .privileges(redfish::privileges::getSignatureCollection)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             secure_boot::handleSignatureCollectionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/SecureBootDatabases/<str>/Signatures/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Signatures/")
         .privileges(redfish::privileges::postSignatureCollection)
         .methods(boost::beast::http::verb::post)(std::bind_front(
             secure_boot::handleSignatureCollectionPost, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" +
-                     std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                     "/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
         .privileges(redfish::privileges::getSignature)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(secure_boot::handleSignatureGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" +
-                     std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                     "/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/SecureBoot/SecureBootDatabases/<str>/Signatures/<str>/")
         .privileges(redfish::privileges::deleteSignature)
         .methods(boost::beast::http::verb::delete_)(
             std::bind_front(secure_boot::handleSignatureDelete, std::ref(app)));

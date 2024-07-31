@@ -3757,7 +3757,8 @@ inline void handleComputerSystemHead(
 // *********** NVIDIA ADDED CODE START ***********
 inline void handleComputerSystemSettingsGet(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -3783,7 +3784,8 @@ inline void handleComputerSystemSettingsGet(
 
 inline void handleComputerSystemSettingsPatch(
     App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -4559,16 +4561,12 @@ inline void requestRoutesSystems(App& app)
         .methods(boost::beast::http::verb::get)(std::bind_front(
             handleSystemCollectionResetActionGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Settings/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Settings/")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleComputerSystemSettingsGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Settings/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Settings/")
         .privileges(redfish::privileges::patchComputerSystem)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleComputerSystemSettingsPatch, std::ref(app)));

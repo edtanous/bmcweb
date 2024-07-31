@@ -33,7 +33,8 @@ namespace secure_boot
 {
 
 inline void handleSecureBootGet(crow::App& app, const crow::Request& req,
-                                const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+                                const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
     {
@@ -135,7 +136,8 @@ inline void handleSecureBootGet(crow::App& app, const crow::Request& req,
 
 inline void
     handleSecureBootPatch(crow::App& app, const crow::Request& req,
-                          const std::shared_ptr<bmcweb::AsyncResp>& aResp)
+                          const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                          [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, aResp))
     {
@@ -282,16 +284,12 @@ inline void
 
 inline void requestRoutesSecureBoot(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/SecureBoot/")
         .privileges(redfish::privileges::getSecureBoot)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(secure_boot::handleSecureBootGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/SecureBoot/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/SecureBoot/")
         .privileges(redfish::privileges::patchSecureBoot)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(secure_boot::handleSecureBootPatch, std::ref(app)));

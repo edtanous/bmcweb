@@ -1784,7 +1784,8 @@ static void
  */
 inline void
     handleBiosServicePut(crow::App& app, const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1853,7 +1854,8 @@ inline void
  */
 inline void
     handleBiosServiceGet(crow::App& app, const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -1967,16 +1969,12 @@ inline void
 
 inline void requestRoutesBiosService(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Bios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/")
         .privileges(redfish::privileges::getBios)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleBiosServiceGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Bios/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/")
         .privileges(redfish::privileges::putBios)
         .methods(boost::beast::http::verb::put)(
             std::bind_front(handleBiosServicePut, std::ref(app)));
@@ -1995,7 +1993,8 @@ inline void requestRoutesBiosService(App& app)
  */
 inline void
     handleBiosSettingsPatch(crow::App& app, const crow::Request& req,
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -2018,7 +2017,8 @@ inline void
  */
 inline void
     handleBiosSettingsGet(crow::App& app, const crow::Request& req,
-                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+                          const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -2039,16 +2039,12 @@ inline void
 
 inline void requestRoutesBiosSettings(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Bios/Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/Settings")
         .privileges(redfish::privileges::getBios)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleBiosSettingsGet, std::ref(app)));
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Bios/Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Bios/Settings")
         .privileges(redfish::privileges::patchBios)
         .methods(boost::beast::http::verb::patch)(
             std::bind_front(handleBiosSettingsPatch, std::ref(app)));
@@ -2358,7 +2354,8 @@ inline void requestRoutesBiosReset(App& app)
  */
 inline void handleBiosChangePasswordPost(
     crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    [[maybe_unused]] const std::string& systemName)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -2430,9 +2427,8 @@ inline void handleBiosChangePasswordPost(
 
 inline void requestRoutesBiosChangePassword(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Bios/Actions/Bios.ChangePassword/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/<str>/Bios/Actions/Bios.ChangePassword/")
         .privileges(redfish::privileges::postBios)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(handleBiosChangePasswordPost, std::ref(app)));

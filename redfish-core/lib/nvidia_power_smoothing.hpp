@@ -1447,13 +1447,14 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1462,13 +1463,14 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
         getProcessorPowerSmoothingData(asyncResp, processorId);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1498,12 +1500,12 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ApplyAdminOverrides/")
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ApplyAdminOverrides/")
         .privileges(redfish::privileges::postProcessor)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1515,12 +1517,12 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ActivatePresetProfile/")
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/Actions/NvidiaPowerSmoothing.ActivatePresetProfile/")
         .privileges(redfish::privileges::postProcessor)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1541,12 +1543,12 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/ActivatePresetProfileActionInfo/")
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/ActivatePresetProfileActionInfo/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1579,12 +1581,12 @@ inline void requestRoutesProcessorPowerSmoothingAdminProfile(App& app)
      */
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1595,12 +1597,12 @@ inline void requestRoutesProcessorPowerSmoothingAdminProfile(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/AdminOverrideProfile/")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1649,13 +1651,13 @@ inline void
      * Functions triggers appropriate requests on DBus
      */
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/" +
-                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                 "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/")
+        app,
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -1673,12 +1675,12 @@ inline void requestRoutesProcessorPowerSmoothingPresetProfile(App& app)
      */
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId,
                    const std::string& profileId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -1691,12 +1693,12 @@ inline void requestRoutesProcessorPowerSmoothingPresetProfile(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
+        "/redfish/v1/Systems/<str>/Processors/<str>/Oem/Nvidia/PowerSmoothing/PresetProfiles/<str>/")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId,
                    const std::string& profileId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))

@@ -438,13 +438,14 @@ inline void requestRoutesNvidiaManagerResetToDefaultsAction(App& app)
      *
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/Actions/Oem/NvidiaManager.ResetToDefaults")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Managers/<str>/Actions/Oem/NvidiaManager.ResetToDefaults")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& managerName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -503,13 +504,12 @@ inline void requestRoutesNvidiaManagerEmmcSecureErase(App& app)
      *
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/Actions/Oem/eMMC.SecureErase")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/Actions/Oem/eMMC.SecureErase")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName) {
         std::string setCommand = "/sbin/fw_setenv emmc_secure_erase yes";
         PersistentStorageUtil persistentStorageUtil;
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -541,13 +541,13 @@ inline void requestRoutesManagerEmmcSecureEraseActionInfo(App& app)
      * Functions triggers appropriate requests on DBus
      */
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/Oem/EmmcSecureEraseActionInfo/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/<str>/Oem/EmmcSecureEraseActionInfo/")
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;
@@ -647,13 +647,13 @@ inline void
  */
 inline void requestRoutesNvidiaManagerSetSelCapacityAction(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/Actions/Oem/Nvidia/SelCapacity/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Managers/<str>/Actions/Oem/Nvidia/SelCapacity/")
         .privileges(redfish::privileges::postManager)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               [[maybe_unused]] const std::string& systemName) {
         size_t capacity = 0;
 
         if (!redfish::json_util::readJsonAction(req, asyncResp->res,
@@ -705,13 +705,12 @@ inline void
  */
 inline void requestRoutesNvidiaManagerGetSelCapacity(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/Oem/Nvidia/SelCapacity/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/Oem/Nvidia/SelCapacity/")
         .privileges(redfish::privileges::getManager)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               [[maybe_unused]] const std::string& systemName) {
         getDbusSelCapacity(asyncResp);
     });
 }

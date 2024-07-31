@@ -595,7 +595,7 @@ inline std::optional<boost::urls::url>
                          std::optional<std::string> transferProtocol,
                          crow::Response& res)
 {
-        if (imageURI.find("://") == std::string::npos)
+    if (imageURI.find("://") == std::string::npos)
     {
         if (imageURI.starts_with("/"))
         {

@@ -160,14 +160,14 @@ inline void requestRoutesProcessorEnvironmentMetricsClearOOBSetPoint(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-            "/Processors/<str>/"
-            "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ClearOOBSetPoint")
+        "/redfish/v1/Systems/<str>/Processors/<str>/"
+        "EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ClearOOBSetPoint")
 
         .privileges({{"ConfigureComponents"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -542,13 +542,13 @@ inline void requestRoutesEnvironmentMetrics(App& app)
 
 inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/EnvironmentMetrics")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems<str>/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -589,13 +589,13 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
             asyncResp, processorId);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/EnvironmentMetrics")
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/<str>/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -752,13 +752,13 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 
 inline void requestRoutesMemoryEnvironmentMetrics(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Memory/<str>/EnvironmentMetrics")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/<str>/Memory/<str>/EnvironmentMetrics")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& dimmId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {

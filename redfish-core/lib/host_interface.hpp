@@ -227,13 +227,12 @@ static void
 
 inline void requestHostInterfacesRoutes(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/HostInterfaces/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/HostInterfaces/")
         .privileges(redfish::privileges::getHostInterfaceCollection)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) {
+               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               [[maybe_unused]] const std::string& managerName) {
         asyncResp->res.jsonValue["@odata.type"] =
             "#HostInterfaceCollection.HostInterfaceCollection";
         asyncResp->res.jsonValue["@odata.id"] =
@@ -290,13 +289,12 @@ inline void requestHostInterfacesRoutes(App& app)
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/HostInterfaces/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/HostInterfaces/<str>/")
         .privileges(redfish::privileges::getHostInterface)
         .methods(boost::beast::http::verb::get)(
             [](const crow::Request&,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+               [[maybe_unused]] const std::string& managerName,
                const std::string& ifaceId) {
         // Check for the match of requested HostInterface Id with
         // the configured HostInterface channel
@@ -338,13 +336,12 @@ inline void requestHostInterfacesRoutes(App& app)
         getCredentialsBootStrap(asyncResp);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Managers/" +
-                          std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
-                          "/HostInterfaces/<str>/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Managers/<str>/HostInterfaces/<str>/")
         .privileges(redfish::privileges::patchHostInterface)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& managerName,
                    const std::string& ifaceId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {

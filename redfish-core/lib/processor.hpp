@@ -3394,13 +3394,13 @@ inline void patchAppliedOperatingConfig(
 
 inline void requestRoutesOperatingConfigCollection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/OperatingConfigs/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/<str>/Processors/<str>/OperatingConfigs/")
         .privileges(redfish::privileges::getOperatingConfigCollection)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& cpuName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -3459,13 +3459,14 @@ inline void requestRoutesOperatingConfigCollection(App& app)
 
 inline void requestRoutesOperatingConfig(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/OperatingConfigs/<str>/")
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Systems/<str>/Processors/<str>/OperatingConfigs/<str>/")
         .privileges(redfish::privileges::getOperatingConfig)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& cpuName, const std::string& configName) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -4353,13 +4354,13 @@ inline void requestRoutesProcessorMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/ProcessorMetrics")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/<str>/Processors/<str>/ProcessorMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -4663,14 +4664,13 @@ inline void requestRoutesProcessorMemoryMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/"
-                          "MemorySummary/MemoryMetrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "MemorySummary/MemoryMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -4873,14 +4873,13 @@ inline void requestRoutesProcessorSettings(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/"
-                          "Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Settings")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -4889,14 +4888,13 @@ inline void requestRoutesProcessorSettings(App& app)
         getProcessorSettingsData(asyncResp, processorId);
     });
 
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/"
-                          "Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Settings")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -5062,14 +5060,13 @@ inline void requestRoutesProcessorReset(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/"
-                          "Actions/Processor.Reset")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Actions/Processor.Reset")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -5103,14 +5100,13 @@ inline void requestRoutesProcessorPortCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/"
-                          "Ports")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Ports")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -5595,14 +5591,13 @@ inline void requestRoutesProcessorPort(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/"
-                          "Ports/<str>")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Ports/<str>")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId, const std::string& port) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
@@ -6138,14 +6133,13 @@ inline void requestRoutesProcessorPortMetrics(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
-                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
-                          "/Processors/<str>/"
-                          "Ports/<str>/Metrics")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Ports/<str>/Metrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
                    const std::string& processorId, const std::string& portId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
