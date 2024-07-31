@@ -195,5 +195,57 @@ class PatchPowerCapCallback
     int64_t setpoint;
 };
 
+class PatchClockLimitControlCallback
+{
+  public:
+    explicit PatchClockLimitControlCallback(
+        std::shared_ptr<bmcweb::AsyncResp> resp) : resp(std::move(resp))
+    {}
+
+    void operator()(const std::string& status) const
+    {
+        if (status == nvidia_async_operation_utils::asyncStatusValueSuccess)
+        {
+            messages::success(resp->res);
+            return;
+        }
+
+        if (status ==
+            nvidia_async_operation_utils::asyncStatusValueWriteFailure)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueUnavailable)
+        {
+            std::string errBusy = "0x50A";
+            std::string errBusyResolution =
+                "NSM Command failed with error busy, please try after 60 seconds";
+
+            // busy error
+            messages::asyncError(resp->res, errBusy, errBusyResolution);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueTimeout)
+        {
+            std::string errTimeout = "0x600";
+            std::string errTimeoutResolution =
+                "Settings may/maynot have applied, please check get response before patching";
+
+            // timeout error
+
+            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    }
+
+  private:
+    std::shared_ptr<bmcweb::AsyncResp> resp;
+};
+
 } // namespace nvidia_async_operation_utils
 } // namespace redfish

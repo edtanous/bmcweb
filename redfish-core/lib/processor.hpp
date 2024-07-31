@@ -3740,11 +3740,14 @@ inline void requestRoutesProcessor(App& app)
         std::optional<int> speedLimit;
         std::optional<bool> speedLocked;
         std::optional<nlohmann::json> oemObject;
+        std::optional<nlohmann::json> operatingSpeedRangeMHzObject;
+        std::optional<uint32_t> settingMin;
+        std::optional<uint32_t> settingMax;
         std::optional<std::string> appliedConfigUri;
         if (!redfish::json_util::readJsonAction(
-                req, asyncResp->res, "SpeedLimitMHz", speedLimit, "SpeedLocked",
+                req, asyncResp->res,  "SpeedLimitMHz", speedLimit, "SpeedLocked",
                 speedLocked, "AppliedOperatingConfig/@odata.id",
-                appliedConfigUri, "Oem", oemObject))
+                appliedConfigUri, "Oem", oemObject, "OperatingSpeedRangeMHz", operatingSpeedRangeMHzObject))
         {
             return;
         }
@@ -3771,6 +3774,36 @@ inline void requestRoutesProcessor(App& app)
                     [[maybe_unused]] const std::string& deviceType) {
                 patchSpeedConfig(asyncResp1, processorId1, reqSpeedConfig,
                                  objectPath, serviceMap);
+            });
+        }
+
+        else if (operatingSpeedRangeMHzObject &&
+                 redfish::json_util::readJson(
+                     *operatingSpeedRangeMHzObject, asyncResp->res,
+                     "SettingMax", settingMax, "SettingMin", settingMin))
+        {
+            redfish::processor_utils::getProcessorObject(
+                asyncResp, processorId,
+                [settingMin, settingMax](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                    const std::string& processorId,
+                    const std::string& objectPath,
+                    [[maybe_unused]] const MapperServiceMap& serviceMap,
+                    [[maybe_unused]] const std::string& deviceType) {
+                if (settingMax)
+                {
+                    redfish::nvidia_processor_utils::
+                        patchOperatingSpeedRangeMHz(asyncResp, processorId,
+                                                    *settingMax, "SettingMax",
+                                                    objectPath);
+                }
+                else if (settingMin)
+                {
+                    redfish::nvidia_processor_utils::
+                        patchOperatingSpeedRangeMHz(asyncResp, processorId,
+                                                    *settingMin, "SettingMin",
+                                                    objectPath);
+                }
             });
         }
 

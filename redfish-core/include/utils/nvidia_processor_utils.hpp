@@ -565,5 +565,141 @@ inline void getClearPCIeCountersActionInfo(
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+inline void
+    setOperatingSpeedRange(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const uint32_t& value, const std::string& patchProp,
+                           const std::string& path)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, path, value, patchProp](
+            const boost::system::error_code errorno,
+            const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                objInfo) {
+        if (errorno)
+        {
+            BMCWEB_LOG_ERROR("ObjectMapper::GetObject call failed: {}",
+                             errorno);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+
+        for (auto& [service, interfaces] : objInfo)
+        {
+            if (std::find(
+                    interfaces.begin(), interfaces.end(),
+                    nvidia_async_operation_utils::setAsyncInterfaceName) ==
+                interfaces.end())
+            {
+                continue;
+            }
+
+            if (patchProp == "SettingMin")
+
+            {
+                nvidia_async_operation_utils::doGenericSetAsyncAndGatherResult(
+                    asyncResp, std::chrono::seconds(60), service, path,
+                    "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
+                    "RequestedSpeedLimitMin", std::variant<uint32_t>(value),
+                    nvidia_async_operation_utils::
+                        PatchClockLimitControlCallback{asyncResp});
+            }
+            else if (patchProp == "SettingMax")
+
+            {
+                nvidia_async_operation_utils::doGenericSetAsyncAndGatherResult(
+                    asyncResp, std::chrono::seconds(60), service, path,
+                    "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
+                    "RequestedSpeedLimitMax", std::variant<uint32_t>(value),
+                    nvidia_async_operation_utils::
+                        PatchClockLimitControlCallback{asyncResp});
+            }
+
+            else
+            {
+                BMCWEB_LOG_ERROR("Invalid patch properrty name: {}", patchProp);
+            }
+
+            return;
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetObject", path,
+        std::array<const char*, 1>(
+            {"xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig"}));
+}
+
+/**
+ * Handle the PATCH operation of the OperatingSpeedRangeMHz Property SettingMin/SettingMax.
+ *
+ * @param[in,out]   asyncResp          Async HTTP response.
+ * @param[in]       processorId     Processor's Id.
+ * @param[in]       value           value of the property to be patched.
+ * @param[in]       patchProp       string representing property name SettingMin/SettingMax
+ * @param[in]       processorObjPath   Path of processor object used to get clockLimit control path.
+ */
+
+inline void patchOperatingSpeedRangeMHz(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& processorId, const uint32_t& value,
+    const std::string& patchProp, const std::string processorObjPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, value, patchProp, processorId,
+         processorObjPath](const boost::system::error_code ec,
+                           std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("ObjectMapper call failed with error {ec}", ec);
+            messages::internalError(asyncResp->res);
+            return; 
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+
+        if (data)
+        {
+            for (auto chassisPath : *data)
+            {
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, value, patchProp, processorId, chassisPath](
+                        const boost::system::error_code ec,
+                        std::variant<std::vector<std::string>>& resp) {
+                    if (ec)
+                    {
+                        return; // no clock Limit Path for the chassis path
+                    }
+
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+
+                    for (auto clockLimitPath : *data)
+                    {
+                        setOperatingSpeedRange(asyncResp, value, patchProp,
+                                               clockLimitPath);
+                    }
+                },
+
+                    "xyz.openbmc_project.ObjectMapper",
+                    chassisPath + "/clock_controls",
+                    "org.freedesktop.DBus.Properties", "Get",
+                    "xyz.openbmc_project.Association", "endpoints");
+            }
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR(
+                "Chassis Path not found for processorId {processorId}",
+                processorId);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+    },
+
+        "xyz.openbmc_project.ObjectMapper",
+        processorObjPath + "/parent_chassis", "org.freedesktop.DBus.Properties",
+        "Get", "xyz.openbmc_project.Association", "endpoints");
+}
+
 } // namespace nvidia_processor_utils
 } // namespace redfish
