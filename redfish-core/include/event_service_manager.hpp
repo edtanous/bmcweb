@@ -1090,9 +1090,7 @@ class EventServiceManager
             subValue->updateRetryConfig(retryAttempts, retryTimeoutInterval);
         }
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-        subscribeTimer = std::make_unique<boost::asio::steady_timer>(
-            crow::connections::systemBus->get_io_context(),
-            std::chrono::seconds(rfaDeferSubscribeTime));
+        createSubscribeTimer();
 
         if (getNumberOfSubscriptions() > 0)
         {

@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+#pragma once
 // Dbus service for EventService Listener
 constexpr const char* mode = "replace";
 constexpr const char* serviceName = "org.freedesktop.systemd1";
@@ -49,7 +50,7 @@ inline crow::ConnectionPolicy getSubscriptionPolicy()
 }
 
 // This is common function for post/delete subscription.
-void handleSubscribeResponse(crow::Response& resp)
+inline void handleSubscribeResponse(crow::Response& resp)
 {
     if (resp.resultInt() ==
         static_cast<unsigned>(boost::beast::http::status::created))
@@ -93,8 +94,8 @@ void handleGetSubscriptionResp(crow::Response& resp, Callback&& handler)
     }
 }
 
-void doSubscribe(std::shared_ptr<crow::HttpClient> client, boost::urls::url url,
-                 crow::Response& resp)
+inline void doSubscribe(std::shared_ptr<crow::HttpClient> client,
+                        boost::urls::url url, crow::Response& resp)
 {
     // subscribe EventService if there is no subscription in satellite BMC
     auto subscribe = [&client, &url](nlohmann::json& jsonVal) {
@@ -125,8 +126,8 @@ void doSubscribe(std::shared_ptr<crow::HttpClient> client, boost::urls::url url,
     handleGetSubscriptionResp(resp, std::move(subscribe));
 }
 
-void doUnsubscribe(std::shared_ptr<crow::HttpClient> client,
-                   boost::urls::url url, crow::Response& resp)
+inline void doUnsubscribe(std::shared_ptr<crow::HttpClient> client,
+                          boost::urls::url url, crow::Response& resp)
 {
     // unsubscribe EventService if there is subscriptions in satellite BMC
     auto unSubscribe = [&client, &url](nlohmann::json& jsonVal) {
@@ -165,7 +166,15 @@ inline void invokeRedfishEventListener()
         listenerServiceName, mode);
 }
 
-std::unique_ptr<boost::asio::steady_timer> subscribeTimer;
+static std::unique_ptr<boost::asio::steady_timer> subscribeTimer;
+
+inline void createSubscribeTimer()
+{
+    subscribeTimer = std::make_unique<boost::asio::steady_timer>(
+        crow::connections::systemBus->get_io_context(),
+        std::chrono::seconds(rfaDeferSubscribeTime));
+}
+
 inline void querySubscriptionList(std::shared_ptr<crow::HttpClient> client,
                                   boost::urls::url url,
                                   const boost::system::error_code& ec)
