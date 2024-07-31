@@ -690,6 +690,92 @@ inline void
 }
 
 /**
+ * @brief Retrieves Oem BootStatus code for the chassis endpoint
+ * @param asyncResp   Pointer to object holding response data
+ * @param chassisObjPath   Path of the chassis endpoint
+ */
+inline void getOemBootStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string chassisObjPath)
+{
+    static constexpr std::array<std::string_view, 1> interfaces = {
+        "com.nvidia.RoT.BootStatus"};
+
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project/inventory/system/chassis", 0, interfaces,
+        [asyncResp, chassisObjPath](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) {
+
+            std::string statusService{};
+
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("No D-Bus object found implementing"
+                        "com.nvidia.RoT.BootStatus for {}", chassisObjPath);
+                return;
+            }
+
+            for (const auto& obj : subtree)
+            {
+                sdbusplus::message::object_path objPath(obj.first);
+                if (!boost::equals(objPath.filename(), chassisObjPath))
+                {
+                    continue;
+                }
+
+                for (const auto& [service, interfaces] : obj.second)
+                {
+                    statusService = service;
+                    break;
+
+                }
+            }
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, chassisObjPath](
+                const boost::system::error_code errorCode,
+                const boost::container::flat_map<
+                    std::string, dbus::utility::DbusVariantType>& propertiesList) {
+            if (errorCode)
+            {
+                // OK since not all fwtypes support bootstatus
+                return;
+            }
+
+            const auto& it = propertiesList.find("BootStatus");
+            if (it == propertiesList.end())
+            {
+                BMCWEB_LOG_ERROR("Can't find D-Bus property \"com.nvidia.RoT.BootStatus.BootStatus\"!");
+                messages::propertyMissing(asyncResp->res, "BootStatus");
+                return;
+            }
+
+            const auto* bootStatus =
+                std::get_if<std::vector<uint8_t>>(&it->second);
+            if (bootStatus == nullptr)
+            {
+                BMCWEB_LOG_ERROR("wrong types for D-Bus property \"com.nvidia.RoT.BootStatus.BootStatus\"!");
+                messages::propertyValueTypeError(asyncResp->res, "", "BootStatus");
+                return;
+            }
+            std::string out{};
+
+            std::ostringstream oss;
+            for (auto byte : *bootStatus)
+            {
+                // Convert each byte to a two-character hexadecimal string
+                oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+            }
+            out = "0x" + oss.str();
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["BootStatus"] = out;
+        },
+            statusService, "/xyz/openbmc_project/inventory/system/chassis/" + chassisObjPath,
+            "org.freedesktop.DBus.Properties", "GetAll",
+            "com.nvidia.RoT.BootStatus");
+        });
+}
+
+/**
  *@brief Sets the background copy for particular chassis
  *
  * @param req   Pointer to object holding request data

@@ -48,7 +48,6 @@ inline void
                    const boost::system::error_code& ec, int errorCode) -> void {
         if (ec || errorCode)
         {
-            redfish::messages::internalError(asyncResp->res);
             return;
         }
         nlohmann::json& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
