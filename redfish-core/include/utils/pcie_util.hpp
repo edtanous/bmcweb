@@ -39,8 +39,8 @@ inline void
 {
     static constexpr std::array<std::string_view, 1> pcieDeviceInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
-    const boost::urls::url pcieDeviceUrl =
-        boost::urls::url("/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices");
+    const boost::urls::url pcieDeviceUrl = boost::urls::url(
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/PCIeDevices");
     collection_util::getCollectionToKey(
         asyncResp, pcieDeviceUrl, pcieDeviceInterface,
         "/xyz/openbmc_project/inventory", jsonKeyName);
@@ -175,6 +175,44 @@ inline std::optional<std::string>
     }
     if (generationInUse ==
         "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen6")
+    {
+        return "Gen6";
+    }
+
+    // The value is not unknown or Gen1-6, need return an internal error.
+    return std::nullopt;
+}
+
+inline std::optional<std::string>
+    redfishPcieTypeStringFromDbus(const std::string& pcieType)
+{
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen1")
+    {
+        return "Gen1";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen2")
+    {
+        return "Gen2";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen3")
+    {
+        return "Gen3";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen4")
+    {
+        return "Gen4";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen5")
+    {
+        return "Gen5";
+    }
+    if (pcieType ==
+        "xyz.openbmc_project.Inventory.Item.PCIeDevice.PCIeTypes.Gen6")
     {
         return "Gen6";
     }
