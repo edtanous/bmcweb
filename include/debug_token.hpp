@@ -199,8 +199,10 @@ class StatusQueryHandler : public OperationHandler
         }
         if (exitCode != 0)
         {
-            errCallback(true, desc, "Exit code: " + std::to_string(exitCode));
-            return;
+            // If error is encountered mctp message will not have the proper
+            // response for debug token, TX/RX parsing below will handle the
+            // error messages
+            BMCWEB_LOG_ERROR("{}: {}", desc, exitCode);
         }
         boost::interprocess::bufferstream outputStream(subprocessOutput.data(),
                                                        subprocessOutput.size());
