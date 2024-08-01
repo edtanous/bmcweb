@@ -78,7 +78,8 @@ namespace redfish
 RedfishService::RedfishService(App& app)
 {
     requestAssemblyRoutes(app);
-    requestRoutesMetadata(app);
+    // Fix me 
+    //requestRoutesMetadata(app);
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
         requestAccountServiceRoutes(app);
@@ -218,7 +219,8 @@ RedfishService::RedfishService(App& app)
         requestRoutesBMCDumpServiceActionInfo(app);
         requestRoutesBMCDumpEntryCollection(app);
         requestRoutesBMCDumpEntry(app);
-        requestRoutesBMCDumpEntryDownload(app);
+        // Need to migrate dump-offload feature to upstream work 
+        //requestRoutesBMCDumpEntryDownload(app);
         requestRoutesBMCDumpCreate(app);
         requestRoutesBMCDumpClear(app);
 

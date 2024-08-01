@@ -87,7 +87,7 @@ class Server
             return;
         }
         if constexpr (std::is_same<Adaptor,
-                                   boost::beast::ssl_stream<
+                                   boost::asio::ssl::stream<
                                        boost::asio::ip::tcp::socket>>::value)
         {
             auto sslContext = ensuressl::getSslServerContext();

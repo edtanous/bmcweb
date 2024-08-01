@@ -68,10 +68,10 @@ template <LogLevel level, typename... Args>
 inline void vlog(std::format_string<Args...>&& format, Args&&... args,
                  const std::source_location& loc) noexcept
 {
-    if constexpr (bmcwebCurrentLoggingLevel < level)
-    {
-        return;
-    }
+    // if constexpr (bmcwebCurrentLoggingLevel < level)
+    // {
+    //     return;
+    // }
     constexpr size_t stringIndex = static_cast<size_t>(level);
     static_assert(stringIndex < mapLogLevelFromName.size(),
                   "Missing string for level");
