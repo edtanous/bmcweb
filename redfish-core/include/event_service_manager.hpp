@@ -2032,7 +2032,22 @@ class EventServiceManager
     const std::string ledGroupsDbusPrefix =
         "/xyz/openbmc_project/led/groups/enclosure_identify";
     const std::string ledPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID;
-
+    const std::string biosPwdPathDbusPrefix =
+        "/xyz/openbmc_project/bios_config/password";
+    const std::string biosPwdPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                      "/Bios/Actions/Bios.ChangePassword";
+    const std::string biosConfigDbusPrefix =
+        "/xyz/openbmc_project/bios_config/manager";
+    const std::string biosConfigPrefix = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                         "/secureboot";
+    const std::string biosSettingsDbusPrefix =
+        "/xyz/openbmc_project/bios_config/manager/bios/settings";
+    const std::string biosSettingsPrefix =
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Bios/Actions/Bios.ResetBios";
+    const std::string chassisResetDbusPrefix =
+        "/xyz/openbmc_project/state/host0";
+    const std::string chassisResetPrefix =
+        "/redfish/v1/Chassis/" PLATFORMCHASSISNAME "/Actions/Chassis.Reset";
     /**
      *  @brief Table used to find OriginOfCondition
      */
@@ -2053,7 +2068,10 @@ class EventServiceManager
         {httpsCertificateDbusPrefix, httpsCertificatePrefix},
         {updateServiceDbusPrefix, updateServicePrefix},
         {managerResetDbusPrefix, managerResetPrefix},
-        {ledGroupsDbusPrefix, ledPrefix}};
+        {ledGroupsDbusPrefix, ledPrefix},
+        {biosSettingsDbusPrefix, biosSettingsPrefix},
+        {biosPwdPathDbusPrefix, biosPwdPrefix},
+        {chassisResetDbusPrefix, chassisResetPrefix}};
 
     const std::string minpasswordLengthDbus = "MinPasswordLength";
     const std::string minpasswordLength = "MinPasswordLength";
@@ -2095,7 +2113,18 @@ class EventServiceManager
     const std::string vlanEnable = "VLANEnable";
     const std::string dhcbEnableDbus = "DHCPEnabled";
     const std::string dhcbEnabled = "DHCPEnabled";
-
+    const std::string secureBootEnableDbus = "SecureBootEnable";
+    const std::string secureBootEnable = "SecureBootEnable";
+    const std::string secureBootModeDbus = "SecureBootMode";
+    const std::string secureBootMode = "SecureBootMode";
+    const std::string secureCurrentBootDbus = "ScureCurrentBoot";
+    const std::string secureCurrentBoot = "ScureCurrentBoot";
+    const std::string resetBIOSSettingsDbus = "ResetBIOSSettings";
+    const std::string resetBIOSSettings = "ResetBIOSSettings";
+    const std::string biosPassowrdDbus = "BIOSPassword";
+    const std::string biosPassword = "NewPassword";
+    const std::string hostPowerStateDbus = "RequestedHostTransition";
+    const std::string hostPowerState = "ResetType";
     /**
      * @brief Map Dbus Property to Redfish Property
      */
@@ -2118,7 +2147,13 @@ class EventServiceManager
         {groupNameDbus, remoteGroup},
         {modulePowercapDbus, setpoint},
         {nicEnabledDbus, vlanEnable},
-        {dhcbEnableDbus, dhcbEnabled}};
+        {dhcbEnableDbus, dhcbEnabled},
+        {secureBootEnableDbus, secureBootEnable},
+        {secureBootModeDbus, secureBootMode},
+        {resetBIOSSettingsDbus, resetBIOSSettings},
+        {biosPassowrdDbus, biosPassword},
+        {secureCurrentBootDbus, secureCurrentBoot},
+        {hostPowerStateDbus, hostPowerState}};
 
     const std::string certificateDbusPrefix = "/xyz/openbmc_project/certs";
     const std::string systemsDbusPrefix =
