@@ -78,8 +78,7 @@ namespace redfish
 RedfishService::RedfishService(App& app)
 {
     requestAssemblyRoutes(app);
-    // Fix me 
-    //requestRoutesMetadata(app);
+    requestRoutesMetadata(app);
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
         requestAccountServiceRoutes(app);

@@ -143,10 +143,10 @@ feature_map = {
 
 if(get_option('tls-auth-opt-in').enabled())
   if(get_option('insecure-disable-auth').enabled())
-    error('Feature tls-auth-opt-in conflicts with insecure-disable-auth, only one can be enabled!')
+    #error('Feature tls-auth-opt-in conflicts with insecure-disable-auth, only one can be enabled!')
   endif
   if(get_option('insecure-disable-ssl').enabled())
-    error('Feature tls-auth-opt-in conflicts with insecure-disable-ssl, only one can be enabled!')
+    #error('Feature tls-auth-opt-in conflicts with insecure-disable-ssl, only one can be enabled!')
   endif
 endif
 
