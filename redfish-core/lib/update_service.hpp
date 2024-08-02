@@ -1297,12 +1297,18 @@ inline bool
             if (param.second == "UpdateParameters")
             {
                 hasUpdateParameters = true;
+                nlohmann::json content = nlohmann::json::parse(formpart.content,
+                                                               nullptr, false);
+                if (content.is_discarded())
+                {
+                    BMCWEB_LOG_INFO("UpdateParameters parse error:{}",formpart.content);
+                    messages::unrecognizedRequestBody(asyncResp->res);
+
+                    return false;
+                }
 
                 try
                 {
-                    nlohmann::json content =
-                        nlohmann::json::parse(formpart.content);
-
                     json_util::readJson(content, asyncResp->res, "Targets",
                                         targets, "@Redfish.OperationApplyTime",
                                         applyTime, "ForceUpdate", forceUpdate);
