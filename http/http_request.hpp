@@ -129,6 +129,11 @@ struct Request
         return req.body().str();
     }
 
+    void clearBody() 
+    {
+        return req.body().clear();
+    }
+
     bool target(std::string_view target)
     {
         req.target(target);

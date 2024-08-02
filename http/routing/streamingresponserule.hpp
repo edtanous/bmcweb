@@ -23,7 +23,7 @@ class StreamingResponseRule : public BaseRule
 
     void validate() override {}
 
-    void handle(const Request&,
+    void handle(Request&,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                 const std::vector<std::string>&) override
     {

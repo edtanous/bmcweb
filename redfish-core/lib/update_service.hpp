@@ -1532,7 +1532,7 @@ void handleSatBMCResponse(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
  * @return None
  */
 inline void forwardImage(
-    const crow::Request& req, const bool updateAll,
+    crow::Request& req, const MultipartParser& parser, const bool updateAll,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const boost::system::error_code& ec,
     const std::unordered_map<std::string, boost::urls::url>& satelliteInfo)
@@ -1556,15 +1556,6 @@ inline void forwardImage(
         *req.ioService,
         std::make_shared<crow::ConnectionPolicy>(getPostAggregationPolicy()));
 
-    MultipartParser parser;
-    ParserError err = parser.parse(req);
-    if (err != ParserError::PARSER_SUCCESS)
-    {
-        // handle error
-        BMCWEB_LOG_ERROR("MIME parse failed, ec : {}", static_cast<int>(err));
-        messages::internalError(asyncResp->res);
-        return;
-    }
 
     std::function<void(crow::Response&)> cb =
         std::bind_front(handleSatBMCResponse, asyncResp);
@@ -1572,7 +1563,7 @@ inline void forwardImage(
     bool hasUpdateFile = false;
     std::string data;
     std::string_view boundary(parser.boundary);
-    for (FormPart& formpart : parser.mime_fields)
+    for (const FormPart& formpart : parser.mime_fields)
     {
         boost::beast::http::fields::const_iterator it =
             formpart.fields.find("Content-Disposition");
@@ -1600,7 +1591,7 @@ inline void forwardImage(
             if (param.second == "UpdateFile")
             {
                 data += "Content-Type: application/octet-stream\r\n\r\n";
-                data += formpart.content;
+                data += std::move(formpart.content);
                 data += "\r\n";
                 hasUpdateFile = true;
             }
@@ -1761,7 +1752,7 @@ inline void setForceUpdate(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
  * @return None
  */
 inline void processMultipartFormData(
-    const crow::Request& req,
+    crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const MultipartParser& parser)
 {
@@ -1836,8 +1827,10 @@ inline void processMultipartFormData(
                 // All URIs in Target has the prepended prefix
                 BMCWEB_LOG_DEBUG("forward image {}", uriTargets[0]);
 
-                RedfishAggregator::getSatelliteConfigs(
-                    std::bind_front(forwardImage, req, updateAll, asyncResp));
+                // clear up the body buffer of the request to save memory
+                req.clearBody();
+                RedfishAggregator::getSatelliteConfigs(std::bind_front(
+                    forwardImage, req, parser, updateAll, asyncResp));
             }
             return;
         }
@@ -1939,7 +1932,7 @@ inline bool preCheckMultipartUpdateServiceReq(
  * @return None
  */
 inline void handleMultipartUpdateServicePost(
-    App& app, const crow::Request& req,
+    App& app, crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
@@ -2552,7 +2545,11 @@ inline void requestRoutesUpdateService(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/UpdateService/update-multipart/")
         .privileges(redfish::privileges::postUpdateService)
         .methods(boost::beast::http::verb::post)(
-            std::bind_front(handleMultipartUpdateServicePost, std::ref(app)));
+            [&app](
+                crow::Request& req,
+                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp) mutable {
+        handleMultipartUpdateServicePost(app, req, asyncResp);
+    });
 }
 
 inline void requestRoutesSoftwareInventoryCollection(App& app)
