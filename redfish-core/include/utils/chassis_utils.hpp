@@ -4,6 +4,7 @@
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "in_band.hpp"
+#include "nvidia_async_call_utils.hpp"
 
 #include <async_resp.hpp>
 #include <sdbusplus/asio/connection.hpp>
@@ -94,24 +95,66 @@ inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& path,
                             const std::string& connection)
 {
-    crow::connections::systemBus->async_method_call(
-        [asyncResp](boost::system::error_code ec1, const int retValue) {
-        if (!ec1)
+    static const std::string clearPowerCapAsyncIntf{
+        "com.nvidia.Common.ClearPowerCapAsync"};
+
+    dbus::utility::getDbusObject(
+        path, std::array<std::string_view, 1>{clearPowerCapAsyncIntf},
+        [asyncResp, path,
+         connection](const boost::system::error_code& ec,
+                     const dbus::utility::MapperGetObject& object) {
+        if (!ec)
         {
-            if (retValue != 0)
+            for (const auto& [serv, _] : object)
             {
-                BMCWEB_LOG_ERROR("resetPowerLimit error {}", retValue);
-                messages::internalError(asyncResp->res);
+                if (serv != connection)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
+
+                nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
+                    int>(asyncResp, std::chrono::seconds(60), connection, path,
+                         clearPowerCapAsyncIntf, "ClearPowerCap",
+                         [asyncResp](const std::string& status,
+                                     [[maybe_unused]] const int* retValue) {
+                    if (status ==
+                        nvidia_async_operation_utils::asyncStatusValueSuccess)
+                    {
+                        BMCWEB_LOG_DEBUG("PowerLimit Reset Succeeded");
+                        messages::success(asyncResp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_ERROR("resetPowerLimit error {}", status);
+                    messages::internalError(asyncResp->res);
+                });
+
+                return;
             }
-            BMCWEB_LOG_DEBUG("PowerLimit Reset Succeeded");
-            messages::success(asyncResp->res);
-            return;
         }
-        BMCWEB_LOG_DEBUG("PowerLimit Reset error {}", ec1);
-        messages::internalError(asyncResp->res);
-        return;
-    },
-        connection, path, "com.nvidia.Common.ClearPowerCap", "ClearPowerCap");
+
+        BMCWEB_LOG_DEBUG("Performing Post using Sync Method Call");
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](boost::system::error_code ec1, const int retValue) {
+            if (!ec1)
+            {
+                if (retValue != 0)
+                {
+                    BMCWEB_LOG_ERROR("resetPowerLimit error {}", retValue);
+                    messages::internalError(asyncResp->res);
+                }
+                BMCWEB_LOG_DEBUG("PowerLimit Reset Succeeded");
+                messages::success(asyncResp->res);
+                return;
+            }
+            BMCWEB_LOG_ERROR("PowerLimit Reset error {}", ec1);
+            messages::internalError(asyncResp->res);
+            return;
+        }, connection, path, "com.nvidia.Common.ClearPowerCap",
+            "ClearPowerCap");
+    });
 }
 
 inline std::string getFeatureReadyStateType(const std::string& stateType)
