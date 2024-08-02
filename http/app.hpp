@@ -36,9 +36,9 @@ class App
     using ssl_socket_t = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
     using raw_socket_t = boost::asio::ip::tcp::socket;
 
-    using socket_type = std::conditional_t<BMCWEB_INSECURE_DISABLE_SSL,
-                                           raw_socket_t, ssl_socket_t>;
-    using server_type = Server<App, socket_type>;
+    using raw_server_type = Server<App, raw_socket_t>;
+    using ssl_server_type = Server<App, ssl_socket_t>;
+
 
     explicit App(std::shared_ptr<boost::asio::io_context> ioIn =
                      std::make_shared<boost::asio::io_context>()) :
@@ -84,6 +84,21 @@ class App
         router.validate();
     }
 
+    void loadCertificate()
+    {
+#ifdef BMCWEB_ENABLE_SSL
+      if (persistent_data::getConfig().isTLSAuthEnabled())
+      {
+        if (!sslServer)
+        {
+            return;
+        }
+        sslServer->loadCertificate();
+      }
+#endif
+
+    }
+
     std::optional<boost::asio::ip::tcp::acceptor> setupSocket()
     {
         if (io == nullptr)
@@ -124,8 +139,24 @@ class App
             BMCWEB_LOG_CRITICAL("Couldn't start server");
             return;
         }
-        server.emplace(this, std::move(*acceptor), sslContext, io);
-        server->run();
+#ifdef BMCWEB_ENABLE_SSL
+        if (persistent_data::getConfig().isTLSAuthEnabled())
+        {
+		BMCWEB_LOG_INFO("TLS RUN");
+		sslServer = std::make_unique<ssl_server_type>(this, std::move(*acceptor), sslContext, io);
+		sslServer->run();
+	}
+	else
+	{
+		BMCWEB_LOG_INFO("NON TLS RUN");
+		rawServer = std::make_unique<raw_server_type>(this, std::move(*acceptor), sslContext, io);
+		rawServer->run();
+	}
+#else
+	BMCWEB_LOG_INFO("NON TLS RUN");
+	rawServer = std::make_unique<raw_server_type>(this, std::move(*acceptor), sslContext, io);
+	rawServer->run();
+#endif
     }
 
     void stop()
@@ -167,9 +198,10 @@ class App
   private:
     std::shared_ptr<boost::asio::io_context> io;
 
-    std::optional<server_type> server;
-
     Router router;
+    std::unique_ptr<ssl_server_type> sslServer;
+    std::unique_ptr<raw_server_type> rawServer;
+
 };
 } // namespace crow
 using App = crow::App;
