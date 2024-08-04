@@ -1513,6 +1513,16 @@ inline void requestRoutesSwitch(App& app)
                             {"target", switchResetURI},
                             {"ResetType@Redfish.AllowableValues",
                              {"ForceRestart"}}};
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                        std::string switchPowerModeURI = switchURI;
+                        switchPowerModeURI += "/Oem/Nvidia/PowerMode";
+                        asyncResp->res
+                            .jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                            "#NvidiaSwitch.v1_2_0.NvidiaSwitch";
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["PowerMode"]
+                                                ["@odata.id"] =
+                            switchPowerModeURI;
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
                         crow::connections::systemBus->async_method_call(
                             [asyncResp,
@@ -4199,5 +4209,271 @@ inline void requestRoutesPortSettings(App& app)
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     });
 }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+inline void requestRoutesSwitchPowerMode(App& app)
+{
+    /**
+     * Functions triggers appropriate requests on DBus
+     */
+
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Oem/Nvidia/PowerMode")
+        .privileges(redfish::privileges::getSwitch)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& fabricId, const std::string& switchId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, fabricId,
+             switchId](const boost::system::error_code ec,
+                       const std::vector<std::string>& objects) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error while getting fabrics");
+                messages::internalError(asyncResp->res);
+                return;
+            }
+
+            for (const std::string& object : objects)
+            {
+                // Get the fabricId object
+                if (!boost::ends_with(object, fabricId))
+                {
+                    continue;
+                }
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, fabricId,
+                     switchId](const boost::system::error_code ec,
+                               std::variant<std::vector<std::string>>& resp) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR(
+                            "DBUS response error while getting switch on fabric");
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    std::vector<std::string>* data =
+                        std::get_if<std::vector<std::string>>(&resp);
+                    if (data == nullptr)
+                    {
+                        BMCWEB_LOG_ERROR(
+                            "Null data response while getting switch on fabric");
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    // Iterate over all retrieved ObjectPaths.
+                    for (const std::string& path : *data)
+                    {
+                        sdbusplus::message::object_path objPath(path);
+                        if (objPath.filename() != switchId)
+                        {
+                            continue;
+                        }
+
+                        std::string switchPowerModeURI = "/redfish/v1/Fabrics/";
+                        switchPowerModeURI += fabricId;
+                        switchPowerModeURI += "/Switches/";
+                        switchPowerModeURI += switchId;
+                        switchPowerModeURI += "/Oem/Nvidia/PowerMode";
+                        asyncResp->res.jsonValue["@odata.type"] =
+                            "#NvidiaSwitchPowerMode.v1_0_0.NvidiaSwitchPowerMode";
+                        asyncResp->res.jsonValue["@odata.id"] =
+                            switchPowerModeURI;
+                        asyncResp->res.jsonValue["Id"] = "PowerMode";
+                        asyncResp->res.jsonValue["Name"] =
+                            switchId + " PowerMode Resource";
+
+                        crow::connections::systemBus->async_method_call(
+                            [asyncResp,
+                             path](const boost::system::error_code ec,
+                                   const std::vector<std::pair<
+                                       std::string, std::vector<std::string>>>&
+                                       object) {
+                            if (ec)
+                            {
+                                BMCWEB_LOG_ERROR(
+                                    "Dbus response error while getting service name for switch");
+                                messages::internalError(asyncResp->res);
+                                return;
+                            }
+                            redfish::nvidia_fabric_utils::
+                                updateSwitchPowerModeData(
+                                    asyncResp, object.front().first, path);
+                        },
+                            "xyz.openbmc_project.ObjectMapper",
+                            "/xyz/openbmc_project/object_mapper",
+                            "xyz.openbmc_project.ObjectMapper", "GetObject",
+                            path, std::array<const char*, 0>());
+
+                        return;
+                    }
+                    // Couldn't find an object with that name.
+                    // Return an error
+                    messages::resourceNotFound(
+                        asyncResp->res, "#Switch.v1_8_0.Switch", switchId);
+                },
+                    "xyz.openbmc_project.ObjectMapper",
+                    object + "/all_switches", "org.freedesktop.DBus.Properties",
+                    "Get", "xyz.openbmc_project.Association", "endpoints");
+                return;
+            }
+            // Couldn't find an object with that name. Return an error
+            messages::resourceNotFound(asyncResp->res, "#Fabric.v1_2_0.Fabric",
+                                       fabricId);
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+            "/xyz/openbmc_project/inventory", 0,
+            std::array<const char*, 1>{
+                "xyz.openbmc_project.Inventory.Item.Fabric"});
+    });
+
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Oem/Nvidia/PowerMode")
+        .privileges(redfish::privileges::patchSwitch)
+        .methods(boost::beast::http::verb::patch)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& fabricId, const std::string& switchId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
+        std::optional<bool> l1HWModeControl;
+        std::optional<bool> l1FWThrottlingMode;
+        std::optional<bool> l1PredictionMode;
+        std::optional<uint32_t> l1HWThreshold;
+        std::optional<uint32_t> l1HWActiveTime;
+        std::optional<uint32_t> l1HWInactiveTime;
+        std::optional<uint32_t> l1HWPredictionInactiveTime;
+        if (!redfish::json_util::readJsonAction(
+                req, asyncResp->res, "L1HWModeEnabled", l1HWModeControl,
+                "L1FWThermalThrottlingModeEnabled", l1FWThrottlingMode,
+                "L1PredictionModeEnabled", l1PredictionMode,
+                "L1HWThresholdBytes", l1HWThreshold,
+                "L1HWActiveTimeMicroseconds", l1HWActiveTime,
+                "L1HWInactiveTimeMicroseconds", l1HWInactiveTime,
+                "L1PredictionInactiveTimeMicroseconds",
+                l1HWPredictionInactiveTime))
+        {
+            return;
+        }
+
+        if (l1HWModeControl)
+        {
+            redfish::nvidia_fabric_utils::getSwitchObject(
+                asyncResp, fabricId, switchId,
+                [l1HWModeControl](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& fabricId1, const std::string& switchId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                redfish::nvidia_fabric_utils::patchL1PowerModeBool(
+                    asyncResp1, fabricId1, switchId1, *l1HWModeControl,
+                    "HWModeControl", objectPath, serviceMap);
+            });
+        }
+
+        if (l1FWThrottlingMode)
+        {
+            redfish::nvidia_fabric_utils::getSwitchObject(
+                asyncResp, fabricId, switchId,
+                [l1FWThrottlingMode](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& fabricId1, const std::string& switchId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                redfish::nvidia_fabric_utils::patchL1PowerModeBool(
+                    asyncResp1, fabricId1, switchId1, *l1FWThrottlingMode,
+                    "FWThrottlingMode", objectPath, serviceMap);
+            });
+        }
+
+        if (l1PredictionMode)
+        {
+            redfish::nvidia_fabric_utils::getSwitchObject(
+                asyncResp, fabricId, switchId,
+                [l1PredictionMode](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& fabricId1, const std::string& switchId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                redfish::nvidia_fabric_utils::patchL1PowerModeBool(
+                    asyncResp1, fabricId1, switchId1, *l1PredictionMode,
+                    "PredictionMode", objectPath, serviceMap);
+            });
+        }
+
+        if (l1HWThreshold)
+        {
+            redfish::nvidia_fabric_utils::getSwitchObject(
+                asyncResp, fabricId, switchId,
+                [l1HWThreshold](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& fabricId1, const std::string& switchId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                redfish::nvidia_fabric_utils::patchL1PowerModeInt(
+                    asyncResp1, fabricId1, switchId1, *l1HWThreshold,
+                    "HWThreshold", objectPath, serviceMap);
+            });
+        }
+
+        if (l1HWActiveTime)
+        {
+            redfish::nvidia_fabric_utils::getSwitchObject(
+                asyncResp, fabricId, switchId,
+                [l1HWActiveTime](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& fabricId1, const std::string& switchId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                redfish::nvidia_fabric_utils::patchL1PowerModeInt(
+                    asyncResp1, fabricId1, switchId1, *l1HWActiveTime,
+                    "HWActiveTime", objectPath, serviceMap);
+            });
+        }
+
+        if (l1HWInactiveTime)
+        {
+            redfish::nvidia_fabric_utils::getSwitchObject(
+                asyncResp, fabricId, switchId,
+                [l1HWInactiveTime](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& fabricId1, const std::string& switchId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                redfish::nvidia_fabric_utils::patchL1PowerModeInt(
+                    asyncResp1, fabricId1, switchId1, *l1HWInactiveTime,
+                    "HWInactiveTime", objectPath, serviceMap);
+            });
+        }
+
+        if (l1HWPredictionInactiveTime)
+        {
+            redfish::nvidia_fabric_utils::getSwitchObject(
+                asyncResp, fabricId, switchId,
+                [l1HWPredictionInactiveTime](
+                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                    const std::string& fabricId1, const std::string& switchId1,
+                    const std::string& objectPath,
+                    const MapperServiceMap& serviceMap) {
+                redfish::nvidia_fabric_utils::patchL1PowerModeInt(
+                    asyncResp1, fabricId1, switchId1,
+                    *l1HWPredictionInactiveTime, "HWPredictionInactiveTime",
+                    objectPath, serviceMap);
+            });
+        }
+    });
+}
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 } // namespace redfish

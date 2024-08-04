@@ -421,6 +421,9 @@ class RedfishService
         requestRoutesEndpoint(app);
         requestRoutesZoneCollection(app);
         requestRoutesZone(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        requestRoutesSwitchPowerMode(app);
+#endif
 
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         requestRoutesTriggerCollection(app);
