@@ -566,6 +566,134 @@ inline void setOemBaseboardChassisAssert(
 }
 
 /**
+ * @brief Fill out nvidia assembly specific info by
+ * requesting data from the associated D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       assemblyId  Assembly ID to query and update.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
+inline void
+    getOemAssemblyAssert(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                         const std::string& assemblyId,
+                         const std::string& objPath)
+
+{
+    BMCWEB_LOG_DEBUG("Get assembly OEM info");
+    /*
+     * FRU device objects in dbus are associated with assemblies
+     * dbus object. Here is to find the associated FRU device object
+     * and then get the OEM information from the FRU device.
+     */
+    dbus::utility::findAssociations(
+        objPath + "/associated_fru",
+        [aResp{std::move(aResp)}, assemblyId](
+            const boost::system::error_code ec,
+            std::variant<std::vector<std::string>>& assoc) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("Cannot get association");
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&assoc);
+        if (data == nullptr)
+        {
+            return;
+        }
+        const std::string& fruPath = data->front();
+        crow::connections::systemBus->async_method_call(
+            [aResp{std::move(aResp)},
+             fruPath, assemblyId](const boost::system::error_code ec,
+                      const std::vector<std::pair<
+                          std::string, std::vector<std::string>>>& objects) {
+            if (ec || objects.size() <= 0)
+            {
+                BMCWEB_LOG_DEBUG("Cannpt get object");
+                messages::internalError(aResp->res);
+                return;
+            }
+            const std::string& fruObject = objects[0].first;
+            crow::connections::systemBus->async_method_call(
+                [aResp{std::move(aResp)}, assemblyId](
+                    const boost::system::error_code ec,
+                    const std::vector<
+                        std::pair<std::string,
+                                  std::variant<std::string, bool, uint64_t>>>&
+                        propertiesList) {
+                if (ec || propertiesList.size() <= 0)
+                {
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                for (auto& assembly : aResp->res.jsonValue["Assemblies"])
+                {
+                    if (assembly["MemberId"] == assemblyId) {
+                        assembly["Oem"]["Nvidia"]["@odata.type"] =
+                            "#NvidiaAssembly.v1_0_0.NvidiaAssembly";
+                        nlohmann::json& vendorDataArray =
+                            assembly["Oem"]["Nvidia"]["VendorData"];
+                        vendorDataArray = nlohmann::json::array();
+                        for (const auto& property : propertiesList)
+                        {
+                            if (property.first.find("BOARD_INFO_AM") != std::string::npos &&
+                                assembly["PhysicalContext"] == "Board")
+                            {
+                                const std::string* value =
+                                    std::get_if<std::string>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG("Null value returned "
+                                                    "Board Extra");
+                                    messages::internalError(aResp->res);
+                                    return;
+                                }
+                                vendorDataArray.emplace_back(std::move(*value));
+                            }
+                            else if (property.first.find("PRODUCT_INFO_AM") != std::string::npos &&
+                                    assembly["PhysicalContext"] == "SystemBoard")
+                            {
+                                const std::string* value =
+                                    std::get_if<std::string>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG("Null value returned "
+                                                    "Product Extra");
+                                    messages::internalError(aResp->res);
+                                    return;
+                                }
+                                vendorDataArray.emplace_back(std::move(*value));
+                            }
+                            else if (property.first.find("CHASSIS_INFO_AM") != std::string::npos &&
+                                    assembly["PhysicalContext"] == "Chassis")
+                            {
+                                const std::string* value =
+                                    std::get_if<std::string>(&property.second);
+                                if (value == nullptr)
+                                {
+                                    BMCWEB_LOG_DEBUG("Null value returned "
+                                                    "Product Extra");
+                                    messages::internalError(aResp->res);
+                                    return;
+                                }
+                                vendorDataArray.emplace_back(std::move(*value));
+                            }
+                        }
+                    }
+                }
+            },
+                fruObject, fruPath, "org.freedesktop.DBus.Properties", "GetAll",
+                "xyz.openbmc_project.FruDevice");
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetObject", fruPath,
+            std::array<std::string, 1>({"xyz.openbmc_project.FruDevice"}));
+    });
+}
+
+/**
  * @brief Fill out chassis nvidia specific info by
  * requesting data from the given D-Bus object.
  *

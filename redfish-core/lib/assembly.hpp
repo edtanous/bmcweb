@@ -23,6 +23,9 @@
 #include <query.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
+#include <health.hpp>
+#include <utils/chassis_utils.hpp>
+#include <utils/nvidia_chassis_util.hpp>
 
 #include <iostream>
 #include <regex>
@@ -69,7 +72,7 @@ inline void
     }
     // Get interface properties
     crow::connections::systemBus->async_method_call(
-        [asyncResp{asyncResp}, chassisId, memberId](
+        [asyncResp{asyncResp}, chassisId, memberId, objPath](
             const boost::system::error_code ec,
             const std::vector<
                 std::pair<std::string, std::variant<std::string, uint64_t>>>&
@@ -175,6 +178,11 @@ inline void
         assemblyRes["MemberId"] = id;
         nlohmann::json& jResp = asyncResp->res.jsonValue["Assemblies"];
         jResp.push_back(assemblyRes);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        // Assembly OEM properties if exist, search by association
+        redfish::nvidia_chassis_utils::getOemAssemblyAssert(asyncResp,
+            id, objPath);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }

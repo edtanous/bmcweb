@@ -254,6 +254,11 @@ inline const char* toPhysicalContext(const std::string& physicalContext)
     {
         return "Board";
     }
+    if (physicalContext ==
+        "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType.Chassis")
+    {
+        return "Chassis";
+    }
     return "";
 }
 
