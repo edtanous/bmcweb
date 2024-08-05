@@ -311,11 +311,12 @@ inline void getEROTChassis(const crow::Request& req,
                     oemActionsRouteDot + "DOTTokenInstall";
 #endif
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
-                auto& oemActionsJsonManualBoot =
-                    asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"];
-                oemActionsJsonManualBoot["#BootProtectedDevice"]["target"] =
+            auto& oemActionsJsonManualBoot =
+                asyncResp->res.jsonValue["Actions"]["Oem"];
+            oemActionsJsonManualBoot
+                ["#NvidiaChassis.BootProtectedDevice"]["target"] =
                     "/redfish/v1/Chassis/" + chassisId +
-                    "/Actions/Oem/Nvidia/BootProtectedDevice";
+                    "/Actions/Oem/NvidiaChassis.BootProtectedDevice";
 #endif
             }
 
@@ -1001,7 +1002,7 @@ inline void requestRoutesEROTChassisManualBootMode(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Chassis/<str>/Actions/Oem/Nvidia/BootProtectedDevice/")
+        "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaChassis.BootProtectedDevice/")
         .privileges(redfish::privileges::postChassis)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
