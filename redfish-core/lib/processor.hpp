@@ -6353,6 +6353,18 @@ inline void getProcessorPortMetricsData(
                 asyncResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] =
                     *value;
             }
+            else if (property.first == "UnsupportedRequestCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Invalid Data Type");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                asyncResp->res.jsonValue["PCIeErrors"]["UnsupportedRequestCount"] =
+                    *value;
+            }
         }
     },
         service, path, "org.freedesktop.DBus.Properties", "GetAll", "");

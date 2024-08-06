@@ -233,6 +233,18 @@ inline void getPCIeErrorData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 }
                 aResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] = *value;
             }
+            else if (property.first == "UnsupportedRequestCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {  
+                    BMCWEB_LOG_ERROR("Invalid Data Type");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["UnsupportedRequestCount"] =
+                    *value;
+            }
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",

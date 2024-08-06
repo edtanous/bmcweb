@@ -56,6 +56,9 @@ static constexpr const char* nvlinkClockReferenceIntf =
 static constexpr const char* pcieLtssmIntf =
     "xyz.openbmc_project.PCIe.LTSSMState";
 
+static constexpr const char* pcieAerErrorStatusIntf =
+    "com.nvidia.PCIe.AERErrorStatus";
+
 static inline std::string getPCIeType(const std::string& pcieType)
 {
     if (pcieType ==
@@ -1846,6 +1849,21 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             getPCIeDeviceClkRefOem(asyncResp, device,
                                                    chassisPCIePath,
                                                    connectionName);
+                        }
+
+                        if (std::find(interfaces2.begin(), interfaces2.end(),
+                                      pcieAerErrorStatusIntf) !=
+                            interfaces2.end())
+                        {
+                           redfish::nvidia_pcie_utils::getAerErrorStatusOem(asyncResp, device,
+                                                 chassisPCIePath,
+                                                 connectionName);
+                            asyncResp->res.jsonValue
+                                ["Actions"]["Oem"]
+                                ["#NvidiaPCIeDevice.ClearAERErrorStatus"]
+                                ["target"] =
+                                pcieDeviceURI +
+                                "/Actions/Oem/NvidiaPCIeDevice.ClearAERErrorStatus";
                         }
 
                         getPCIeLTssmState(asyncResp, device, chassisPCIePath,
