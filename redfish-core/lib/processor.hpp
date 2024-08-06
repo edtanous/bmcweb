@@ -693,15 +693,16 @@ inline void getProcessorPCIeFunctionsLinks(
 {
     BMCWEB_LOG_DEBUG("Get processor pcie functions links");
     crow::connections::systemBus->async_method_call(
-        [aResp, pcieDeviceLink, objPath](
-            const boost::system::error_code ec,
-            boost::container::flat_map<std::string,
-                                       std::variant<std::string, size_t>>&
-                pcieDevProperties) {
+        [aResp, pcieDeviceLink,
+         objPath](const boost::system::error_code ec,
+                  boost::container::flat_map<std::string,
+                                             std::variant<std::string, size_t>>&
+                      pcieDevProperties) {
         if (ec)
         {
             // Not reporting Internal Failure because we might have another
-            // service with the same objpath to set up config only. Eg: PartLoaction
+            // service with the same objpath to set up config only. Eg:
+            // PartLoaction
             BMCWEB_LOG_WARNING("Can't get PCIeDevice DBus properties {}",
                                objPath);
             return;
@@ -1463,14 +1464,16 @@ inline void getCpuConfigData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  * @param[in]       service     D-Bus service to query.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void getProcessorLocationContext(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                               const std::string& service,
-                               const std::string& objPath)
+inline void
+    getProcessorLocationContext(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                const std::string& service,
+                                const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG("Get Processor LocationContext Data");
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, service, objPath,
-        "xyz.openbmc_project.Inventory.Decorator.LocationContext", "LocationContext",
+        "xyz.openbmc_project.Inventory.Decorator.LocationContext",
+        "LocationContext",
         [objPath, aResp{std::move(aResp)}](const boost::system::error_code ec,
                                            const std::string& property) {
         if (ec)
@@ -1480,8 +1483,7 @@ inline void getProcessorLocationContext(std::shared_ptr<bmcweb::AsyncResp> aResp
             return;
         }
 
-        aResp->res.jsonValue["Location"]["PartLocationContext"] =
-            property;
+        aResp->res.jsonValue["Location"]["PartLocationContext"] = property;
     });
 }
 
@@ -1555,15 +1557,15 @@ inline void getCpuLocationType(std::shared_ptr<bmcweb::AsyncResp> aResp,
  */
 inline void
     getProcessorReplaceable(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& connectionName,
-                           const std::string& path)
+                            const std::string& connectionName,
+                            const std::string& path)
 {
     BMCWEB_LOG_DEBUG("Get Processor Replaceable");
     sdbusplus::asio::getProperty<bool>(
         *crow::connections::systemBus, connectionName, path,
-        "xyz.openbmc_project.Inventory.Decorator.Replaceable", "FieldReplaceable",
-        [asyncResp](const boost::system::error_code& ec,
-                    const bool property) {
+        "xyz.openbmc_project.Inventory.Decorator.Replaceable",
+        "FieldReplaceable",
+        [asyncResp](const boost::system::error_code& ec, const bool property) {
         if (ec)
         {
             BMCWEB_LOG_ERROR("DBUS response error for Replaceable");
@@ -1571,8 +1573,7 @@ inline void
             return;
         }
 
-        asyncResp->res.jsonValue["Replaceable"] =
-            property;
+        asyncResp->res.jsonValue["Replaceable"] = property;
     });
 }
 
@@ -2361,6 +2362,14 @@ inline void
     redfish::nvidia_processor_utils::getPowerSmoothingInfo(aResp, processorId);
 }
 
+inline void
+    getWorkLoadPowerInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         std::string processorId)
+{
+    BMCWEB_LOG_DEBUG(" get getWorkLoadPowerInfo data");
+    redfish::nvidia_processor_utils::getWorkLoadPowerInfo(aResp, processorId);
+}
+
 inline void getProcessorRemoteDebugState(
     const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& service,
     const std::string& objPath)
@@ -2869,6 +2878,10 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                 redfish::nvidia_processor_utils::getNvLinkTotalCount(
                     aResp, processorId, serviceName, objectPath);
             }
+            else if (interface == "com.nvidia.PowerProfile.ProfileInfo")
+            {
+                getWorkLoadPowerInfo(aResp, processorId);
+            }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         }
     }
@@ -3228,70 +3241,70 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
         BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
 
-    crow::connections::systemBus->async_method_call(
+        crow::connections::systemBus->async_method_call(
             [resp, processorId,
              reqSpeedConfig](boost::system::error_code ec,
-                                            sdbusplus::message::message& msg) {
-        if (!ec)
-        {
-            BMCWEB_LOG_DEBUG("Set speed config property succeeded");
-            return;
-        }
+                             sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG("Set speed config property succeeded");
+                return;
+            }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set speed config property failed: {}",
-                         processorId, ec);
-        // Read and convert dbus error message to redfish error
-        const sd_bus_error* dbusError = msg.get_error();
-        if (dbusError == nullptr)
-        {
-            messages::internalError(resp->res);
-            return;
-        }
-        if (strcmp(dbusError->name,
-                   "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
-        {
-            // Invalid value
-            uint32_t speedLimit = std::get<1>(reqSpeedConfig);
-            messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
-                                             std::to_string(speedLimit));
-        }
-        else if (strcmp(dbusError->name,
+            BMCWEB_LOG_DEBUG("CPU:{} set speed config property failed: {}",
+                             processorId, ec);
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                // Invalid value
+                uint32_t speedLimit = std::get<1>(reqSpeedConfig);
+                messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
+                                                 std::to_string(speedLimit));
+            }
+            else if (strcmp(dbusError->name,
                             "xyz.openbmc_project.Common.Error.Unavailable") ==
                      0)
-        {
-            std::string errBusy = "0x50A";
-            std::string errBusyResolution =
-                "SMBPBI Command failed with error busy, please try after 60 seconds";
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-            // busy error
-            messages::asyncError(resp->res, errBusy, errBusyResolution);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
-        {
-            std::string errTimeout = "0x600";
-            std::string errTimeoutResolution =
-                "Settings may/maynot have applied, please check get response before patching";
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
 
-            // timeout error
+                // timeout error
                 messages::asyncError(resp->res, errTimeout,
                                      errTimeoutResolution);
-        }
-        else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                         "Device.Error.WriteFailure") == 0)
-        {
-            // Service failed to change the config
-            messages::operationFailed(resp->res);
-        }
-        else
-        {
-            messages::internalError(resp->res);
-        }
-    },
+            }
+            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                             "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
             service, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
-        "SpeedConfig",
-        std::variant<std::tuple<bool, uint32_t>>(reqSpeedConfig));
+            "SpeedConfig",
+            std::variant<std::tuple<bool, uint32_t>>(reqSpeedConfig));
     });
 }
 
@@ -3778,7 +3791,8 @@ inline void requestRoutesProcessor(App& app)
         if (!redfish::json_util::readJsonAction(
                 req, asyncResp->res, "SpeedLimitMHz", speedLimit, "SpeedLocked",
                 speedLocked, "AppliedOperatingConfig/@odata.id",
-                appliedConfigUri, "Oem", oemObject, "OperatingSpeedRangeMHz", operatingSpeedRangeMHzObject))
+                appliedConfigUri, "Oem", oemObject, "OperatingSpeedRangeMHz",
+                operatingSpeedRangeMHzObject))
         {
             return;
         }
@@ -5015,63 +5029,63 @@ inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         }
 
         BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
-    // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId](boost::system::error_code ec,
-                            sdbusplus::message::message& msg) {
-        if (!ec)
-        {
-            BMCWEB_LOG_DEBUG("Set eccModeEnabled succeeded");
-            messages::success(resp->res);
-            return;
-        }
+        // Set the property, with handler to check error responses
+        crow::connections::systemBus->async_method_call(
+            [resp, processorId](boost::system::error_code ec,
+                                sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG("Set eccModeEnabled succeeded");
+                messages::success(resp->res);
+                return;
+            }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set eccModeEnabled property failed: {}",
-                         processorId, ec);
-        // Read and convert dbus error message to redfish error
-        const sd_bus_error* dbusError = msg.get_error();
-        if (dbusError == nullptr)
-        {
-            messages::internalError(resp->res);
-            return;
-        }
+            BMCWEB_LOG_DEBUG("CPU:{} set eccModeEnabled property failed: {}",
+                             processorId, ec);
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
 
-        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                    "Device.Error.WriteFailure") == 0)
-        {
-            // Service failed to change the config
-            messages::operationFailed(resp->res);
-        }
-        else if (strcmp(dbusError->name,
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else if (strcmp(dbusError->name,
                             "xyz.openbmc_project.Common.Error.Unavailable") ==
                      0)
-        {
-            std::string errBusy = "0x50A";
-            std::string errBusyResolution =
-                "SMBPBI Command failed with error busy, please try after 60 seconds";
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-            // busy error
-            messages::asyncError(resp->res, errBusy, errBusyResolution);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
-        {
-            std::string errTimeout = "0x600";
-            std::string errTimeoutResolution =
-                "Settings may/maynot have applied, please check get response before patching";
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
 
-            // timeout error
+                // timeout error
                 messages::asyncError(resp->res, errTimeout,
                                      errTimeoutResolution);
-        }
-        else
-        {
-            messages::internalError(resp->res);
-        }
-    },
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
             service, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
             "xyz.openbmc_project.Memory.MemoryECC", "ECCModeEnabled",
-        std::variant<bool>(eccModeEnabled));
+            std::variant<bool>(eccModeEnabled));
     });
 }
 
@@ -5284,28 +5298,28 @@ inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
             BMCWEB_LOG_DEBUG("Performing Post using Sync Method Call");
 
-        // Set the property, with handler to check error responses
-        crow::connections::systemBus->async_method_call(
-            [resp, processorId](boost::system::error_code ec1,
-                                const int retValue) {
-            if (!ec1)
-            {
-                if (retValue != 0)
+            // Set the property, with handler to check error responses
+            crow::connections::systemBus->async_method_call(
+                [resp, processorId](boost::system::error_code ec1,
+                                    const int retValue) {
+                if (!ec1)
                 {
-                    BMCWEB_LOG_ERROR("{}", retValue);
-                    messages::internalError(resp->res);
+                    if (retValue != 0)
+                    {
+                        BMCWEB_LOG_ERROR("{}", retValue);
+                        messages::internalError(resp->res);
+                    }
+                    BMCWEB_LOG_DEBUG("CPU:{} Reset Succeded", processorId);
+                    messages::success(resp->res);
+                    return;
                 }
-                BMCWEB_LOG_DEBUG("CPU:{} Reset Succeded", processorId);
-                messages::success(resp->res);
+                BMCWEB_LOG_DEBUG("{}", ec1);
+                messages::internalError(resp->res);
                 return;
-            }
-            BMCWEB_LOG_DEBUG("{}", ec1);
-            messages::internalError(resp->res);
-            return;
-        },
-            conName, cpuObjectPath,
-            "xyz.openbmc_project.Control.Processor.Reset", "Reset");
-    });
+            },
+                conName, cpuObjectPath,
+                "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+        });
     });
 }
 
@@ -5567,11 +5581,13 @@ inline void getConnectedProcessorPorts(
                 thisProcessorPort["@odata.id"] = processorPortUri;
                 // Check if thisProcessorPort is not already in the array
                 if (std::find(connectedPortslinksArray.begin(),
-                    connectedPortslinksArray.end(),
-                    thisProcessorPort) == connectedPortslinksArray.end())
+                              connectedPortslinksArray.end(),
+                              thisProcessorPort) ==
+                    connectedPortslinksArray.end())
                 {
                     // If not found, push back the value
-                    connectedPortslinksArray.push_back(std::move(thisProcessorPort));
+                    connectedPortslinksArray.push_back(
+                        std::move(thisProcessorPort));
                 }
                 i++;
             }
@@ -6416,8 +6432,8 @@ inline void getProcessorPortMetricsData(
                     messages::internalError(asyncResp->res);
                     return;
                 }
-                asyncResp->res.jsonValue["PCIeErrors"]["UnsupportedRequestCount"] =
-                    *value;
+                asyncResp->res.jsonValue["PCIeErrors"]
+                                        ["UnsupportedRequestCount"] = *value;
             }
         }
     },
@@ -6639,9 +6655,8 @@ inline void requestRoutesPCIeClearCounter(App& app)
 
 inline void requestRoutesProcessorPortSettings(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/<str>/Processors/<str>/"
-                 "Ports/<str>/Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Ports/<str>/Settings")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -6668,7 +6683,7 @@ inline void requestRoutesProcessorPortSettings(App& app)
         asyncResp->res.jsonValue["@odata.id"] = processorPortSettingsURI;
         asyncResp->res.jsonValue["Id"] = "Settings";
         asyncResp->res.jsonValue["Name"] = processorId + " " + portId +
-                                       " Pending Settings";
+                                           " Pending Settings";
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         redfish::processor_utils::getProcessorObject(
@@ -6684,9 +6699,8 @@ inline void requestRoutesProcessorPortSettings(App& app)
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     });
 
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Systems/<str>/Processors/<str>/"
-                 "Ports/<str>/Settings")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Processors/<str>/"
+                      "Ports/<str>/Settings")
         .privileges(redfish::privileges::patchProcessor)
         .methods(boost::beast::http::verb::patch)(
             [&app](const crow::Request& req,
@@ -6701,8 +6715,8 @@ inline void requestRoutesProcessorPortSettings(App& app)
         BMCWEB_LOG_DEBUG("Setting for {} Processor and {} PortID.", processorId,
                          portId);
         std::optional<std::string> linkState;
-        if (!redfish::json_util::readJsonAction(
-                req, asyncResp->res, "LinkState", linkState))
+        if (!redfish::json_util::readJsonAction(req, asyncResp->res,
+                                                "LinkState", linkState))
         {
             return;
         }

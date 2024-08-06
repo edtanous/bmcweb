@@ -454,13 +454,15 @@ RedfishService::RedfishService(App& app)
     requestRoutesUpdateServiceRevokeAllRemoteServerPublicKeys(app);
 #endif
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    requestRoutesChassisFirmwareInfo(app);
     requestRoutesProcessorPowerSmoothing(app);
     requestRoutesProcessorPowerSmoothingAdminProfile(app);
     requestRoutesProcessorPowerSmoothingPresetProfileCollection(app);
     requestRoutesProcessorPowerSmoothingPresetProfile(app);
-
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    requestRoutesChassisFirmwareInfo(app);
+    requestRoutesProcessorWorkloadPower(app);
+    requestRoutesProcessorWorkloadPowerProfileCollection(app);
+    requestRoutesProcessorWorkloadPowerProfile(app);
 #endif
     // Note, this must be the last route registered
     requestRoutesRedfish(app);

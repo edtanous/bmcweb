@@ -96,3 +96,23 @@ inline std::vector<std::string>
 
     return hexArray;
 }
+
+inline std::string vectorTo256BitHexString(const std::vector<uint8_t>& value)
+{
+    // Ensure the vector has exactly 32 bytes (256 bits)
+    if (value.size() != 32)
+    {
+        BMCWEB_LOG_ERROR("vectorToHexString failed");
+        return "0x" + std::string(64, '0');
+    }
+
+    // Convert the vector to a hex string
+    std::stringstream ss;
+    ss << "0x";
+    for (const auto& byte : value)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0')
+           << static_cast<int>(byte);
+    }
+    return ss.str();
+}

@@ -810,8 +810,8 @@ inline void getPortNumberAndCallSetAsync(
                                     propertyName,
                                     std::variant<std::vector<uint8_t>>(
                                         portListToDisable),
-                                    nvidia_async_operation_utils::PatchPortDisableCallback{
-                                        aResp});
+                                    nvidia_async_operation_utils::
+                                        PatchPortDisableCallback{aResp});
                             return;
                         }
                     }
@@ -942,6 +942,17 @@ inline void patchPortDisableFuture(
     },
         serviceMap.front().first, objectPath, "org.freedesktop.DBus.Properties",
         "GetAll", "com.nvidia.NVLink.NVLinkDisableFuture");
+}
+inline void
+    getWorkLoadPowerInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                         const std::string& processorId)
+{
+    std::string powerProfileURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+                                  "/Processors/";
+    powerProfileURI += processorId;
+    powerProfileURI += "/Oem/Nvidia/WorkloadPowerProfile";
+    aResp->res.jsonValue["Oem"]["Nvidia"]["WorkloadPowerProfile"]["@odata.id"] =
+        powerProfileURI;
 }
 
 inline void
@@ -1169,13 +1180,16 @@ inline void
 }
 
 /**
- * Handle the PATCH operation of the OperatingSpeedRangeMHz Property SettingMin/SettingMax.
+ * Handle the PATCH operation of the OperatingSpeedRangeMHz Property
+ * SettingMin/SettingMax.
  *
  * @param[in,out]   asyncResp          Async HTTP response.
  * @param[in]       processorId     Processor's Id.
  * @param[in]       value           value of the property to be patched.
- * @param[in]       patchProp       string representing property name SettingMin/SettingMax
- * @param[in]       processorObjPath   Path of processor object used to get clockLimit control path.
+ * @param[in]       patchProp       string representing property name
+ * SettingMin/SettingMax
+ * @param[in]       processorObjPath   Path of processor object used to get
+ * clockLimit control path.
  */
 
 inline void patchOperatingSpeedRangeMHz(
@@ -1191,7 +1205,7 @@ inline void patchOperatingSpeedRangeMHz(
         {
             BMCWEB_LOG_ERROR("ObjectMapper call failed with error {}", ec);
             messages::internalError(asyncResp->res);
-            return; 
+            return;
         }
         const std::vector<std::string>* data =
             std::get_if<std::vector<std::string>>(&resp);
