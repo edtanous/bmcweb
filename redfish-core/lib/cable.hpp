@@ -13,6 +13,7 @@
 #include <query.hpp>
 #include <sdbusplus/asio/property.hpp>
 #include <sdbusplus/unpack_properties.hpp>
+#include <utils/nvidia_cable_util.hpp>
 
 #include <array>
 #include <string_view>
@@ -100,6 +101,7 @@ inline void
                         const boost::system::error_code& ec,
                         const dbus::utility::DBusPropertiesMap& properties) {
                     fillCableProperties(asyncResp->res, ec, properties);
+                    updateCableNameProperty(asyncResp->res, ec, properties);
                 });
             }
             else if (interface == "xyz.openbmc_project.Inventory.Item")
@@ -126,6 +128,16 @@ inline void
                         asyncResp->res.jsonValue["Status"]["State"] = "Absent";
                     }
                 });
+            }
+            else if (
+                interface == "xyz.openbmc_project.Inventory.Decorator.Asset" ||
+                interface ==
+                    "xyz.openbmc_project.Inventory.Decorator.LocationCode" ||
+                interface ==
+                    "xyz.openbmc_project.Inventory.Decorator.LocationContext")
+            {
+                fetchCableInventoryProperties(asyncResp, service,
+                                              cableObjectPath);
             }
         }
     }
