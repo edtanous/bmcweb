@@ -79,6 +79,7 @@ RedfishService::RedfishService(App& app)
 {
     requestAssemblyRoutes(app);
     requestRoutesMetadata(app);
+    requestPcieSlotsRoutes(app);
     if (persistent_data::getConfig().isTLSAuthEnabled())
     {
         requestAccountServiceRoutes(app);
@@ -177,6 +178,8 @@ RedfishService::RedfishService(App& app)
     defined(BMCWEB_ENABLE_REDFISH_FW_HTTP_HTTPS_UPDATE)
     requestRoutesUpdateServiceActionsSimpleUpdate(app);
 #endif
+    requestRoutesSoftwareInventoryCollection(app);
+    requestRoutesSoftwareInventory(app);
     requestRoutesInventorySoftwareCollection(app);
     requestRoutesInventorySoftware(app);
     requestRoutesSystemLogServiceCollection(app);
