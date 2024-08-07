@@ -76,6 +76,18 @@
             "ParamTypes": ["string"],
             "Resolution": "None.",
             "Severity": "OK"
+        },
+        "StageSuccessful": {
+            "Description": "Indicates that image is successfully staged on the device",
+            "Message": "Device %1 successfully staged with image %2.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
         }
     },
     "Name": "Nvidia Message Registry",

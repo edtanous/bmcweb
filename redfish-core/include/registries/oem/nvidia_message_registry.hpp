@@ -130,6 +130,19 @@ constexpr std::array registry =
             },
             "None.",
         }},
+    MessageEntry{
+        "StageSuccessful",
+        {
+            "Indicates that image is successfully staged on the device",
+            "Device %1 successfully staged with image %2.",
+            "OK",
+            2,
+            {
+                "string",
+                "string",
+            },
+            "None.",
+        }},
 
 };
 
@@ -143,5 +156,6 @@ enum class Index
     firmwareNotInRecovery = 5,
     recoveryStarted = 6,
     recoverySuccessful = 7,
+    stageSuccessful = 8,
 };
 } // namespace redfish::registries::nvidia

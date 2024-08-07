@@ -260,6 +260,19 @@ inline nlohmann::json firmwareNotInRecovery(const std::string& arg1)
         {"Resolution", "None."}};
 }
 
+inline nlohmann::json stageSuccessful(const std::string& arg1,
+                                      const std::string& arg2)
+{
+    return nlohmann::json{
+        {"@odata.type", "#MessageRegistry.v1_4_1.MessageRegistry"},
+        {"MessageId", "NvidiaUpdate.1.0.StageSuccessful"},
+        {"Message", "Device '" + arg1 + "' successfully staged with image '" +
+                        arg2 + "'."},
+        {"MessageArgs", {arg1, arg2}},
+        {"Severity", "OK"},
+        {"Resolution", "None."}};
+}
+
 inline nlohmann::json getUpdateMessage(const std::string& msgId,
                                        std::vector<std::string>& args)
 {
@@ -353,6 +366,10 @@ inline nlohmann::json getUpdateMessage(const std::string& msgId,
     if (msgId == "NvidiaUpdate.1.0.FirmwareNotInRecovery")
     {
         return firmwareNotInRecovery(arg0);
+    }
+    if (msgId == "NvidiaUpdate.1.0.StageSuccessful")
+    {
+        return stageSuccessful(arg0, arg1);
     }
 
     return {};
