@@ -4154,6 +4154,80 @@ inline void
         aRsp->res.jsonValue["Links"]["Chassis"] = std::move(chassisArray);
     });
 
+    crow::connections::systemBus->async_method_call(
+            [asyncResp](
+                const boost::system::error_code ec,
+                const std::vector<std::pair<
+                    std::string, std::vector<std::pair<
+                                     std::string, std::vector<std::string>>>>>&
+                    subtree) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("Error while getting manager service state");
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (!subtree.empty())
+            {
+                // Iterate over all retrieved ObjectPaths.
+                for (const std::pair<
+                         std::string,
+                         std::vector<
+                             std::pair<std::string, std::vector<std::string>>>>&
+                         object : subtree)
+                {
+                    const std::string& path = object.first;
+                    if (!boost::ends_with(path, PLATFORMBMCID))
+                    {
+			            continue;
+                    }
+
+                    // At /redfish/v1/Systems/PLATFORMBMCID, we want
+                    // "Chassis" to point to "root" Chassis rather than
+                    // another Chassis that is contained by the "root" Chassis.
+                    // we want to identify the "root" Chassis of the HMC by
+                    // making only two queries and without having to attempt to
+                    // parse the Topology.
+                    sdbusplus::asio::getProperty<std::vector<std::string>>(
+                        *crow::connections::systemBus,
+                        "xyz.openbmc_project.ObjectMapper", path + "/chassis",
+                        "xyz.openbmc_project.Association", "endpoints",
+                        [asyncResp](const boost::system::error_code ec,
+                                    const std::vector<std::string>& property) {
+                        if (ec)
+                        {
+                            BMCWEB_LOG_ERROR("DBUS response error: {}", ec);
+                            return; // no chassis = no failures
+                        }
+
+                        // single entry will be present
+                        for (const std::string& p : property)
+                        {
+                            sdbusplus::message::object_path objPath(p);
+                            const std::string& chassisId = objPath.filename();
+                            asyncResp->res
+                                .jsonValue["Links"]["Chassis"].clear();
+                            nlohmann::json::array_t chassisArray;
+                            nlohmann::json& chassis = chassisArray.emplace_back();
+                            chassis["@odata.id"] = boost::urls::format("/redfish/v1/Chassis/{}",
+                                                                       chassisId);
+                            asyncResp->res.jsonValue["Links"]["Chassis"] = std::move(chassisArray);
+                        }
+                    });
+
+                    return;
+                }
+                BMCWEB_LOG_ERROR(
+                    "Could not find interface xyz.openbmc_project.Inventory.Item.ManagementService");
+            }
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+            "/xyz/openbmc_project/inventory", int32_t(0),
+            std::array<const char*, 1>{"xyz.openbmc_project.Inventory."
+                                       "Item.ManagementService"});
+
     getSystemLocationIndicatorActive(asyncResp);
     // TODO (Gunnar): Remove IndicatorLED after enough time has passed
     getIndicatorLedState(asyncResp);
