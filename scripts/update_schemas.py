@@ -133,14 +133,13 @@ for key, value in json_schema_files.items():
 
 # Create a dictionary ordered by schema name
 json_schema_files = OrderedDict(
-    # sorted(json_schema_files.items(), key=lambda x: SchemaVersion(x[0]))
-    sorted(json_schema_files.items())
+    sorted(json_schema_files.items(), key=lambda x: SchemaVersion(x[0]))
 )
 for csdl_file in csdl_filenames:
     with open(os.path.join(schema_path, csdl_file), "wb") as schema_out:
         content = zip_ref.read(os.path.join("csdl", csdl_file))
-                content = content.replace(b"\r\n", b"\n")
-                schema_out.write(content)
+        content = content.replace(b"\r\n", b"\n")
+        schema_out.write(content)
 
 for schema, version in json_schema_files.items():
     zip_filepath = os.path.join("json-schema", version[0])
