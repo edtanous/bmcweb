@@ -1465,6 +1465,44 @@ inline void requestRoutesChassisFirmwareInfo(App& app)
         .privileges(redfish::privileges::getActionInfo)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleNvidiaRoTImageSlot, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "Settings/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleNvidiaRoTProtectedComponentSettings, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/SetIrreversibleConfigActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleSetIrreversibleConfigActionInfo, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaRoTChassis.SetIrreversibleConfig")
+        .privileges(redfish::privileges::postActionInfo)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleSetIrreversibleConfigAction, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>"
+        "/UpdateMinimumSecurityVersionActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleUpdateMinSecVersionActionInfo, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>"
+        "/Actions/NvidiaRoTProtectedComponent.UpdateMinimumSecurityVersion")
+        .privileges(redfish::privileges::postActionInfo)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleUpdateMinSecVersionAction, std::ref(app)));
 }
 
 } // namespace redfish

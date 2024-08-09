@@ -378,6 +378,8 @@ inline void getEROTChassis(const crow::Request& req,
                       std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)}}};
 
             firmware_info::updateProtectedComponentLink(asyncResp, chassisId);
+            firmware_info::updateIrreversibleConfigEnabled(asyncResp,
+                                                           chassisId);
 
             // Might have 2+ services to support different properties
             for (size_t serviceIdx = 0; serviceIdx < connectionNames.size(); serviceIdx++)
