@@ -49,6 +49,8 @@ static constexpr auto asyncStatusValueUnsupportedRequest =
     "com.nvidia.Async.Status.AsyncOperationStatus.UnsupportedRequest";
 static constexpr auto asyncStatusValueWriteFailure =
     "com.nvidia.Async.Status.AsyncOperationStatus.WriteFailure";
+static constexpr auto asyncStatusValueInvalidArgument =
+    "com.nvidia.Async.Status.AsyncOperationStatus.InvalidArgument";
 
 template <typename Callback>
 struct SetAsyncStatusHandlerInfo

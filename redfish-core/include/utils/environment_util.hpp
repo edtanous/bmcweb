@@ -970,75 +970,118 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         }
         for (const auto& element : objInfo)
         {
-            // Set the property, with handler to check error responses
-            crow::connections::systemBus->async_method_call(
-                [resp, resourceId, powerLimit,
-                 resourceType](boost::system::error_code ec,
-                               sdbusplus::message::message& msg) {
+            dbus::utility::getDbusObject(
+                objectPath,
+                std::array<std::string_view, 1>{
+                    nvidia_async_operation_utils::setAsyncInterfaceName},
+                [resp, objectPath, powerLimit, element, resourceId,
+                 resourceType](const boost::system::error_code& ec,
+                               const dbus::utility::MapperGetObject& object) {
                 if (!ec)
                 {
-                    BMCWEB_LOG_DEBUG("Set power limit property succeeded");
-                    messages::success(resp->res);
-                    return;
+                    for (const auto& [serv, _] : object)
+                    {
+                        if (serv != element.first)
+                        {
+                            continue;
+                        }
+
+                        BMCWEB_LOG_DEBUG(
+                            "Performing Patch using Set Async Method Call");
+
+                        nvidia_async_operation_utils::
+                            doGenericSetAsyncAndGatherResult(
+                                resp, std::chrono::seconds(60), element.first,
+                                objectPath,
+                                "xyz.openbmc_project.Control.Power.Cap",
+                                "PowerCap",
+                                std::variant<uint32_t>(
+                                    static_cast<uint32_t>(powerLimit)),
+                                nvidia_async_operation_utils::
+                                    PatchPowerCapCallback{resp, powerLimit});
+
+                        return;
+                    }
                 }
 
-                BMCWEB_LOG_ERROR("{}: {} set power limit property failed: {}",
-                                 resourceType, resourceId, ec);
-                // Read and convert dbus error message to redfish error
-                const sd_bus_error* dbusError = msg.get_error();
-                if (dbusError == nullptr)
-                {
-                    messages::internalError(resp->res);
-                    return;
-                }
-                if (strcmp(
-                        dbusError->name,
-                        "xyz.openbmc_project.Common.Error.InvalidArgument") ==
-                    0)
-                {
-                    // Invalid value
-                    messages::propertyValueIncorrect(
-                        resp->res, "powerLimit", std::to_string(powerLimit));
-                }
-                else if (strcmp(
-                             dbusError->name,
-                             "xyz.openbmc_project.Common.Error.Unavailable") ==
-                         0)
-                {
-                    std::string errBusy = "0x50A";
-                    std::string errBusyResolution =
-                        "SMBPBI Command failed with error busy, please try after 60 seconds";
+                BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
 
-                    // busy error
-                    messages::asyncError(resp->res, errBusy, errBusyResolution);
-                }
-                else if (strcmp(dbusError->name,
-                                "xyz.openbmc_project.Common.Error.Timeout") ==
-                         0)
-                {
-                    std::string errTimeout = "0x600";
-                    std::string errTimeoutResolution =
-                        "Settings may/maynot have applied, please check get response before patching";
+                // Set the property, with handler to check error responses
+                crow::connections::systemBus->async_method_call(
+                    [resp, resourceId, powerLimit,
+                     resourceType](boost::system::error_code ec,
+                                   sdbusplus::message::message& msg) {
+                    if (!ec)
+                    {
+                        BMCWEB_LOG_DEBUG("Set power limit property succeeded");
+                        messages::success(resp->res);
+                        return;
+                    }
 
-                    // timeout error
-                    messages::asyncError(resp->res, errTimeout,
-                                         errTimeoutResolution);
-                }
-                else if (strcmp(dbusError->name,
-                                "xyz.openbmc_project.Common."
-                                "Device.Error.WriteFailure") == 0)
-                {
-                    // Service failed to change the config
-                    messages::operationFailed(resp->res);
-                }
-                else
-                {
-                    messages::internalError(resp->res);
-                }
-            },
-                element.first, objectPath, "org.freedesktop.DBus.Properties",
-                "Set", "xyz.openbmc_project.Control.Power.Cap", "PowerCap",
-                std::variant<uint32_t>(static_cast<uint32_t>(powerLimit)));
+                    BMCWEB_LOG_ERROR(
+                        "{}: {} set power limit property failed: {}",
+                        resourceType, resourceId, ec);
+                    // Read and convert dbus error message to redfish error
+                    const sd_bus_error* dbusError = msg.get_error();
+                    if (dbusError == nullptr)
+                    {
+                        messages::internalError(resp->res);
+                        return;
+                    }
+                    if (strcmp(
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.InvalidArgument") ==
+                        0)
+                    {
+                        // Invalid value
+                        messages::propertyValueIncorrect(
+                            resp->res, "powerLimit",
+                            std::to_string(powerLimit));
+                    }
+                    else if (
+                        strcmp(
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                        0)
+                    {
+                        std::string errBusy = "0x50A";
+                        std::string errBusyResolution =
+                            "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                        // busy error
+                        messages::asyncError(resp->res, errBusy,
+                                             errBusyResolution);
+                    }
+                    else if (strcmp(
+                                 dbusError->name,
+                                 "xyz.openbmc_project.Common.Error.Timeout") ==
+                             0)
+                    {
+                        std::string errTimeout = "0x600";
+                        std::string errTimeoutResolution =
+                            "Settings may/maynot have applied, please check get response before patching";
+
+                        // timeout error
+                        messages::asyncError(resp->res, errTimeout,
+                                             errTimeoutResolution);
+                    }
+                    else if (strcmp(dbusError->name,
+                                    "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+                    {
+                        // Service failed to change the config
+                        messages::operationFailed(resp->res);
+                    }
+                    else
+                    {
+                        messages::internalError(resp->res);
+                    }
+                },
+                    element.first, objectPath,
+                    "org.freedesktop.DBus.Properties", "Set",
+                    "xyz.openbmc_project.Control.Power.Cap", "PowerCap",
+                    std::variant<uint32_t>(static_cast<uint32_t>(powerLimit)));
+            });
         }
     },
         "xyz.openbmc_project.ObjectMapper",

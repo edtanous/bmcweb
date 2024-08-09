@@ -3171,67 +3171,106 @@ inline void patchSpeedConfig(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         return;
     }
     BMCWEB_LOG_DEBUG("patchSpeedConfig");
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId, reqSpeedConfig](boost::system::error_code ec,
-                                            sdbusplus::message::message& msg) {
+
+    dbus::utility::getDbusObject(
+        cpuObjectPath,
+        std::array<std::string_view, 1>{
+            nvidia_async_operation_utils::setAsyncInterfaceName},
+        [resp, reqSpeedConfig, processorId, cpuObjectPath,
+         service = *inventoryService](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetObject& object) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG("Set speed config property succeeded");
-            return;
+            for (const auto& [serv, _] : object)
+            {
+                if (serv != service)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG(
+                    "Performing Patch using Set Async Method Call");
+
+                nvidia_async_operation_utils::doGenericSetAsyncAndGatherResult(
+                    resp, std::chrono::seconds(60), service, cpuObjectPath,
+                    "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
+                    "SpeedConfig",
+                    std::variant<std::tuple<bool, uint32_t>>(reqSpeedConfig),
+                    nvidia_async_operation_utils::PatchSpeedConfigCallback{
+                        resp, std::get<1>(reqSpeedConfig)});
+
+                return;
+            }
         }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set speed config property failed: {}",
-                         processorId, ec);
-        // Read and convert dbus error message to redfish error
-        const sd_bus_error* dbusError = msg.get_error();
-        if (dbusError == nullptr)
-        {
-            messages::internalError(resp->res);
-            return;
-        }
-        if (strcmp(dbusError->name,
-                   "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
-        {
-            // Invalid value
-            uint32_t speedLimit = std::get<1>(reqSpeedConfig);
-            messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
-                                             std::to_string(speedLimit));
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Unavailable") == 0)
-        {
-            std::string errBusy = "0x50A";
-            std::string errBusyResolution =
-                "SMBPBI Command failed with error busy, please try after 60 seconds";
+        BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
 
-            // busy error
-            messages::asyncError(resp->res, errBusy, errBusyResolution);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
-        {
-            std::string errTimeout = "0x600";
-            std::string errTimeoutResolution =
-                "Settings may/maynot have applied, please check get response before patching";
+        crow::connections::systemBus->async_method_call(
+            [resp, processorId,
+             reqSpeedConfig](boost::system::error_code ec,
+                             sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG("Set speed config property succeeded");
+                return;
+            }
 
-            // timeout error
-            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
-        }
-        else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                         "Device.Error.WriteFailure") == 0)
-        {
-            // Service failed to change the config
-            messages::operationFailed(resp->res);
-        }
-        else
-        {
-            messages::internalError(resp->res);
-        }
-    },
-        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
-        "Set", "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
-        "SpeedConfig",
-        std::variant<std::tuple<bool, uint32_t>>(reqSpeedConfig));
+            BMCWEB_LOG_DEBUG("CPU:{} set speed config property failed: {}",
+                             processorId, ec);
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
+            if (strcmp(dbusError->name,
+                       "xyz.openbmc_project.Common.Error.InvalidArgument") == 0)
+            {
+                // Invalid value
+                uint32_t speedLimit = std::get<1>(reqSpeedConfig);
+                messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
+                                                 std::to_string(speedLimit));
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
+
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
+            else if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                             "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+            service, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
+            "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig",
+            "SpeedConfig",
+            std::variant<std::tuple<bool, uint32_t>>(reqSpeedConfig));
+    });
 }
 
 /**
@@ -4878,61 +4917,96 @@ inline void patchEccMode(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         messages::internalError(resp->res);
         return;
     }
-    // Set the property, with handler to check error responses
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId](boost::system::error_code ec,
-                            sdbusplus::message::message& msg) {
+
+    dbus::utility::getDbusObject(
+        cpuObjectPath,
+        std::array<std::string_view, 1>{
+            nvidia_async_operation_utils::setAsyncInterfaceName},
+        [resp, eccModeEnabled, processorId, cpuObjectPath,
+         service = *inventoryService](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetObject& object) {
         if (!ec)
         {
-            BMCWEB_LOG_DEBUG("Set eccModeEnabled succeeded");
-            messages::success(resp->res);
-            return;
+            for (const auto& [serv, _] : object)
+            {
+                if (serv != service)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG(
+                    "Performing Patch using Set Async Method Call");
+
+                nvidia_async_operation_utils::doGenericSetAsyncAndGatherResult(
+                    resp, std::chrono::seconds(60), service, cpuObjectPath,
+                    "xyz.openbmc_project.Memory.MemoryECC", "ECCModeEnabled",
+                    std::variant<bool>(eccModeEnabled),
+                    nvidia_async_operation_utils::PatchEccModeCallback{resp});
+
+                return;
+            }
         }
 
-        BMCWEB_LOG_DEBUG("CPU:{} set eccModeEnabled property failed: {}",
-                         processorId, ec);
-        // Read and convert dbus error message to redfish error
-        const sd_bus_error* dbusError = msg.get_error();
-        if (dbusError == nullptr)
-        {
-            messages::internalError(resp->res);
-            return;
-        }
+        BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
+        // Set the property, with handler to check error responses
+        crow::connections::systemBus->async_method_call(
+            [resp, processorId](boost::system::error_code ec,
+                                sdbusplus::message::message& msg) {
+            if (!ec)
+            {
+                BMCWEB_LOG_DEBUG("Set eccModeEnabled succeeded");
+                messages::success(resp->res);
+                return;
+            }
 
-        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                    "Device.Error.WriteFailure") == 0)
-        {
-            // Service failed to change the config
-            messages::operationFailed(resp->res);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Unavailable") == 0)
-        {
-            std::string errBusy = "0x50A";
-            std::string errBusyResolution =
-                "SMBPBI Command failed with error busy, please try after 60 seconds";
+            BMCWEB_LOG_DEBUG("CPU:{} set eccModeEnabled property failed: {}",
+                             processorId, ec);
+            // Read and convert dbus error message to redfish error
+            const sd_bus_error* dbusError = msg.get_error();
+            if (dbusError == nullptr)
+            {
+                messages::internalError(resp->res);
+                return;
+            }
 
-            // busy error
-            messages::asyncError(resp->res, errBusy, errBusyResolution);
-        }
-        else if (strcmp(dbusError->name,
-                        "xyz.openbmc_project.Common.Error.Timeout") == 0)
-        {
-            std::string errTimeout = "0x600";
-            std::string errTimeoutResolution =
-                "Settings may/maynot have applied, please check get response before patching";
+            if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
+                                        "Device.Error.WriteFailure") == 0)
+            {
+                // Service failed to change the config
+                messages::operationFailed(resp->res);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                     0)
+            {
+                std::string errBusy = "0x50A";
+                std::string errBusyResolution =
+                    "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-            // timeout error
-            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
-        }
-        else
-        {
-            messages::internalError(resp->res);
-        }
-    },
-        *inventoryService, cpuObjectPath, "org.freedesktop.DBus.Properties",
-        "Set", "xyz.openbmc_project.Memory.MemoryECC", "ECCModeEnabled",
-        std::variant<bool>(eccModeEnabled));
+                // busy error
+                messages::asyncError(resp->res, errBusy, errBusyResolution);
+            }
+            else if (strcmp(dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Timeout") == 0)
+            {
+                std::string errTimeout = "0x600";
+                std::string errTimeoutResolution =
+                    "Settings may/maynot have applied, please check get response before patching";
+
+                // timeout error
+                messages::asyncError(resp->res, errTimeout,
+                                     errTimeoutResolution);
+            }
+            else
+            {
+                messages::internalError(resp->res);
+            }
+        },
+            service, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
+            "xyz.openbmc_project.Memory.MemoryECC", "ECCModeEnabled",
+            std::variant<bool>(eccModeEnabled));
+    });
 }
 
 inline void requestRoutesProcessorSettings(App& app)
@@ -5098,27 +5172,74 @@ inline void postResetType(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                                                   resetType);
             return;
         }
-        // Set the property, with handler to check error responses
-        crow::connections::systemBus->async_method_call(
-            [resp, processorId](boost::system::error_code ec1,
-                                const int retValue) {
-            if (!ec1)
+
+        static const auto resetAsyncIntf =
+            "xyz.openbmc_project.Control.Processor.ResetAsync";
+
+        dbus::utility::getDbusObject(
+            cpuObjectPath, std::array<std::string_view, 1>{resetAsyncIntf},
+            [resp, cpuObjectPath, conName,
+             processorId](const boost::system::error_code& ec,
+                          const dbus::utility::MapperGetObject& object) {
+            if (!ec)
             {
-                if (retValue != 0)
+                for (const auto& [serv, _] : object)
                 {
-                    BMCWEB_LOG_ERROR("{}", retValue);
-                    messages::internalError(resp->res);
+                    if (serv != conName)
+                    {
+                        continue;
+                    }
+
+                    BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
+
+                    nvidia_async_operation_utils::
+                        doGenericCallAsyncAndGatherResult<int>(
+                            resp, std::chrono::seconds(60), conName,
+                            cpuObjectPath, resetAsyncIntf, "Reset",
+                            [resp, processorId](
+                                const std::string& status,
+                                [[maybe_unused]] const int* retValue) {
+                        if (status == nvidia_async_operation_utils::
+                                          asyncStatusValueSuccess)
+                        {
+                            BMCWEB_LOG_DEBUG("CPU:{} Reset Succeded",
+                                             processorId);
+                            messages::success(resp->res);
+                            return;
+                        }
+                        BMCWEB_LOG_ERROR("CPU:{} Reset failed", processorId,
+                                         status);
+                        messages::internalError(resp->res);
+                    });
+
+                    return;
                 }
-                BMCWEB_LOG_DEBUG("CPU:{} Reset Succeded", processorId);
-                messages::success(resp->res);
-                return;
             }
-            BMCWEB_LOG_DEBUG("{}", ec1);
-            messages::internalError(resp->res);
-            return;
-        },
-            conName, cpuObjectPath,
-            "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+
+            BMCWEB_LOG_DEBUG("Performing Post using Sync Method Call");
+
+            // Set the property, with handler to check error responses
+            crow::connections::systemBus->async_method_call(
+                [resp, processorId](boost::system::error_code ec1,
+                                    const int retValue) {
+                if (!ec1)
+                {
+                    if (retValue != 0)
+                    {
+                        BMCWEB_LOG_ERROR("{}", retValue);
+                        messages::internalError(resp->res);
+                    }
+                    BMCWEB_LOG_DEBUG("CPU:{} Reset Succeded", processorId);
+                    messages::success(resp->res);
+                    return;
+                }
+                BMCWEB_LOG_DEBUG("{}", ec1);
+                messages::internalError(resp->res);
+                return;
+            },
+                conName, cpuObjectPath,
+                "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+        });
     });
 }
 

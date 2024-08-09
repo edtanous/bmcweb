@@ -17,6 +17,7 @@
 #pragma once
 
 #include "health.hpp"
+#include "utils/nvidia_async_set_callbacks.hpp"
 
 #include <app.hpp>
 #include <dbus_utility.hpp>
@@ -590,70 +591,111 @@ inline void changepowercap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         }
         for (const auto& element : objInfo)
         {
-            crow::connections::systemBus->async_method_call(
+            dbus::utility::getDbusObject(
+                path,
+                std::array<std::string_view, 1>{
+                    nvidia_async_operation_utils::setAsyncInterfaceName},
                 [asyncResp, path, setpoint,
-                 element](const boost::system::error_code ec2,
-                          sdbusplus::message::message& msg) {
-                if (!ec2)
+                 element](const boost::system::error_code& ec,
+                          const dbus::utility::MapperGetObject& object) {
+                if (!ec)
                 {
-                    BMCWEB_LOG_DEBUG("Set power limit property succeeded");
-                    messages::success(asyncResp->res);
-                    return;
+                    for (const auto& [serv, _] : object)
+                    {
+                        if (serv != element.first)
+                        {
+                            continue;
+                        }
+
+                        BMCWEB_LOG_DEBUG(
+                            "Performing Patch using Set Async Method Call");
+
+                        nvidia_async_operation_utils::
+                            doGenericSetAsyncAndGatherResult(
+                                asyncResp, std::chrono::seconds(60),
+                                element.first, path,
+                                "xyz.openbmc_project.Control.Power.Cap",
+                                setPointPropName,
+                                dbus::utility::DbusVariantType(setpoint),
+                                nvidia_async_operation_utils::
+                                    PatchPowerCapCallback{
+                                        asyncResp,
+                                        static_cast<int64_t>(setpoint)});
+
+                        return;
+                    }
                 }
-                // Read and convert dbus error message to redfish error
-                const sd_bus_error* dbusError = msg.get_error();
-                if (dbusError == nullptr)
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                if (strcmp(
-                        dbusError->name,
-                        "xyz.openbmc_project.Common.Error.InvalidArgument") ==
-                    0)
-                {
-                    // Invalid value
-                    messages::propertyValueIncorrect(asyncResp->res, "setpoint",
-                                                     std::to_string(setpoint));
-                }
-                else if (strcmp(dbusError->name,
-                                "xyz.openbmc_project.Common."
-                                "Device.Error.WriteFailure") == 0)
-                {
-                    // Service failed to change the config
-                    messages::operationFailed(asyncResp->res);
-                }
-                else if (strcmp(
-                             dbusError->name,
-                             "xyz.openbmc_project.Common.Error.Unavailable") ==
-                         0)
-                {
-                    std::string errBusy = "0x50A";
-                    std::string errBusyResolution =
-                        "SMBPBI Command failed with error busy, please try after 60 seconds";
-                    // busy error
-                    messages::asyncError(asyncResp->res, errBusy,
-                                         errBusyResolution);
-                }
-                else if (strcmp(dbusError->name,
-                                "xyz.openbmc_project.Common.Error.Timeout") ==
-                         0)
-                {
-                    std::string errTimeout = "0x600";
-                    std::string errTimeoutResolution =
-                        "Settings may/maynot have applied, please check get response before patching";
-                    // timeout error
-                    messages::asyncError(asyncResp->res, errTimeout,
-                                         errTimeoutResolution);
-                }
-                else
-                {
-                    messages::internalError(asyncResp->res);
-                }
-            },
-                element.first, path, "org.freedesktop.DBus.Properties", "Set",
-                "xyz.openbmc_project.Control.Power.Cap", setPointPropName,
-                dbus::utility::DbusVariantType(setpoint));
+
+                BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
+
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, path, setpoint,
+                     element](const boost::system::error_code ec2,
+                              sdbusplus::message::message& msg) {
+                    if (!ec2)
+                    {
+                        BMCWEB_LOG_DEBUG("Set power limit property succeeded");
+                        messages::success(asyncResp->res);
+                        return;
+                    }
+                    // Read and convert dbus error message to redfish error
+                    const sd_bus_error* dbusError = msg.get_error();
+                    if (dbusError == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    if (strcmp(
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.InvalidArgument") ==
+                        0)
+                    {
+                        // Invalid value
+                        messages::propertyValueIncorrect(
+                            asyncResp->res, "setpoint",
+                            std::to_string(setpoint));
+                    }
+                    else if (strcmp(dbusError->name,
+                                    "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+                    {
+                        // Service failed to change the config
+                        messages::operationFailed(asyncResp->res);
+                    }
+                    else if (
+                        strcmp(
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                        0)
+                    {
+                        std::string errBusy = "0x50A";
+                        std::string errBusyResolution =
+                            "SMBPBI Command failed with error busy, please try after 60 seconds";
+                        // busy error
+                        messages::asyncError(asyncResp->res, errBusy,
+                                             errBusyResolution);
+                    }
+                    else if (strcmp(
+                                 dbusError->name,
+                                 "xyz.openbmc_project.Common.Error.Timeout") ==
+                             0)
+                    {
+                        std::string errTimeout = "0x600";
+                        std::string errTimeoutResolution =
+                            "Settings may/maynot have applied, please check get response before patching";
+                        // timeout error
+                        messages::asyncError(asyncResp->res, errTimeout,
+                                             errTimeoutResolution);
+                    }
+                    else
+                    {
+                        messages::internalError(asyncResp->res);
+                    }
+                },
+                    element.first, path, "org.freedesktop.DBus.Properties",
+                    "Set", "xyz.openbmc_project.Control.Power.Cap",
+                    setPointPropName, dbus::utility::DbusVariantType(setpoint));
+            });
         }
     },
 

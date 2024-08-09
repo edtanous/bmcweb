@@ -24,10 +24,10 @@ namespace redfish
 namespace nvidia_async_operation_utils
 {
 
-class PatchMigModeCallback
+class PatchGenericCallback
 {
   public:
-    explicit PatchMigModeCallback(std::shared_ptr<bmcweb::AsyncResp> resp) :
+    explicit PatchGenericCallback(std::shared_ptr<bmcweb::AsyncResp> resp) :
         resp(std::move(resp))
     {}
 
@@ -49,7 +49,7 @@ class PatchMigModeCallback
         {
             std::string errBusy = "0x50A";
             std::string errBusyResolution =
-                "SMBPBI Command failed with error busy, please try after 60 seconds";
+                "Command failed with error busy, please try after 60 seconds";
 
             // busy error
             messages::asyncError(resp->res, errBusy, errBusyResolution);
@@ -72,6 +72,127 @@ class PatchMigModeCallback
 
   private:
     std::shared_ptr<bmcweb::AsyncResp> resp;
+};
+
+using PatchMigModeCallback = PatchGenericCallback;
+using PatchEccModeCallback = PatchGenericCallback;
+
+class PatchSpeedConfigCallback
+{
+  public:
+    explicit PatchSpeedConfigCallback(std::shared_ptr<bmcweb::AsyncResp> resp,
+                                      uint32_t speedLimit) :
+        resp(std::move(resp)), speedLimit(speedLimit)
+    {}
+
+    void operator()(const std::string& status) const
+    {
+        if (status == nvidia_async_operation_utils::asyncStatusValueSuccess)
+        {
+            return;
+        }
+
+        if (status ==
+            nvidia_async_operation_utils::asyncStatusValueWriteFailure)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueUnavailable)
+        {
+            std::string errBusy = "0x50A";
+            std::string errBusyResolution =
+                "Command failed with error busy, please try after 60 seconds";
+
+            // busy error
+            messages::asyncError(resp->res, errBusy, errBusyResolution);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueTimeout)
+        {
+            std::string errTimeout = "0x600";
+            std::string errTimeoutResolution =
+                "Settings may/maynot have applied, please check get response before patching";
+
+            // timeout error
+            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueInvalidArgument)
+        {
+            // Invalid value
+            messages::propertyValueIncorrect(resp->res, "SpeedLimitMHz",
+                                             std::to_string(speedLimit));
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    }
+
+  private:
+    std::shared_ptr<bmcweb::AsyncResp> resp;
+    uint32_t speedLimit;
+};
+
+class PatchPowerCapCallback
+{
+  public:
+    explicit PatchPowerCapCallback(std::shared_ptr<bmcweb::AsyncResp> resp,
+                                   int64_t setpoint) :
+        resp(std::move(resp)), setpoint(setpoint)
+    {}
+
+    void operator()(const std::string& status) const
+    {
+        if (status == nvidia_async_operation_utils::asyncStatusValueSuccess)
+        {
+            return;
+        }
+
+        if (status ==
+            nvidia_async_operation_utils::asyncStatusValueWriteFailure)
+        {
+            // Service failed to change the config
+            messages::operationFailed(resp->res);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueUnavailable)
+        {
+            std::string errBusy = "0x50A";
+            std::string errBusyResolution =
+                "Command failed with error busy, please try after 60 seconds";
+
+            // busy error
+            messages::asyncError(resp->res, errBusy, errBusyResolution);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueTimeout)
+        {
+            std::string errTimeout = "0x600";
+            std::string errTimeoutResolution =
+                "Settings may/maynot have applied, please check get response before patching";
+
+            // timeout error
+            messages::asyncError(resp->res, errTimeout, errTimeoutResolution);
+        }
+        else if (status ==
+                 nvidia_async_operation_utils::asyncStatusValueInvalidArgument)
+        {
+            // Invalid value
+            messages::propertyValueIncorrect(resp->res, "setpoint",
+                                             std::to_string(setpoint));
+        }
+        else
+        {
+            messages::internalError(resp->res);
+        }
+    }
+
+  private:
+    std::shared_ptr<bmcweb::AsyncResp> resp;
+    int64_t setpoint;
 };
 
 } // namespace nvidia_async_operation_utils
