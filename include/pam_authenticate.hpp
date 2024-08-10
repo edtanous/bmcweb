@@ -9,7 +9,8 @@
 
 struct PasswordData
 {
-    std::string_view password;
+    std::string password;
+    std::optional<std::string> token;
 };
 
 // function used to get user input
@@ -47,21 +48,33 @@ inline int pamFunctionConversation(int numMsg, const struct pam_message** msgs,
             case PAM_PROMPT_ECHO_OFF:
             {
                 // Assume PAM is only prompting for the password as hidden input
-                // Allocate memory only when PAM_PROMPT_ECHO_OFF is encounterred
+                // Allocate memory only when PAM_PROMPT_ECHO_OFF is encountered
                 size_t appPassSize = appPass->password.size();
 
                 if ((appPassSize + 1) > PAM_MAX_RESP_SIZE)
                 {
                     return PAM_CONV_ERR;
                 }
-                // Create an array for pam to own
-                // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-                auto passPtr = std::make_unique<char[]>(appPassSize + 1);
-                std::strncpy(passPtr.get(), appPass->password.data(),
-                             appPassSize);
-                passPtr.get()[appPassSize] = '\0';
 
-                responses[i].resp = passPtr.release();
+                if (strcmp(msg.msg, "Password") == 0)
+                {
+                    response.resp =
+                        strdup(appPass->password.c_str()); // Password input
+                }
+                else if (strcmp(msg.msg, "Verification code") == 0 ||
+                         strcmp(msg.msg, "TOTP") == 0)
+                {
+                    if (!appPass->token)
+                    {
+                        return PAM_CONV_ERR;
+                    }
+                    response.resp =
+                        strdup(appPass->token->c_str()); // TOTP input
+                }
+                else
+                {
+                    return PAM_CONV_ERR;
+                }
             }
             break;
             case PAM_ERROR_MSG:
@@ -83,11 +96,13 @@ inline int pamFunctionConversation(int numMsg, const struct pam_message** msgs,
  * @brief Attempt username/password authentication via PAM.
  * @param username The provided username aka account name.
  * @param password The provided password.
+ * @param token The provided MFA token.
  * @returns PAM error code or PAM_SUCCESS for success. */
 inline int pamAuthenticateUser(std::string_view username,
-                               std::string_view password)
+                               std::string_view password,
+                               std::optional<std::string> token)
 {
-    PasswordData data{password};
+    PasswordData data{std::string(password), token};
     std::string userStr(username);
 
     const struct pam_conv localConversation = {pamFunctionConversation, &data};
@@ -154,20 +169,8 @@ inline int pamFunctionConversationPasswordChange(
             case PAM_PROMPT_ECHO_OFF:
             {
                 // Assume PAM is only prompting for the password as hidden input
-                // Allocate memory only when PAM_PROMPT_ECHO_OFF is encounterred
-                char* appPass = static_cast<char*>(appdataPtr);
-                size_t appPassSize = std::strlen(appPass);
-
-                if ((appPassSize + 1) > PAM_MAX_RESP_SIZE)
-                {
-                    return PAM_CONV_ERR;
-                }
-                // Create an array for pam to own
-                // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-                auto passPtr = std::make_unique<char[]>(appPassSize + 1);
-                std::strncpy(passPtr.get(), appPass, appPassSize + 1);
-
-                responses[i].resp = passPtr.release();
+                // Allocate memory only when PAM_PROMPT_ECHO_OFF is encountered
+                responses[i].resp = strdup(static_cast<char*>(appdataPtr));
             }
             break;
             case PAM_ERROR_MSG:
@@ -190,8 +193,8 @@ inline int pamUpdatePassword(const std::string& username,
 {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
     char* passStrNoConst = const_cast<char*>(password.c_str());
-    const struct pam_conv localConversation = {
-        pamFunctionConversationPasswordChange, passStrNoConst};
+    const struct pam_conv localConversation = {pamFunctionConversation,
+                                               passStrNoConst};
     pam_handle_t* localAuthHandle = nullptr; // this gets set by pam_start
 
     int retval = pam_start("webserver", username.c_str(), &localConversation,
