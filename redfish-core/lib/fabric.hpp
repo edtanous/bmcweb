@@ -1792,36 +1792,53 @@ inline std::string getNVSwitchResetType(const std::string& processorType)
     return "";
 }
 
-inline void nvswitchPostResetType(
+inline void switchPostResetType(
     const std::shared_ptr<bmcweb::AsyncResp>& resp, const std::string& switchId,
-    const std::string& cpuObjectPath, const std::string& resetType,
+    const std::string& objectPath, const std::string& resetType,
     const std::vector<std::pair<std::string, std::vector<std::string>>>&
         serviceMap)
 {
+    std::vector<std::string> resetInterfaces = {
+        "xyz.openbmc_project.Control.Processor.ResetAsync",
+        "xyz.openbmc_project.Control.Processor.Reset"};
+
     // Check that the property even exists by checking for the interface
     const std::string* inventoryService = nullptr;
+    bool resetIntfImp = false;
+    bool resetAsyncIntfImp = false;
     for (const auto& [serviceName, interfaceList] : serviceMap)
     {
-        if (std::find(interfaceList.begin(), interfaceList.end(),
-                      "xyz.openbmc_project.Control.Processor.Reset") !=
-            interfaceList.end())
+        for (const auto& iface : resetInterfaces)
         {
-            inventoryService = &serviceName;
-            break;
+            auto it = std::find(interfaceList.begin(), interfaceList.end(),
+                                iface);
+            if (it != interfaceList.end())
+            {
+                inventoryService = &serviceName;
+                if (iface == "xyz.openbmc_project.Control.Processor.ResetAsync")
+                    resetAsyncIntfImp = true;
+                if (iface == "xyz.openbmc_project.Control.Processor.Reset")
+                    resetIntfImp = true;
+            }
         }
+        if (resetIntfImp || resetAsyncIntfImp)
+            break;
     }
     if (inventoryService == nullptr)
     {
+        BMCWEB_LOG_ERROR(
+            "switchPostResetType error service not implementing reset interface");
         messages::internalError(resp->res);
         return;
     }
+
     const std::string conName = *inventoryService;
     sdbusplus::asio::getProperty<std::string>(
-        *crow::connections::systemBus, conName, cpuObjectPath,
+        *crow::connections::systemBus, conName, objectPath,
         "xyz.openbmc_project.Control.Processor.Reset", "ResetType",
-        [resp, resetType, switchId, conName, cpuObjectPath](
-
-            const boost::system::error_code ec, const std::string& property) {
+        [resp, resetType, switchId, conName, objectPath, resetIntfImp,
+         resetAsyncIntfImp](const boost::system::error_code ec,
+                            const std::string& property) {
         if (ec)
         {
             BMCWEB_LOG_ERROR("DBus response, error for ResetType ");
@@ -1830,34 +1847,69 @@ inline void nvswitchPostResetType(
             return;
         }
 
-        const std::string processorResetType = getNVSwitchResetType(property);
-        if (processorResetType != resetType)
+        const std::string switchResetType = getNVSwitchResetType(property);
+        if (switchResetType != resetType)
         {
-            BMCWEB_LOG_DEBUG("Property Value Incorrect");
+            BMCWEB_LOG_DEBUG("Property Value Incorrect {} while allowed is {}",
+                             resetType, switchResetType);
             messages::actionParameterNotSupported(resp->res, "ResetType",
                                                   resetType);
             return;
         }
-        // Set the property, with handler to check error responses
-        crow::connections::systemBus->async_method_call(
-            [resp, switchId](boost::system::error_code ec, const int retValue) {
-            if (!ec)
-            {
-                if (retValue != 0)
+
+        if (resetAsyncIntfImp)
+        {
+            BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
+
+            nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
+                int>(resp, std::chrono::seconds(60), conName, objectPath,
+                     "xyz.openbmc_project.Control.Processor.ResetAsync",
+                     "Reset",
+                     [resp](const std::string& status,
+                            [[maybe_unused]] const int* retValue) {
+                if (status ==
+                    nvidia_async_operation_utils::asyncStatusValueSuccess)
                 {
-                    BMCWEB_LOG_ERROR("{}", retValue);
-                    messages::internalError(resp->res);
+                    BMCWEB_LOG_DEBUG("Switch Reset Succeeded");
+                    messages::success(resp->res);
+                    return;
                 }
-                BMCWEB_LOG_DEBUG("Switch:{} Reset Succeded", switchId);
-                messages::success(resp->res);
+                BMCWEB_LOG_ERROR("Switch reset error {}", status);
+                messages::internalError(resp->res);
+            });
+        }
+        else if (resetIntfImp)
+        {
+            BMCWEB_LOG_DEBUG("Performing Post using Sync Method Call");
+
+            // Set the property, with handler to check error responses
+            crow::connections::systemBus->async_method_call(
+                [resp, switchId](boost::system::error_code ec,
+                                 const int retValue) {
+                if (!ec)
+                {
+                    if (retValue != 0)
+                    {
+                        BMCWEB_LOG_ERROR("{}", retValue);
+                        messages::internalError(resp->res);
+                    }
+                    BMCWEB_LOG_DEBUG("Switch:{} Reset Succeded", switchId);
+                    messages::success(resp->res);
+                    return;
+                }
+                BMCWEB_LOG_ERROR("Error: {}", ec);
+                messages::internalError(resp->res);
                 return;
-            }
-            BMCWEB_LOG_DEBUG("{}", ec);
+            },
+                conName, objectPath,
+                "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+        }
+        else
+        {
+            BMCWEB_LOG_ERROR("No reset interface implemented.");
             messages::internalError(resp->res);
             return;
-        },
-            conName, cpuObjectPath,
-            "xyz.openbmc_project.Control.Processor.Reset", "Reset");
+        }
     });
 }
 
@@ -1891,6 +1943,7 @@ inline void requestRoutesNVSwitchReset(App& app)
                             const std::vector<std::string>& objects) {
                 if (ec)
                 {
+                    BMCWEB_LOG_ERROR("DBUS response error");
                     messages::internalError(asyncResp->res);
                     return;
                 }
@@ -1903,40 +1956,53 @@ inline void requestRoutesNVSwitchReset(App& app)
                         continue;
                     }
                     crow::connections::systemBus->async_method_call(
-                        [asyncResp, fabricId, switchId,
-                         resetType](const boost::system::error_code ec,
-                                    const crow::openbmc_mapper::GetSubTreeType&
-                                        subtree) {
+                        [asyncResp, fabricId, switchId, resetType](
+                            const boost::system::error_code ec,
+                            std::variant<std::vector<std::string>>& resp) {
                         if (ec)
                         {
+                            BMCWEB_LOG_ERROR("DBUS response error");
                             messages::internalError(asyncResp->res);
                             return;
                         }
-                        // Iterate over all retrieved ObjectPaths.
-                        for (const std::pair<
-                                 std::string,
-                                 std::vector<std::pair<
-                                     std::string, std::vector<std::string>>>>&
-                                 object : subtree)
+                        std::vector<std::string>* data =
+                            std::get_if<std::vector<std::string>>(&resp);
+                        if (data == nullptr)
+                        {
+                            BMCWEB_LOG_ERROR(
+                                "DBUS response error while getting switches");
+                            messages::internalError(asyncResp->res);
+                            return;
+                        }
+                        for (const std::string& objectPath : *data)
                         {
                             // Get the switchId object
-                            const std::string& path = object.first;
-                            const std::vector<std::pair<
-                                std::string, std::vector<std::string>>>&
-                                connectionNames = object.second;
-                            sdbusplus::message::object_path objPath(path);
-                            if (objPath.filename() != switchId)
+                            if (!boost::ends_with(objectPath, switchId))
                             {
                                 continue;
                             }
-                            if (connectionNames.size() < 1)
-                            {
-                                BMCWEB_LOG_ERROR("Got 0 Connection names");
-                                continue;
-                            }
-                            nvswitchPostResetType(asyncResp, switchId, objPath,
 
-                                                  *resetType, connectionNames);
+                            crow::connections::systemBus->async_method_call(
+                                [asyncResp, switchId, resetType, objectPath](
+                                    const boost::system::error_code ec,
+                                    const std::vector<std::pair<
+                                        std::string, std::vector<std::string>>>&
+                                        obj) {
+                                if (ec)
+                                {
+                                    BMCWEB_LOG_ERROR(
+                                        "DBUS response error while getting service");
+                                    messages::internalError(asyncResp->res);
+                                    return;
+                                }
+                                switchPostResetType(asyncResp, switchId,
+                                                      objectPath, *resetType,
+                                                      obj);
+                            },
+                                "xyz.openbmc_project.ObjectMapper",
+                                "/xyz/openbmc_project/object_mapper",
+                                "xyz.openbmc_project.ObjectMapper", "GetObject",
+                                objectPath, std::array<const char*, 0>());
                             return;
                         }
                         // Couldn't find an object with that name.
@@ -1945,11 +2011,9 @@ inline void requestRoutesNVSwitchReset(App& app)
                             asyncResp->res, "#Switch.v1_8_0.Switch", switchId);
                     },
                         "xyz.openbmc_project.ObjectMapper",
-                        "/xyz/openbmc_project/object_mapper",
-                        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                        object, 0,
-                        std::array<const char*, 1>{
-                            "xyz.openbmc_project.Inventory.Item.Switch"});
+                        object + "/all_switches",
+                        "org.freedesktop.DBus.Properties", "Get",
+                        "xyz.openbmc_project.Association", "endpoints");
                     return;
                 }
                 // Couldn't find an object with that name. Return an
