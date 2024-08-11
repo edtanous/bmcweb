@@ -317,6 +317,7 @@ class RedfishService
         requestRoutesProcessorPortCollection(app);
         requestRoutesProcessorPort(app);
         requestRoutesProcessorPortMetrics(app);
+        requestRoutesProcessorPortSettings(app);
         requestRoutesMemoryCollection(app);
         requestRoutesMemory(app);
         requestRoutesMemoryMetrics(app);
@@ -414,6 +415,7 @@ class RedfishService
         requestRoutesPortCollection(app);
         requestRoutesPort(app);
         requestRoutesPortMetrics(app);
+        requestRoutesPortSettings(app);
         requestRoutesEndpointCollection(app);
         requestRoutesEndpoint(app);
         requestRoutesZoneCollection(app);

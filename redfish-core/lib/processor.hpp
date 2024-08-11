@@ -2325,6 +2325,17 @@ inline void getProcessorMigModeData(
     getMigModeData(aResp, cpuId, service, objPath);
 }
 
+inline void getPortDisableFutureStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const std::string& processorId, const std::string& objectPath,
+    const dbus::utility::MapperServiceMap& serviceMap,
+    const std::string& portId)
+{
+    BMCWEB_LOG_DEBUG("Get getPortDisableFutureStatus data");
+    redfish::nvidia_processor_utils::getPortDisableFutureStatus(
+        aResp, processorId, objectPath, serviceMap, portId);
+}
+
 inline void
     getProcessorCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                            const std::string& cpuId, const std::string& service,
@@ -5773,6 +5784,12 @@ inline void getProcessorAcceleratorPortData(
                     aResp->res.jsonValue["Id"] = portId;
                     std::string metricsURI = portUri + "/Metrics";
                     aResp->res.jsonValue["Metrics"]["@odata.id"] = metricsURI;
+
+                    std::string portSettingURI = portUri + "/Settings";
+                    aResp->res.jsonValue["@Redfish.Settings"]["@odata.type"] =
+                        "#Settings.v1_3_3.Settings";
+                    aResp->res.jsonValue["@Redfish.Settings"]["SettingsObject"]
+                                        ["@odata.id"] = portSettingURI;
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                     aResp->res.jsonValue["Status"]["Conditions"] =
                         nlohmann::json::array();
@@ -6520,5 +6537,78 @@ inline void requestRoutesClearPCIeCountersActionInfo(App& app)
 }
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void requestRoutesProcessorPortSettings(App& app)
+{
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
+                 "Ports/<str>/Settings")
+        .privileges(redfish::privileges::getProcessor)
+        .methods(boost::beast::http::verb::get)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId, const std::string& portId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
+        BMCWEB_LOG_DEBUG("Setting for {} Processor and {} PortID.", processorId,
+                         portId);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        redfish::processor_utils::getProcessorObject(
+            asyncResp, processorId,
+            [portId](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                     const std::string& processorId1,
+                     const std::string& objectPath,
+                     const MapperServiceMap& serviceMap,
+                     [[maybe_unused]] const std::string& deviceType) {
+            getPortDisableFutureStatus(asyncResp1, processorId1, objectPath,
+                                       serviceMap, portId);
+        });
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    });
+
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/<str>/"
+                 "Ports/<str>/Settings")
+        .privileges(redfish::privileges::patchProcessor)
+        .methods(boost::beast::http::verb::patch)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& processorId, const std::string& portId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
+        BMCWEB_LOG_DEBUG("Setting for {} Processor and {} PortID.", processorId,
+                         portId);
+        std::optional<std::string> linkState;
+        if (!redfish::json_util::readJsonAction(
+                req, asyncResp->res, "LinkState", linkState))
+        {
+            return;
+        }
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        if (linkState)
+        {
+            redfish::processor_utils::getProcessorObject(
+                asyncResp, processorId,
+                [linkState,
+                 portId](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
+                         const std::string& processorId1,
+                         const std::string& objectPath,
+                         const MapperServiceMap& serviceMap,
+                         [[maybe_unused]] const std::string& deviceType) {
+                redfish::nvidia_processor_utils::patchPortDisableFuture(
+                    asyncResp1, processorId1, portId, *linkState,
+                    "PortDisableFuture", objectPath, serviceMap);
+            });
+        }
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    });
+}
 
 } // namespace redfish

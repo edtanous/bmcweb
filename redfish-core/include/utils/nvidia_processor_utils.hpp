@@ -563,6 +563,392 @@ inline void getClearPCIeCountersActionInfo(
             "xyz.openbmc_project.Inventory.Item.Accelerator"});
 }
 
+inline void
+    getPortLinkStatusSetting(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                             const std::string& portPath,
+                             const std::string& service,
+                             const std::vector<uint8_t>& portsToDisable)
+{
+    using PropertyType =
+        std::variant<std::string, bool, size_t, std::vector<uint8_t>>;
+    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, portsToDisable](const boost::system::error_code ec,
+                                const PropertiesMap& properties) {
+        if (ec)
+        {
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        for (const auto& property : properties)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "PortNumber")
+            {
+                const size_t* value = std::get_if<size_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for port number");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+
+                // check port number if present in vector
+                auto it = std::find(portsToDisable.begin(),
+                                    portsToDisable.end(), *value);
+                if (it != portsToDisable.end())
+                {
+                    aResp->res.jsonValue["LinkState"] = "Disabled";
+                }
+                else
+                {
+                    aResp->res.jsonValue["LinkState"] = "Enabled";
+                }
+            }
+        }
+    },
+        service, portPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Item.Port");
+}
+
+inline void getPortDisableFutureStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const std::string& processorId, const std::string& objectPath,
+    const dbus::utility::MapperServiceMap& serviceMap,
+    const std::string& portId)
+{
+    using PropertyType =
+        std::variant<std::string, bool, size_t, std::vector<uint8_t>>;
+    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, processorId, portId,
+         objectPath](const boost::system::error_code ec,
+                     const PropertiesMap& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Dbus response error"
+                             "while getting port disable status");
+            messages::internalError(aResp->res);
+            return;
+        }
+        std::vector<uint8_t> portsToDisable;
+
+        for (const auto& property : properties)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "PortDisableFuture")
+            {
+                auto* value =
+                    std::get_if<std::vector<uint8_t>>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for Port Disable Future mask");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                portsToDisable = *value;
+            }
+        }
+
+        crow::connections::systemBus->async_method_call(
+            [aResp, processorId, portId,
+             portsToDisable](const boost::system::error_code ec,
+                             std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error");
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error while getting ports");
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const std::string& portPath : *data)
+            {
+                sdbusplus::message::object_path pPath(portPath);
+                if (pPath.filename() != portId)
+                {
+                    continue;
+                }
+
+                std::string processorPortSettingsURI =
+                    "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+                processorPortSettingsURI += processorId;
+                processorPortSettingsURI += "/Ports/";
+                processorPortSettingsURI += portId;
+                processorPortSettingsURI += "/Settings";
+
+                aResp->res.jsonValue["@odata.type"] = "#Port.v1_4_0.Port";
+                aResp->res.jsonValue["@odata.id"] = processorPortSettingsURI;
+                aResp->res.jsonValue["Id"] = "Settings";
+                aResp->res.jsonValue["Name"] = processorId + " " + portId +
+                                               " Pending Settings";
+
+                crow::connections::systemBus->async_method_call(
+                    [aResp, processorId, portId, portPath, portsToDisable](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG("No port interface on {}", portPath);
+                        return;
+                    }
+                    getPortLinkStatusSetting(
+                        aResp, portPath, object.front().first, portsToDisable);
+                },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", portPath,
+                    std::array<std::string, 1>(
+                        {"xyz.openbmc_project.Inventory.Item.Port"}));
+            }
+        },
+            "xyz.openbmc_project.ObjectMapper", objectPath + "/all_states",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    },
+        serviceMap.front().first, objectPath, "org.freedesktop.DBus.Properties",
+        "GetAll", "com.nvidia.NVLink.NVLinkDisableFuture");
+}
+
+inline void getPortNumberAndCallSetAsync(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const std::string& processorId, const std::string& portId,
+    const std::string& propertyValue, const std::string& propertyName,
+    const std::string& processorPath, const std::string& processorService,
+    const std::string& portService, const std::string& portPath,
+    const std::vector<uint8_t>& portsToDisable)
+{
+    using PropertyType =
+        std::variant<std::string, bool, size_t, std::vector<uint8_t>>;
+    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, processorId, portId, propertyValue, propertyName, processorPath,
+         processorService, portsToDisable](const boost::system::error_code ec,
+                                           const PropertiesMap& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        for (const auto& property : properties)
+        {
+            const std::string& propName = property.first;
+            if (propName == "PortNumber")
+            {
+                const size_t* value = std::get_if<size_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for port number");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                uint32_t portNumber = static_cast<uint32_t>(*value);
+
+                dbus::utility::getDbusObject(
+                    objectPath,
+                    std::array<std::string_view, 1>{
+                        nvidia_async_operation_utils::setAsyncInterfaceName},
+                    [aResp, propertyValue, propertyName, portNumber,
+                     processorId, processorPath, processorService,
+                     portsToDisable](
+                        const boost::system::error_code& ec,
+                        const dbus::utility::MapperGetObject& object) {
+                    if (!ec)
+                    {
+                        for (const auto& [serv, _] : object)
+                        {
+                            if (serv != processorService)
+                            {
+                                continue;
+                            }
+
+                            std::vector<uint8_t> portListToDisable =
+                                portsToDisable;
+                            auto it = std::find(portListToDisable.begin(),
+                                                portListToDisable.end(),
+                                                portNumber);
+                            if (propertyValue == "Disabled")
+                            {
+                                if (it == portListToDisable.end())
+                                    portListToDisable.push_back(
+                                        static_cast<uint8_t>(portNumber));
+                            }
+                            else if (propertyValue == "Enabled")
+                            {
+                                if (it != portListToDisable.end())
+                                    portListToDisable.erase(it);
+                            }
+                            else
+                            {
+                                BMCWEB_LOG_ERROR(
+                                    "Invalid value for patch on property {}",
+                                    propertyName);
+                                messages::internalError(aResp->res);
+                                return;
+                            }
+
+                            BMCWEB_LOG_DEBUG(
+                                "Performing Patch using Set Async Method Call for {}",
+                                propertyName);
+
+                            nvidia_async_operation_utils::
+                                doGenericSetAsyncAndGatherResult(
+                                    aResp, std::chrono::seconds(60),
+                                    processorService, processorPath,
+                                    "com.nvidia.NVLink.NVLinkDisableFuture",
+                                    propertyName,
+                                    std::variant<std::vector<uint8_t>>(
+                                        portListToDisable),
+                                    nvidia_async_operation_utils::PatchPortDisableCallback{
+                                        aResp});
+                            return;
+                        }
+                    }
+                });
+            }
+        }
+    },
+        portService, portPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Inventory.Item.Port");
+}
+
+inline void patchPortDisableFuture(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+    const std::string& processorId, const std::string& portId,
+    const std::string& propertyValue, const std::string& propertyName,
+    const std::string& objectPath,
+    const dbus::utility::MapperServiceMap& serviceMap)
+{
+    // Check that the property even exists by checking for the interface
+    const std::string* inventoryService = nullptr;
+    for (const auto& [serviceName, interfaceList] : serviceMap)
+    {
+        if (std::find(interfaceList.begin(), interfaceList.end(),
+                      "com.nvidia.NVLink.NVLinkDisableFuture") !=
+            interfaceList.end())
+        {
+            inventoryService = &serviceName;
+            break;
+        }
+    }
+    if (inventoryService == nullptr)
+    {
+        BMCWEB_LOG_ERROR(
+            "NVLinkDisableFuture interface not found while {} patch",
+            propertyName);
+        messages::internalError(aResp->res);
+        return;
+    }
+
+    using PropertyType =
+        std::variant<std::string, bool, size_t, std::vector<uint8_t>>;
+    using PropertiesMap = boost::container::flat_map<std::string, PropertyType>;
+
+    crow::connections::systemBus->async_method_call(
+        [aResp, processorId, portId, propertyValue, propertyName, objectPath,
+         service = *inventoryService](const boost::system::error_code ec,
+                                      const PropertiesMap& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+        std::vector<uint8_t> portsToDisable;
+
+        for (const auto& property : properties)
+        {
+            const std::string& propertyName = property.first;
+            if (propertyName == "PortDisableFuture")
+            {
+                auto* value =
+                    std::get_if<std::vector<uint8_t>>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("Null value returned "
+                                     "for Port Disable Future mask");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                portsToDisable = *value;
+            }
+        }
+        crow::connections::systemBus->async_method_call(
+            [aResp, processorId, portId, propertyValue, propertyName,
+             objectPath, service,
+             portsToDisable](const boost::system::error_code ec,
+                             std::variant<std::vector<std::string>>& resp) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error");
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::vector<std::string>* data =
+                std::get_if<std::vector<std::string>>(&resp);
+            if (data == nullptr)
+            {
+                BMCWEB_LOG_ERROR("DBUS response error while getting ports");
+                messages::internalError(aResp->res);
+                return;
+            }
+            for (const std::string& portPath : *data)
+            {
+                // Get the portId object
+                sdbusplus::message::object_path pPath(portPath);
+                if (pPath.filename() != portId)
+                {
+                    continue;
+                }
+
+                crow::connections::systemBus->async_method_call(
+                    [aResp, processorId, portId, portPath, propertyValue,
+                     propertyName, objectPath, service, portsToDisable](
+                        const boost::system::error_code ec,
+                        const std::vector<std::pair<
+                            std::string, std::vector<std::string>>>& object) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_DEBUG("No port interface on {}", portPath);
+                        return;
+                    }
+
+                    getPortNumberAndCallSetAsync(
+                        aResp, processorId, portId, propertyValue, propertyName,
+                        objectPath, service, object.front().first, portPath,
+                        portsToDisable);
+                },
+                    "xyz.openbmc_project.ObjectMapper",
+                    "/xyz/openbmc_project/object_mapper",
+                    "xyz.openbmc_project.ObjectMapper", "GetObject", portPath,
+                    std::array<std::string, 1>(
+                        {"xyz.openbmc_project.Inventory.Item.Port"}));
+            }
+        },
+            "xyz.openbmc_project.ObjectMapper", objectPath + "/all_states",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    },
+        serviceMap.front().first, objectPath, "org.freedesktop.DBus.Properties",
+        "GetAll", "com.nvidia.NVLink.NVLinkDisableFuture");
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void
