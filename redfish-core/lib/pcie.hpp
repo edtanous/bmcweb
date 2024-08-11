@@ -1757,8 +1757,9 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                 // Get Inventory Service
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, device, chassisPCIePath, interface, chassisId,
-                     chassisPCIeDevicePath](const boost::system::error_code ec,
-                                            const GetSubTreeType& subtree) {
+                     chassisPCIeDevicePath,
+                     chassisPath](const boost::system::error_code ec,
+                                  const GetSubTreeType& subtree) {
                     if (ec)
                     {
                         BMCWEB_LOG_DEBUG("DBUS response error");
@@ -1825,6 +1826,9 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             getPCIeDeviceState(asyncResp, device,
                                                chassisPCIePath, connectionName);
                         }
+                        redfish::nvidia_chassis_utils::
+                            getChassisFabricSwitchesLinks(asyncResp,
+                                                          chassisPath);
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                         redfish::conditions_utils::populateServiceConditions(
                             asyncResp, device);
