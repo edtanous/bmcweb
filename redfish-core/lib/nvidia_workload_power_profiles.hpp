@@ -73,7 +73,6 @@ inline void
                 }
                 aResp->res.jsonValue["EnforcedProfileMask"] =
                     vectorTo256BitHexString(*value);
-                ;
             }
             else if (property.first == "RequestedProfileMask")
             {
@@ -87,7 +86,6 @@ inline void
                 }
                 aResp->res.jsonValue["RequestedProfileMask"] =
                     vectorTo256BitHexString(*value);
-                ;
             }
             else if (property.first == "SupportedProfileMask")
             {
@@ -133,7 +131,8 @@ inline void validateProcessorAndGetWorkloadPowerInfo(
                 continue;
             }
             std::string workLoadPowerURI =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             workLoadPowerURI += processorId;
             workLoadPowerURI += "/Oem/Nvidia/WorkloadPowerProfile";
             aResp->res.jsonValue["@odata.type"] =
@@ -254,7 +253,7 @@ inline void getWorkLoadProfileData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     return;
                 }
                 std::string profileName = processorId;
-                profileName += "  Workload Power Profile";
+                profileName += "  Workload Power Profile ";
                 profileName += *value;
                 aResp->res.jsonValue["Name"] = profileName;
             }
@@ -289,8 +288,9 @@ inline void validateProcessorWorkloadPowerProfile(
             {
                 continue;
             }
-            std::string profileURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                     "/Processors/";
+            std::string profileURI =
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             profileURI += processorId;
             profileURI += "/Oem/Nvidia/WorkloadPowerProfile/Profiles/";
             profileURI += profileId;
@@ -403,7 +403,8 @@ inline void getProcessorWorkloadPowerProfileCollectionData(
                 continue;
             }
             std::string profileCollectionURI =
-                "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Processors/";
+                "/redfish/v1/Systems/" +
+                std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
             profileCollectionURI += processorId;
             profileCollectionURI += "/Oem/Nvidia/WorkloadPowerProfile/Profiles";
             aResp->res.jsonValue["@odata.type"] =
@@ -413,6 +414,8 @@ inline void getProcessorWorkloadPowerProfileCollectionData(
             std::string name = processorId;
             name += " Workload Power Profile Collection";
             aResp->res.jsonValue["Name"] = name;
+            aResp->res.jsonValue["Members"] = nlohmann::json::array();
+            aResp->res.jsonValue["Members@odata.count"] = 0;
 
             crow::connections::systemBus->async_method_call(
                 [aResp, profileCollectionURI,
@@ -490,8 +493,9 @@ inline void requestRoutesProcessorWorkloadPower(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                      "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/")
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                          std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                          "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -506,8 +510,8 @@ inline void requestRoutesProcessorWorkloadPower(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-        "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/Actions/NvidiaWorkloadPower.EnableProfiles/")
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/Actions/NvidiaWorkloadPower.EnableProfiles/")
         .privileges(redfish::privileges::postProcessor)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -532,8 +536,8 @@ inline void requestRoutesProcessorWorkloadPower(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-        "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/EnableProfilesActionInfo")
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/EnableProfilesActionInfo")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -543,8 +547,9 @@ inline void requestRoutesProcessorWorkloadPower(App& app)
         {
             return;
         }
-        std::string actionInfoURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                    "/Processors/";
+        std::string actionInfoURI =
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
         actionInfoURI += processorId;
         actionInfoURI +=
             "/Oem/Nvidia/WorkloadPowerProfile/EnableProfilesActionInfo";
@@ -565,8 +570,8 @@ inline void requestRoutesProcessorWorkloadPower(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-        "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/Actions/NvidiaWorkloadPower.DisableProfiles/")
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/Actions/NvidiaWorkloadPower.DisableProfiles/")
         .privileges(redfish::privileges::postProcessor)
         .methods(boost::beast::http::verb::post)(
             [&app](const crow::Request& req,
@@ -591,8 +596,8 @@ inline void requestRoutesProcessorWorkloadPower(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-        "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/DisableProfilesActionInfo")
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/DisableProfilesActionInfo")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -602,8 +607,9 @@ inline void requestRoutesProcessorWorkloadPower(App& app)
         {
             return;
         }
-        std::string actionInfoURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
-                                    "/Processors/";
+        std::string actionInfoURI =
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Processors/";
         actionInfoURI += processorId;
         actionInfoURI +=
             "/Oem/Nvidia/WorkloadPowerProfile/DisableProfilesActionInfo";
@@ -628,8 +634,9 @@ inline void requestRoutesProcessorWorkloadPowerProfileCollection(App& app)
     /**
      * Functions triggers appropriate requests on DBus
      */
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/" +
+                 std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                  "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/Profiles/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
@@ -651,8 +658,8 @@ inline void requestRoutesProcessorWorkloadPowerProfile(App& app)
      */
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/" PLATFORMSYSTEMID
-        "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/Profiles/<str>/")
+        "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+            "/Processors/<str>/Oem/Nvidia/WorkloadPowerProfile/Profiles/<str>/")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

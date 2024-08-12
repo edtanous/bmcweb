@@ -160,7 +160,7 @@ inline void getProcessorCurrentProfileData(
 {
     BMCWEB_LOG_DEBUG("Get processor current profile data.");
     crow::connections::systemBus->async_method_call(
-        [aResp{std::move(aResp)},
+        [aResp{std::move(aResp)}, objPath,
          presetProfileURI](const boost::system::error_code ec,
                            const DbusProperties& properties) {
         if (ec)
@@ -276,12 +276,22 @@ inline void getProcessorCurrentProfileData(
                     messages::internalError(aResp->res);
                     return;
                 }
-
-                std::string appliedProfile = presetProfileURI;
-                appliedProfile += "/";
-                appliedProfile += value->filename();
-                aResp->res.jsonValue["AppliedPresetProfile"]["@odata.id"] =
-                    appliedProfile;
+                if (*value != objPath)
+                {
+                    std::string appliedProfile = presetProfileURI;
+                    appliedProfile += "/";
+                    appliedProfile += value->filename();
+                    aResp->res.jsonValue["AppliedPresetProfile"]["@odata.id"] =
+                        appliedProfile;
+                }
+                else
+                {
+                    // AppliedProfilePath is invalid
+                    BMCWEB_LOG_ERROR("AppliedPresetProfile is invalid for {}",
+                                     objPath);
+                    aResp->res.jsonValue["AppliedPresetProfile"]["@odata.id"] =
+                        nullptr;
+                }
             }
         }
     },
@@ -802,6 +812,8 @@ inline void getProcessorPowerSmoothingPresetProfileCollectionData(
             std::string name = processorId;
             name += " PowerSmoothing PresetProfile Collection";
             aResp->res.jsonValue["Name"] = name;
+            aResp->res.jsonValue["Members"] = nlohmann::json::array();
+            aResp->res.jsonValue["Members@odata.count"] = 0;
 
             crow::connections::systemBus->async_method_call(
                 [aResp, profileCollectionURI,

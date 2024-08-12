@@ -175,7 +175,7 @@ inline void getCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
         for (const auto& property : properties)
         {
             json["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaProcessor.v1_2_0.NvidiaGPU";
+                "#NvidiaProcessor.v1_3_0.NvidiaGPU";
             if (property.first == "CCModeEnabled")
             {
                 const bool* ccModeEnabled = std::get_if<bool>(&property.second);
@@ -230,7 +230,7 @@ inline void
         }
         nlohmann::json& json = aResp->res.jsonValue;
         json["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaProcessor.v1_2_0.NvidiaGPU";
+            "#NvidiaProcessor.v1_3_0.NvidiaGPU";
         for (const auto& property : properties)
         {
             if (property.first == "PendingCCModeState")
@@ -947,7 +947,8 @@ inline void
     getWorkLoadPowerInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                          const std::string& processorId)
 {
-    std::string powerProfileURI = "/redfish/v1/Systems/" PLATFORMSYSTEMID
+    std::string powerProfileURI = "/redfish/v1/Systems/" +
+                                  std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                   "/Processors/";
     powerProfileURI += processorId;
     powerProfileURI += "/Oem/Nvidia/WorkloadPowerProfile";
@@ -979,11 +980,13 @@ inline void
                 BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
 
                 nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
-                    int>(asyncResp, std::chrono::seconds(60), connection, path,
-                         "xyz.openbmc_project.PCIe.ClearPCIeCounters",
-                         "ClearCounter",
-                         [asyncResp , counterType](const std::string& status,
-                                     [[maybe_unused]] const int* retValue) {
+                    int>(
+                    asyncResp, std::chrono::seconds(60), connection, path,
+                    "xyz.openbmc_project.PCIe.ClearPCIeCounters",
+                    "ClearCounter",
+                    [asyncResp,
+                     counterType](const std::string& status,
+                                  [[maybe_unused]] const int* retValue) {
                     if (status ==
                         nvidia_async_operation_utils::asyncStatusValueSuccess)
                     {
@@ -993,7 +996,8 @@ inline void
                     }
                     BMCWEB_LOG_ERROR("Clear Counter Throws error {}", status);
                     messages::internalError(asyncResp->res);
-                }, counterType);
+                },
+                    counterType);
 
                 return;
             }
@@ -1111,7 +1115,6 @@ inline void
             "xyz.openbmc_project.Inventory.Item.Cpu",
             "xyz.openbmc_project.Inventory.Item.Accelerator"});
 }
-
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
@@ -1241,9 +1244,8 @@ inline void patchOperatingSpeedRangeMHz(
         }
         else
         {
-            BMCWEB_LOG_ERROR(
-                "Chassis Path not found for processorId {}",
-                processorId);
+            BMCWEB_LOG_ERROR("Chassis Path not found for processorId {}",
+                             processorId);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1293,8 +1295,9 @@ inline void getOperatingSpeedRangeData(
                             messages::internalError(asyncResp->res);
                             return;
                         }
-                        for (const std::pair<std::string,
-                                             std::variant<uint32_t, std::string>>&
+                        for (const std::pair<
+                                 std::string,
+                                 std::variant<uint32_t, std::string>>&
                                  property : propertiesList)
                         {
                             std::string propertyName = property.first;
@@ -1310,7 +1313,9 @@ inline void getOperatingSpeedRangeData(
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
-                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                asyncResp->res
+                                    .jsonValue["OperatingSpeedRangeMHz"]
+                                              [propertyName] = *value;
                                 continue;
                             }
                             else if (propertyName == "MinSpeed")
@@ -1325,7 +1330,9 @@ inline void getOperatingSpeedRangeData(
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
-                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                asyncResp->res
+                                    .jsonValue["OperatingSpeedRangeMHz"]
+                                              [propertyName] = *value;
                                 continue;
                             }
                             else if (propertyName == "RequestedSpeedLimitMax")
@@ -1340,7 +1347,9 @@ inline void getOperatingSpeedRangeData(
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
-                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                asyncResp->res
+                                    .jsonValue["OperatingSpeedRangeMHz"]
+                                              [propertyName] = *value;
                                 continue;
                             }
                             else if (propertyName == "RequestedSpeedLimitMin")
@@ -1355,7 +1364,9 @@ inline void getOperatingSpeedRangeData(
                                     messages::internalError(asyncResp->res);
                                     return;
                                 }
-                                asyncResp->res.jsonValue["OperatingSpeedRangeMHz"][propertyName] = *value;
+                                asyncResp->res
+                                    .jsonValue["OperatingSpeedRangeMHz"]
+                                              [propertyName] = *value;
                                 continue;
                             }
                         }
@@ -1430,7 +1441,6 @@ inline void
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 }
-
 
 } // namespace nvidia_processor_utils
 } // namespace redfish

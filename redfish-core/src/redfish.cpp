@@ -29,7 +29,6 @@
 #include "metric_report_definition.hpp"
 #include "network_protocol.hpp"
 #include "nvidia_oem_dpu.hpp"
-#include "nvidia_power_smoothing.hpp"
 #include "pcie.hpp"
 #include "power.hpp"
 #include "power_subsystem.hpp"
@@ -56,6 +55,8 @@
 #endif
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 #include "nvidia_debug_token.hpp"
+#include "nvidia_power_smoothing.hpp"
+#include "nvidia_workload_power_profiles.hpp"
 #endif
 #include "boot_options.hpp"
 #include "erot_chassis.hpp"
