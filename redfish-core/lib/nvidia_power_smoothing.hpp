@@ -712,48 +712,29 @@ inline void getProcessorPowerSmoothingPresetProfileData(
                         continue;
                     }
                     profileExists = true;
+                    std::string objectPathToGetProfileData = profilePath;
                     BMCWEB_LOG_ERROR("Profile ID: {}", profileId);
                     crow::connections::systemBus->async_method_call(
-                        [processorId, profileId, profilePath,
+                        [processorId, objectPathToGetProfileData,
                          aResp{std::move(aResp)}](
                             const boost::system::error_code ec,
-                            const boost::container::flat_map<
-                                std::string,
-                                boost::container::flat_map<
-                                    std::string, std::vector<std::string>>>&
-                                subtree) {
+                            const std::vector<std::pair<
+                                std::string, std::vector<std::string>>>&
+                                object) {
                         if (ec)
                         {
                             BMCWEB_LOG_ERROR("DBUS response error");
                             messages::internalError(aResp->res);
-
                             return;
                         }
-                        for (const auto& [path, object] : subtree)
-                        {
-                            sdbusplus::message::object_path objectPath(path);
-                            BMCWEB_LOG_ERROR("Profile ID as per objectpath: {}",
-                                             objectPath.filename());
-                            if (objectPath.filename() != profileId)
-                            {
-                                continue;
-                            }
-                            for (const auto& [service, interfaces] : object)
-                            {
-                                if (std::find(
-                                        interfaces.begin(), interfaces.end(),
-                                        "com.nvidia.PowerSmoothing.PowerProfile") !=
-                                    interfaces.end())
-                                {
-                                    getProfileData(aResp, service, path);
-                                }
-                            }
-                        }
+                        std::string service = object.front().first;
+                        getProfileData(aResp, service,
+                                       objectPathToGetProfileData);
                     },
                         "xyz.openbmc_project.ObjectMapper",
                         "/xyz/openbmc_project/object_mapper",
-                        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
-                        "/xyz/openbmc_project/inventory", 0,
+                        "xyz.openbmc_project.ObjectMapper", "GetObject",
+                        objectPathToGetProfileData,
                         std::array<const char*, 1>{
                             "com.nvidia.PowerSmoothing.PowerProfile"});
                 }
