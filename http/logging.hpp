@@ -205,34 +205,30 @@ template <typename... Args>
 inline void BMCWEB_LOG_CRITICAL(const crow::FormatString& format,
                                 Args&&... args)
 {
-    crow::vlog<crow::LogLevel::Critical>(
-        format, std::make_format_args(std::forward<Args>(args)...));
+    crow::vlog<crow::LogLevel::Critical>(format,
+                                         std::make_format_args(args...));
 }
 
 template <typename... Args>
 inline void BMCWEB_LOG_ERROR(const crow::FormatString& format, Args&&... args)
 {
-    crow::vlog<crow::LogLevel::Error>(
-        format, std::make_format_args(std::forward<Args>(args)...));
+    crow::vlog<crow::LogLevel::Error>(format, std::make_format_args(args...));
 }
 
 template <typename... Args>
 inline void BMCWEB_LOG_WARNING(const crow::FormatString& format, Args&&... args)
 {
-    crow::vlog<crow::LogLevel::Warning>(
-        format, std::make_format_args(std::forward<Args>(args)...));
+    crow::vlog<crow::LogLevel::Warning>(format, std::make_format_args(args...));
 }
 
 template <typename... Args>
 inline void BMCWEB_LOG_INFO(const crow::FormatString& format, Args&&... args)
 {
-    crow::vlog<crow::LogLevel::Info>(
-        format, std::make_format_args(std::forward<Args>(args)...));
+    crow::vlog<crow::LogLevel::Info>(format, std::make_format_args(args...));
 }
 
 template <typename... Args>
 inline void BMCWEB_LOG_DEBUG(const crow::FormatString& format, Args&&... args)
 {
-    crow::vlog<crow::LogLevel::Debug>(
-        format, std::make_format_args(std::forward<Args>(args)...));
+    crow::vlog<crow::LogLevel::Debug>(format, std::make_format_args(args...));
 }
