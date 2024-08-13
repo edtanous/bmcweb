@@ -699,14 +699,17 @@ inline void getProcessorPCIeFunctionsLinks(
 {
     BMCWEB_LOG_DEBUG("Get processor pcie functions links");
     crow::connections::systemBus->async_method_call(
-        [aResp, pcieDeviceLink](
+        [aResp, pcieDeviceLink, objPath](
             const boost::system::error_code ec,
             boost::container::flat_map<std::string,
                                        std::variant<std::string, size_t>>&
                 pcieDevProperties) {
         if (ec)
         {
-            messages::internalError(aResp->res);
+            // Not reporting Internal Failure because we might have another
+            // service with the same objpath to set up config only. Eg: PartLoaction
+            BMCWEB_LOG_WARNING("Can't get PCIeDevice DBus properties {}",
+                               objPath);
             return;
         }
         aResp->res.jsonValue["SystemInterface"]["InterfaceType"] = "PCIe";

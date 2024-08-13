@@ -1062,13 +1062,17 @@ inline void getSensorDataByService(
                               const PropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("Can't get sensor reading for");
+            BMCWEB_LOG_DEBUG("Can't get sensor reading for {}",
+                             objPath);
             // Not reporting Internal Failure for services that dont host
             // sensor path in case of Processor Env Eg: GpuOobRecovery in
             // case of FPGA Processor
             if (resourceType != "Processor")
             {
-                messages::internalError(aResp->res);
+                // Not reporting Internal Failure because we might have another
+                // service with the same objpath to set up config only. Eg: PartLoaction
+                BMCWEB_LOG_WARNING("Can't get Processor sensor DBus properties {}",
+                                   objPath);
             }
             return;
         }
