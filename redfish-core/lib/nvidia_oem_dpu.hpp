@@ -359,20 +359,20 @@ const PropertyInfo nicTristateAttributeInfo = {
         {"Disabled",
          "xyz.openbmc_project.Control.NcSi.OEM.Nvidia.NicTristateAttribute.Modes.Disabled"}}};
 
-constexpr char hostRhimTarget[] = "/redfish/v1/Systems/" +
+const std::string hostRhimTarget = "/redfish/v1/Systems/" +
                                   std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                   "/Oem/Nvidia/Actions/HostRshim.Set";
 
-constexpr char modeTarget[] = "/redfish/v1/Systems/" +
+const std::string modeTarget = "/redfish/v1/Systems/" +
                               std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                               "/Oem/Nvidia/Actions/Mode.Set";
-constexpr char dpuStrpOptionGet[] =
+const std::string dpuStrpOptionGet =
     "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
     "/Oem/Nvidia/Connectx/StrapOptions";
-constexpr char dpuHostPrivGet[] = "/redfish/v1/Systems/" +
+const std::string dpuHostPrivGet = "/redfish/v1/Systems/" +
                                   std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
                                   "/Oem/Nvidia/Connectx/ExternalHostPrivileges";
-constexpr char externalHostPrivilegeTarget[] =
+const std::string externalHostPrivilegeTarget =
     "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
     "/Oem/Nvidia/Connectx/ExternalHostPrivileges/Actions/ExternalHostPrivileges.Set";
 
@@ -1293,19 +1293,25 @@ inline void requestRoutesNvidiaOemBf(App& app)
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
 
-    BMCWEB_ROUTE(app, bluefield::hostRhimTarget)
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/Oem/Nvidia/Actions/HostRshim.Set")
         .privileges(redfish::privileges::postComputerSystem)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
                             &bluefield::hostRshim, std::ref(app)));
 
-    BMCWEB_ROUTE(app, bluefield::modeTarget)
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/Oem/Nvidia/Actions/Mode.Set")
         .privileges(redfish::privileges::postComputerSystem)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
                             &bluefield::mode, std::ref(app)));
 
-    BMCWEB_ROUTE(app, bluefield::externalHostPrivilegeTarget)
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/Oem/Nvidia/Connectx/ExternalHostPrivileges/Actions/ExternalHostPrivileges.Set")
         .privileges(redfish::privileges::postComputerSystem)
         .methods(boost::beast::http::verb::post)(
             std::bind_front(&bluefield::DpuActionSetAndGetProp::setAction,
@@ -1395,7 +1401,9 @@ inline void requestRoutesNvidiaOemBf(App& app)
         });
     });
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF3_PROPERTIES
-    BMCWEB_ROUTE(app, bluefield::dpuStrpOptionGet)
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/Oem/Nvidia/Connectx/StrapOptions")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
@@ -1411,7 +1419,9 @@ inline void requestRoutesNvidiaOemBf(App& app)
         bluefield::starpOptionsMask.getProperty(&mask, asyncResp);
     });
 
-    BMCWEB_ROUTE(app, bluefield::dpuHostPrivGet)
+    BMCWEB_ROUTE(app, "/redfish/v1/Systems/" +
+                        std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                        "/Oem/Nvidia/Connectx/ExternalHostPrivileges")
         .privileges(redfish::privileges::getComputerSystem)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
