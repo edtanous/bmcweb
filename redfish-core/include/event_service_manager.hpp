@@ -703,12 +703,15 @@ class Subscription : public persistent_data::UserSubscription
         nlohmann::json logEntryArray;
         logEntryArray.push_back({});
         nlohmann::json& logEntryJson = logEntryArray.back();
+        // MemberId is 0 : since we are sending one event record.
+        uint64_t memberId = 0;
 
         logEntryJson = {{"EventId", "TestID"},
                         {"EventType", "Event"},
                         {"Severity", "OK"},
                         {"Message", "Generated test event"},
                         {"MessageId", "OpenBMC.0.2.TestEventLog"},
+                        {"MemberId", memberId},
                         {"MessageArgs", nlohmann::json::array()},
                         {"EventTimestamp",
                          redfish::time_utils::getDateTimeOffsetNow().first},
