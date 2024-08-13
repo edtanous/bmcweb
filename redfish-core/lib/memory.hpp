@@ -1311,6 +1311,8 @@ inline void getMemoryMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                               "com.nvidia.MemoryRowRemapping") !=
                     interfaces.end())
                 {
+                    aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                        "#NvidiaMemoryMetrics.v1_1_0.NvidiaGPUMemoryMetrics";
                     getMemoryRowRemappings(aResp, service, path);
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
