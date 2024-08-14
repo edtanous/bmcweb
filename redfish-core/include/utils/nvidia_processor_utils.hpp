@@ -289,7 +289,7 @@ inline void getSMUtilizationData(std::shared_ptr<bmcweb::AsyncResp> aResp,
 
         for (const auto& property : properties)
         {
-            if (property.first == "Utilization")
+            if (property.first == "SMUtilization")
             {
                 const double* value = std::get_if<double>(&property.second);
                 if (value == nullptr)
@@ -306,7 +306,7 @@ inline void getSMUtilizationData(std::shared_ptr<bmcweb::AsyncResp> aResp,
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
-        "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig");
+        "com.nvidia.SMUtilization");
 }
 
 inline void getNvLinkTotalCount(const std::shared_ptr<bmcweb::AsyncResp>& aResp,

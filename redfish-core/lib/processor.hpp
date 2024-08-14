@@ -4471,8 +4471,7 @@ inline void getProcessorMetricsData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 }
 
                 if (std::find(interfaces.begin(), interfaces.end(),
-                              "xyz.openbmc_project.Inventory.Item.Cpu."
-                              "OperatingConfig") != interfaces.end())
+                              "com.nvidia.SMUtilization") != interfaces.end())
                 {
                     nvidia_processor_utils::getSMUtilizationData(aResp, service,
                                                                  path);
