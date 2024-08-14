@@ -949,6 +949,164 @@ inline void patchPortDisableFuture(
         "GetAll", "com.nvidia.NVLink.NVLinkDisableFuture");
 }
 
+inline void
+    clearPCIeCounter(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                     const std::string& connection, const std::string& path,
+                     const std::string& counterType)
+{
+    dbus::utility::getDbusObject(
+        path,
+        std::array<std::string_view, 1>{
+            "xyz.openbmc_project.PCIe.ClearPCIeCounters"},
+        [asyncResp, path, connection,
+         counterType](const boost::system::error_code& ec,
+                      const dbus::utility::MapperGetObject& object) {
+        if (!ec)
+        {
+            for (const auto& [serv, _] : object)
+            {
+                if (serv != connection)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
+
+                nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
+                    int>(asyncResp, std::chrono::seconds(60), connection, path,
+                         "xyz.openbmc_project.PCIe.ClearPCIeCounters",
+                         "ClearCounter",
+                         [asyncResp , counterType](const std::string& status,
+                                     [[maybe_unused]] const int* retValue) {
+                    if (status ==
+                        nvidia_async_operation_utils::asyncStatusValueSuccess)
+                    {
+                        BMCWEB_LOG_DEBUG("Clear Counter Succeeded");
+                        messages::success(asyncResp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_ERROR("Clear Counter Throws error {}", status);
+                    messages::internalError(asyncResp->res);
+                }, counterType);
+
+                return;
+            }
+        }
+    });
+};
+
+inline void
+    postPCIeClearCounter(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& processorId,
+                         const std::string& portId,
+                         const std::string& counterType)
+{
+    BMCWEB_LOG_DEBUG("Get available system processor resource");
+    crow::connections::systemBus->async_method_call(
+        [processorId, portId, asyncResp, counterType](
+            const boost::system::error_code ec,
+            const boost::container::flat_map<
+                std::string, boost::container::flat_map<
+                                 std::string, std::vector<std::string>>>&
+                subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(asyncResp->res);
+
+            return;
+        }
+        for (const auto& [path, object] : subtree)
+        {
+            if (!boost::ends_with(path, processorId))
+            {
+                continue;
+            }
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, processorId, portId,
+                 counterType](const boost::system::error_code& e,
+                              std::variant<std::vector<std::string>>& resp) {
+                if (e)
+                {
+                    // no state sensors attached.
+                    BMCWEB_LOG_ERROR(
+                        "Object Mapper call failed while finding all_states association, with error {}",
+                        e);
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                std::vector<std::string>* data =
+                    std::get_if<std::vector<std::string>>(&resp);
+                if (data == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("No Association for all_states found");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+
+                for (const std::string& sensorpath : *data)
+                {
+                    // Check Interface in Object or not
+                    BMCWEB_LOG_DEBUG("processor state sensor object path {}",
+                                     sensorpath);
+
+                    sdbusplus::message::object_path path1(sensorpath);
+                    if (path1.filename() != portId)
+                    {
+                        return;
+                    }
+
+                    crow::connections::systemBus->async_method_call(
+                        [asyncResp, sensorpath, portId, counterType](
+                            const boost::system::error_code ec,
+                            const std::vector<std::pair<
+                                std::string, std::vector<std::string>>>&
+                                object) {
+                        if (ec)
+                        {
+                            // the path does not implement port
+                            // interfaces
+                            BMCWEB_LOG_DEBUG(
+                                "no port interface on object path {}",
+                                sensorpath);
+                            return;
+                        }
+
+                        for (auto [connection, interfaces] : object)
+                        {
+                            clearPCIeCounter(asyncResp, connection, sensorpath,
+                                             counterType);
+                        }
+                    },
+                        "xyz.openbmc_project.ObjectMapper",
+                        "/xyz/openbmc_project/object_mapper",
+                        "xyz.openbmc_project.ObjectMapper", "GetObject",
+                        sensorpath,
+                        std::array<std::string, 2>(
+                            {"xyz.openbmc_project.Inventory.Item.Port",
+                             "xyz.openbmc_project.PCIe.ClearPCIeCounters"}));
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper", path + "/all_states",
+                "org.freedesktop.DBus.Properties", "Get",
+                "xyz.openbmc_project.Association", "endpoints");
+            return;
+        }
+        // Object not found
+        messages::resourceNotFound(asyncResp->res,
+                                   "#Processor.v1_20_0.Processor", processorId);
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 2>{
+            "xyz.openbmc_project.Inventory.Item.Cpu",
+            "xyz.openbmc_project.Inventory.Item.Accelerator"});
+}
+
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void

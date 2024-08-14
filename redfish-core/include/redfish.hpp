@@ -305,6 +305,7 @@ class RedfishService
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         requestRoutesEdppReset(app);
         requestRoutesClearPCIeCountersActionInfo(app);
+        requestRoutesPCIeClearCounter(app);
         requestRoutesNvidiaManagerResetToDefaultsAction(app);
         requestRoutesNvidiaManagerEmmcSecureErase(app);
         requestRoutesManagerEmmcSecureEraseActionInfo(app);
@@ -437,6 +438,7 @@ class RedfishService
         requestRoutesChassisControls(app);
         requestRoutesChassisControlsCollection(app);
         requestRoutesUpdateServiceCommitImage(app);
+        requestRoutesChassisControlsReset(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
        requestRoutesComputeDigestPost(app);
 #endif

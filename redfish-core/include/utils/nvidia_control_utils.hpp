@@ -145,5 +145,121 @@ inline void
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Association", "endpoints");
 };
-} // namespace nvidia_processor_utils
+
+inline void
+    resetClockLimitControl(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connection,
+                           const std::string& path)
+{
+    dbus::utility::getDbusObject(
+        path,
+        std::array<std::string_view, 1>{"com.nvidia.Common.ClearClockLimAsync"},
+        [asyncResp, path,
+         connection](const boost::system::error_code& ec,
+                     const dbus::utility::MapperGetObject& object) {
+        if (!ec)
+        {
+            for (const auto& [serv, _] : object)
+            {
+                if (serv != connection)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
+
+                nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
+                    int>(asyncResp, std::chrono::seconds(60), connection, path,
+                         "com.nvidia.Common.ClearClockLimAsync",
+                         "ClearClockLimit",
+                         [asyncResp](const std::string& status,
+                                     [[maybe_unused]] const int* retValue) {
+                    if (status ==
+                        nvidia_async_operation_utils::asyncStatusValueSuccess)
+                    {
+                        BMCWEB_LOG_DEBUG(
+                            "Clear Requested clock Limit Succeeded");
+                        messages::success(asyncResp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_ERROR(
+                        "Clear Requested clock Limit Throws error {}", status);
+                    messages::internalError(asyncResp->res);
+                });
+
+                return;
+            }
+        }
+    });
+};
+
+inline void
+    postClockLimitControl(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                          const std::string& chassisID,
+                          const std::string& controlID,
+                          const std::optional<std::string>& validChassisPath)
+{
+    if (!validChassisPath)
+    {
+        BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
+        messages::resourceNotFound(asyncResp->res, "Chassis", chassisID);
+        return;
+    }
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisID, controlID,
+         validChassisPath](const boost::system::error_code ec,
+                           std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR(
+                "ObjectMapper::Get Associated clock control object call failed: {}",
+                ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        std::vector<std::string>* data =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (data == nullptr)
+        {
+            BMCWEB_LOG_ERROR("control id resource not found");
+            messages::resourceNotFound(asyncResp->res, "ControlID", controlID);
+            return;
+        }
+
+        for (auto sensorpath : *data)
+        {
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, sensorpath](
+                    const boost::system::error_code ec,
+                    const std::vector<std::pair<
+                        std::string, std::vector<std::string>>>& object) {
+                if (ec)
+                {
+                    // the path does not implement clear clock limit interface
+                    // interfaces
+                    BMCWEB_LOG_DEBUG(
+                        "no clear clock Limit interface on object path {}",
+                        sensorpath);
+                    return;
+                }
+                for (auto [connection, interfaces] : object)
+                {
+                    resetClockLimitControl(asyncResp, connection, sensorpath);
+                }
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetObject", sensorpath,
+                std::array<std::string, 1>(
+                    {"com.nvidia.Common.ClearClockLimAsync"}));
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        *validChassisPath + "/clock_controls",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+};
+
+
+} // namespace nvidia_control_utils
 }
