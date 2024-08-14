@@ -15,7 +15,7 @@
 
 namespace redfish
 {
-    constexpr std::array<std::string_view,130> schemas {
+    constexpr std::array<std::string_view,127> schemas {
         "AccountService",
         "ActionInfo",
         "AggregationService",
@@ -82,9 +82,7 @@ namespace redfish
         "MetricReportDefinitionCollection",
         "OemComputerSystem",
         "OemManager",
-        "OemUpdateService",
         "OemVirtualMedia",
-        "OpenBMCAccountService",
         "OperatingConfig",
         "OperatingConfigCollection",
         "PCIeDevice",
@@ -106,7 +104,6 @@ namespace redfish
         "ProcessorMetrics",
         "Protocol",
         "RedfishError",
-        "RedfishExtensions",
         "Redundancy",
         "Resource",
         "Role",

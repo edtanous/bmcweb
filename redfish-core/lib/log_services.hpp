@@ -988,8 +988,8 @@ static std::string getDumpEntriesPath(const std::string& dumpType)
     else if (dumpType == "System")
     {
         entriesPath =
-            std::format("/redfish/v1/Managers/{}/LogServices/FaultLog/Entries/",
-                        BMCWEB_REDFISH_MANAGER_URI_NAME);
+            std::format("/redfish/v1/Systems/{}/LogServices/Dump/Entries/",
+                        BMCWEB_REDFISH_SYSTEM_URI_NAME);
     }
     else if (dumpType == "FDR")
     {
@@ -1000,7 +1000,7 @@ static std::string getDumpEntriesPath(const std::string& dumpType)
     else if (dumpType == "FaultLog")
     {
         entriesPath =
-            std::format("/redfish/v1/Systems/{}/LogServices/Dump/Entries/",
+            std::format("/redfish/v1/Systems/{}/LogServices/FaultLog/Entries/",
                         BMCWEB_REDFISH_SYSTEM_URI_NAME);
     }
     else
@@ -5624,6 +5624,18 @@ inline void requestRoutesSystemFDREntryDownload(App& app)
     });
 }
 
+inline void handleLogServicesFDRDumpCollectDiagnosticDataPost(
+    crow::App& app, const std::string& dumpType, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& /*managerId*/)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    createDump(asyncResp, req, dumpType);
+}
+
 inline void requestRoutesSystemFDRCreate(App& app)
 {
     BMCWEB_ROUTE(
@@ -5631,7 +5643,7 @@ inline void requestRoutesSystemFDRCreate(App& app)
         "/redfish/v1/Systems/<str>/LogServices/FDR/Actions/LogService.CollectDiagnosticData/")
         .privileges(redfish::privileges::postLogService)
         .methods(boost::beast::http::verb::post)(
-            std::bind_front(handleLogServicesDumpCollectDiagnosticDataPost,
+            std::bind_front(handleLogServicesFDRDumpCollectDiagnosticDataPost,
                             std::ref(app), "FDR"));
 }
 
