@@ -2340,8 +2340,6 @@ class EventServiceManager
                         }
 
                         nlohmann::json::object_t oem;
-                        oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
-                            "#NvidiaEvent.v1_0_0.CPER";
                         parseAdditionalDataForCPER(cper, oem, additional);
                     }
                     else

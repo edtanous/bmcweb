@@ -1171,8 +1171,6 @@ inline void
                     thisEntry["CPER"]["NotificationType"] = notificationType;
                 }
                 // CPER Oem properties
-                thisEntry["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaLogEntry.v1_0_0.CPER";
                 if (sectionType != "NA")
                 {
                     thisEntry["CPER"]["Oem"]["Nvidia"]["SectionType"] =
@@ -1412,9 +1410,6 @@ inline void
                         notificationType;
                 }
                 // CPER Oem properties
-                asyncResp->res
-                    .jsonValue["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaLogEntry.v1_0_0.CPER";
                 if (sectionType != "NA")
                 {
                     asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
@@ -3034,8 +3029,6 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
 
                     // populate CPER section (checks are in the fn)
                     nlohmann::json::object_t oem;
-                    oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
-                        "#NvidiaLogEntry.v1_0_0.CPER";
                     parseAdditionalDataForCPER(cper, oem, additional);
                 }
                 if (isMessageRegistry)
@@ -3234,8 +3227,6 @@ inline void requestRoutesDBusEventLogEntry(App& app)
 
                 // populate CPER section (checks are in the fn)
                 nlohmann::json::object_t oem;
-                oem["CPER"]["Oem"]["Nvidia"]["@odata_type"] =
-                    "#NvidiaLogEntry.v1_0_0.CPER";
                 parseAdditionalDataForCPER(cper, oem, additional);
             }
 
