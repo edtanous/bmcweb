@@ -1634,6 +1634,7 @@ inline void getOperatingConfigData(
         const SpeedConfigProperty* speedConfig = nullptr;
         const size_t* availableCoreCount = nullptr;
         const uint32_t* baseSpeed = nullptr;
+        const uint32_t* defaultBoostClockSpeedMHz = nullptr;
         const uint32_t* maxJunctionTemperature = nullptr;
         const uint32_t* maxSpeed = nullptr;
         const uint32_t* minSpeed = nullptr;
@@ -1646,6 +1647,7 @@ inline void getOperatingConfigData(
         const bool success = sdbusplus::unpackPropertiesNoThrow(
             dbus_utils::UnpackErrorPrinter(), properties, "AvailableCoreCount",
             availableCoreCount, "BaseSpeed", baseSpeed,
+            "DefaultBoostClockSpeedMHz", defaultBoostClockSpeedMHz,
             "MaxJunctionTemperature", maxJunctionTemperature, "MaxSpeed",
             maxSpeed, "PowerLimit", powerLimit, "TurboProfile", turboProfile,
             "BaseSpeedPrioritySettings", baseSpeedPrioritySettings, "MinSpeed",
@@ -1732,6 +1734,14 @@ inline void getOperatingConfigData(
                 baseSpeedArray.push_back(std::move(speed));
             }
         }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        if (defaultBoostClockSpeedMHz != nullptr)
+        {
+            json["Oem"]["Nvidia"]["DefaultBoostClockSpeedMHz"] =
+                *defaultBoostClockSpeedMHz;
+        }
+
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     });
 }
 
@@ -6289,6 +6299,24 @@ inline void getProcessorPortMetricsData(
                     asyncResp->res.jsonValue["Oem"]["Nvidia"]
                                             ["NVLinkRawTxBandwidthGbps"] =
                         *value;
+                }
+            }
+            else if (property.first == "RXErrorsPerLane")
+            {
+                asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaPortMetrics.v1_4_0.NvidiaPortMetrics";
+
+                const std::vector<uint32_t>* value =
+                    std::get_if<std::vector<uint32_t>>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_DEBUG("Null value returned "
+                                     "for RXErrorsPerLane");
+                }
+                else
+                {
+                    asyncResp->res
+                        .jsonValue["Oem"]["Nvidia"]["RXErrorsPerLane"] = *value;
                 }
             }
 

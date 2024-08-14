@@ -2145,4 +2145,30 @@ inline void requestRoutesChassisPCIeFunction(App& app)
     //         std::bind_front(handlePCIeFunctionGet, std::ref(app)));
 }
 
+
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+inline void requestRoutesClearPCIeAerErrorStatus(App& app)
+{
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/PCIeDevices/<str>/Actions/Oem/NvidiaPCIeDevice.ClearAERErrorStatus/")
+        .privileges({{"Login"}})
+        .methods(boost::beast::http::verb::post)(
+            [&app](const crow::Request& req,
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   const std::string& chassisId, const std::string& device) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
+
+        redfish::nvidia_pcie_utils::postClearAerErrorStatus(asyncResp,
+                                                            chassisId, device);
+    });
+}
+
+#endif
+
 } // namespace redfish

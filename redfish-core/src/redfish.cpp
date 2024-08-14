@@ -373,6 +373,9 @@ RedfishService::RedfishService(App& app)
     requestRoutesChassisPCIeFunction(app);
     requestRoutesChassisPCIeDeviceCollection(app);
     requestRoutesChassisPCIeDevice(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    requestRoutesClearPCIeAerErrorStatus(app);
+#endif
 
     requestRoutesSensorCollection(app);
     requestRoutesSensor(app);

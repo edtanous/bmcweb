@@ -110,16 +110,6 @@ static inline void
                         *value;
                 }
             }
-            else if (propertyName == "RXErrorsPerLane")
-            {
-                const std::vector<uint32_t>* value =
-                    std::get_if<std::vector<uint32_t>>(&property.second);
-                if (value != nullptr)
-                {
-                    asyncResp->res.jsonValue["Oem"]["Nvidia"][propertyName] =
-                        *value;
-                }
-            }
         }
     };
     std::string escapedPath = std::string(path) + "/" + device;
@@ -128,6 +118,142 @@ static inline void
         std::move(getAerErrorStatusOemCallback), service, escapedPath,
         "org.freedesktop.DBus.Properties", "GetAll", pcieAerErrorStatusIntf);
 }
+
+inline void clearAerErrorStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& connection,
+                           const std::string& path)
+{
+    dbus::utility::getDbusObject(
+        path,
+        std::array<std::string_view, 1>{"com.nvidia.PCIe.AERErrorStatus"},
+        [asyncResp, path,
+         connection](const boost::system::error_code& ec,
+                     const dbus::utility::MapperGetObject& object) {
+        if (!ec)
+        {
+            for (const auto& [serv, _] : object)
+            {
+                if (serv != connection)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
+
+                nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
+                    int>(asyncResp, std::chrono::seconds(60), connection, path,
+                         "com.nvidia.PCIe.AERErrorStatus",
+                         "ClearAERStatus",
+                         [asyncResp](const std::string& status,
+                                     [[maybe_unused]] const int* retValue) {
+                    if (status ==
+                        nvidia_async_operation_utils::asyncStatusValueSuccess)
+                    {
+                        BMCWEB_LOG_DEBUG(
+                            "Clear AER Error Status Succeeded");
+                        messages::success(asyncResp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_ERROR(
+                        "Clear AER Error Status Throws error {}", status);
+                    messages::internalError(asyncResp->res);
+                });
+
+                return;
+            }
+        }
+    });
+};
+
+inline void
+    postClearAerErrorStatus(
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& chassisId,
+                            const std::string& device)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, chassisId,
+         device](const boost::system::error_code ec,
+                 const std::vector<std::string>& chassisPaths) {
+        if (ec)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        for (const std::string& chassisPath : chassisPaths)
+        {
+            // Get the chassisId object
+            sdbusplus::message::object_path objPath(chassisPath);
+            if (objPath.filename() != chassisId)
+            {
+                continue;
+            }
+            const std::string chassisPCIePath =
+                std::string("/xyz/openbmc_project/inventory/system/chassis/")
+                    .append(chassisId)
+                    .append("/PCIeDevices");
+            const std::string chassisPCIeDevicePath =
+                std::string(chassisPCIePath).append("/").append(device);
+            const std::array<const char*, 1> interface = {
+                "xyz.openbmc_project.Inventory.Item.PCIeDevice"};
+            // Get Inventory Service
+            crow::connections::systemBus->async_method_call(
+                [asyncResp, device, chassisPCIePath, interface, chassisId,
+                 chassisPCIeDevicePath,
+                 chassisPath](const boost::system::error_code ec,
+                              const GetSubTreeType& subtree) {
+                if (ec)
+                {
+                    BMCWEB_LOG_DEBUG("DBUS response error");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                // Iterate over all retrieved ObjectPaths.
+                for (const std::pair<
+                         std::string,
+                         std::vector<
+                             std::pair<std::string, std::vector<std::string>>>>&
+                         object : subtree)
+                {
+                    if (object.first != chassisPCIeDevicePath)
+                    {
+                        continue;
+                    }
+                    const std::vector<
+                        std::pair<std::string, std::vector<std::string>>>&
+                        connectionNames = object.second;
+
+                    for (auto [connection, interfaces] : connectionNames)
+                    {
+                        if (std::find(interfaces.begin(), interfaces.end(),
+                                      "com.nvidia.PCIe.AERErrorStatus") !=
+                            interfaces.end())
+                        {
+                            clearAerErrorStatus(asyncResp, connection,
+                                                object.first);
+                            return;
+                        }
+                    }
+                }
+                messages::resourceNotFound(
+                    asyncResp->res, "#PCIeDevice.v1_14_0.PCIeDevice", device);
+            },
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory", 0, interface);
+            return;
+        }
+        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_15_0.Chassis",
+                                   chassisId);
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths",
+        "/xyz/openbmc_project/inventory", 0,
+        std::array<const char*, 1>{
+            "xyz.openbmc_project.Inventory.Item.Chassis"});
+};
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
