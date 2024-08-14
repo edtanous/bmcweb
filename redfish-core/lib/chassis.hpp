@@ -708,6 +708,15 @@ inline void handleChassisGetSubTree(
                 {
                     getChassisLocationCode(asyncResp, connectionName, path);
                 }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                else if (
+                    interface ==
+                    "xyz.openbmc_project.Inventory.Decorator.VendorInformation")
+                { 
+                    //CBC chassis extention
+                    redfish::nvidia_chassis_utils::getOemCBCChassisAsset(asyncResp, connectionName, path);
+                }
+#endif
             }
 
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY

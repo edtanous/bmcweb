@@ -331,6 +331,58 @@ inline void getChassisFabricSwitchesLinks(
  * @brief Fill out chassis nvidia specific info by
  * requesting data from the associated D-Bus object.
  *
+ * @param[in,out]   asyncResp      Async HTTP response.
+ * @param[in]       connectionName D-Bus service to query.
+ * @param[in]       path           D-Bus object path to query.
+ */
+inline void getOemCBCChassisAsset(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
+                                  std::string connectionName, std::string path)
+{
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.VendorInformation",
+        "CustomField1",
+        [asyncResp](const boost::system::error_code& ec,
+                    const std::string& property) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error for CBC Tray IDs");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        // convert byte string to vector.
+        std::vector<char> value;
+        for (unsigned int i = 0; i < property.length(); i += 2)
+        {
+            std::string byteData = property.substr(i, 2);
+            char byte = static_cast<char>(strtol(byteData.c_str(), NULL, 16));
+            value.push_back(byte);
+        }
+        // this is CBC byte defintion for rev. 0x2
+        // byte 0: Revision 0x2
+        // byte 1: Unused
+        // byte 2: Chassis slot number
+        // byte 3: Tray Index
+        // byte 4: Topology Id
+        if (value[2] != 2)
+        {
+            // redfish only support rev. 0x2 defintion.
+            return;
+        }
+
+        auto& oem = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+        oem["@odata.type"] = "#NvidiaChassis.v1_4_0.NvidiaCBCChassis";
+        oem["ChassisPhysicalSlotNumber"] = value[2];
+        oem["ComputeTrayIndex"] = value[3];
+        oem["RevisionId"] = value[0];
+        oem["TopologyId"] = value[4];
+    });
+}
+
+/**
+ * @brief Fill out chassis nvidia specific info by
+ * requesting data from the associated D-Bus object.
+ *
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       service     D-Bus service to query.
  * @param[in]       objPath     D-Bus object to query.
