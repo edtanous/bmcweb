@@ -117,11 +117,15 @@ static std::string pcieSwtich = platformDevicePrefix + "PCIeSwitch_";
 static std::string processorModule = platformDevicePrefix + "ProcessorModule_";
 static std::string cpu = platformDevicePrefix + "CPU_";
 static std::string nvLink = "NVLink_";
+static std::string cpuProcessor = "CPU_";
+static std::string processor = "ProcessorModule_";
+static std::string pcieLink = "PCIeLink_";
+static std::string cpuCore = "CoreUtil_";
 static std::string networkAdapter(NETWORKADAPTERPREFIX);
 static std::string networkAdapterLink(NETWORKADAPTERLINKPREFIX);
 static std::string gpmInstances = "UtilizationPercent/";
-static std::string nvLinkManagementNIC  = "NIC_";
-static std::string nvLinkManagementNICPort  = "Port_";
+static std::string nvLinkManagementNIC = "NIC_";
+static std::string nvLinkManagementNICPort = "Port_";
 
 inline std::string getSwitchId(const std::string& key)
 {
@@ -180,6 +184,11 @@ inline void metricsReplacementsNonPlatformMetrics(
     std::set<int> gpmInstance;
     std::set<int> networkAdapterNId;
     std::set<int> nvLinkManagementId;
+    std::set<int> cpuId;
+    std::set<int> processorId;
+    std::set<int> coreId;
+    std::set<int> nvLinkId;
+    std::set<int> pcieLinkId;
     nlohmann::json& wildCards = asyncResp->res.jsonValue["Wildcards"];
     for (const auto& e : inputMetricProperties)
     {
@@ -270,6 +279,39 @@ inline void metricsReplacementsNonPlatformMetrics(
             {
                 int number = std::stoi(match[1].str());
                 nvLinkManagementId.insert(number);
+            }
+        }
+        if (deviceType == "CpuProcessorMetrics")
+        {
+            std::regex cpuProcessorPattern(cpuProcessor + "(\\d+)");
+            if (std::regex_search(e, match, cpuProcessorPattern))
+            {
+                 int number = std::stoi(match[1].str());
+                 cpuId.insert(number);
+            }
+            std::regex processorPattern(processor + "(\\d+)");
+            if (std::regex_search(e, match, processorPattern))
+            {
+                 int number = std::stoi(match[1].str());
+                 processorId.insert(number);
+            }
+            std::regex cpuCorePattern(cpuCore + "(\\d+)");
+            if (std::regex_search(e, match, cpuCorePattern))
+            {
+                 int number = std::stoi(match[1].str());
+                 coreId.insert(number);
+            }
+            std::regex nvLinkPattern(nvLink + "(\\d+)");
+            if (std::regex_search(e, match, nvLinkPattern))
+            {
+                 int number = std::stoi(match[1].str());
+                 nvLinkId.insert(number);
+            }
+            std::regex pcieLinkPattern(pcieLink + "(\\d+)");
+            if (std::regex_search(e, match, pcieLinkPattern))
+            {
+                 int number = std::stoi(match[1].str());
+                 pcieLinkId.insert(number);
             }
         }
     }
@@ -385,6 +427,53 @@ inline void metricsReplacementsNonPlatformMetrics(
         wildCards.push_back({
             {"Name", "NvlinkId"},
             {"Values", devCountnvlinkId},
+        });
+    }
+    if (deviceType == "CpuProcessorMetrics"){
+        nlohmann::json devCountCpuId = nlohmann::json::array();
+        for (const auto& e : cpuId)
+        {
+            devCountCpuId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "CpuId"},
+            {"Values", devCountCpuId},
+        });
+        nlohmann::json devCountProcessorId = nlohmann::json::array();
+        for (const auto& e : processorId)
+        {
+            devCountProcessorId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "ProcessorId"},
+            {"Values", devCountProcessorId},
+        });
+        nlohmann::json devCountCoreId = nlohmann::json::array();
+        for (const auto& e : coreId)
+        {
+            devCountCoreId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "CoreId"},
+            {"Values", devCountCoreId},
+        });
+        nlohmann::json devCountNvlinkId = nlohmann::json::array();
+        for (const auto& e : nvLinkId)
+        {
+            devCountNvlinkId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "NvlinkId"},
+            {"Values", devCountNvlinkId},
+        });
+        nlohmann::json devCountPcieLinkId = nlohmann::json::array();
+        for (const auto& e : pcieLinkId)
+        {
+            devCountPcieLinkId.push_back(std::to_string(e));
+        }
+        wildCards.push_back({
+            {"Name", "PCIeLinkId"},
+            {"Values", devCountPcieLinkId},
         });
     }
 }

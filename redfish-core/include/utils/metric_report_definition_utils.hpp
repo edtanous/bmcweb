@@ -73,77 +73,32 @@ inline int mrdConfigRead(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     }
     return rc;
 }
+
+inline std::string metricId(const std::string& input, const std::string& platformDevicePrefix) {
+    std::string result = input;
+
+    // Check if the input string starts with the platformDevicePrefix
+    if (result.find(platformDevicePrefix) == 0) {
+        // Remove the platformDevicePrefix from the input string
+        result = result.substr(platformDevicePrefix.length());
+    }
+
+    // Find the position of the underscore
+    size_t underscorePos = result.find('_');
+    if (underscorePos != std::string::npos) {
+        // Extract the part before the underscore
+        result = result.substr(0, underscorePos);
+    }
+    return result;
+}
 #endif
 
 inline void validateAndGetMetricReportDefinition(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string& id)
 {
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
-    bool validMetricId = false;
-    std::string deviceType;
-    std::string memoryMetricId = PLATFORMDEVICEPREFIX "MemoryMetrics_0";
-    std::string processorMetricId = PLATFORMDEVICEPREFIX "ProcessorMetrics_0";
-    std::string processorPortMetricId = PLATFORMDEVICEPREFIX
-        "ProcessorPortMetrics_0";
-    std::string processorPortGpmMetricId = PLATFORMDEVICEPREFIX
-        "ProcessorPortGPMMetrics_0";
-    std::string processorGpmMetricId = PLATFORMDEVICEPREFIX
-        "ProcessorGPMMetrics_0";
-    std::string nvSwitchMetricId = PLATFORMDEVICEPREFIX "NVSwitchMetrics_0";
-    std::string nvSwitchPortMetricId = PLATFORMDEVICEPREFIX
-        "NVSwitchPortMetrics_0";
-    std::string networkAdapterPortMetricId = PLATFORMDEVICEPREFIX
-        "NetworkAdapterPortMetrics_0";
-    if (id == PLATFORMMETRICSID)
-    {
-        deviceType = "PlatformEnvironmentMetrics";
-        validMetricId = true;
-    }
-    else if (id == memoryMetricId)
-    {
-        validMetricId = true;
-        deviceType = "MemoryMetrics";
-    }
-    else if (id == processorMetricId)
-    {
-        validMetricId = true;
-        deviceType = "ProcessorMetrics";
-    }
-    else if (id == processorPortMetricId)
-    {
-        validMetricId = true;
-        deviceType = "ProcessorPortMetrics";
-    }
-    else if (id == processorGpmMetricId)
-    {
-        validMetricId = true;
-        deviceType = "ProcessorGPMMetrics";
-    }
-    else if (id == processorPortGpmMetricId)
-    {
-        validMetricId = true;
-        deviceType = "ProcessorPortGPMMetrics";
-    }
-    else if (id == nvSwitchMetricId)
-    {
-        validMetricId = true;
-        deviceType = "NVSwitchMetrics";
-    }
-    else if (id == nvSwitchPortMetricId)
-    {
-        validMetricId = true;
-        deviceType = "NVSwitchPortMetrics";
-    }
-    else if (id == networkAdapterPortMetricId)
-    {
-        validMetricId = true;
-        deviceType = "NetworkAdapterPortMetrics";
-    }
-    if (!validMetricId)
-    {
-        messages::resourceNotFound(asyncResp->res, "MetricReportDefinition",
-                                   id);
-    }
+    static std::string platformDevicePrefix(PLATFORMDEVICEPREFIX);
+    std::string deviceType = metricId(id, platformDevicePrefix);
     int rc = mrdConfigRead(asyncResp, deviceType, id);
     if (rc != 0){
         messages::resourceNotFound(asyncResp->res, "MetricReportDefinition Config File Not Present", id);
