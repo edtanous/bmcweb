@@ -210,7 +210,7 @@ inline void afterSystemsStorageGetSubtree(
 
     getDrives(asyncResp);
     asyncResp->res.jsonValue["Controllers"]["@odata.id"] = boost::urls::format(
-        "/redfish/v0/Systems/" PLATFORMSYSTEMID "/Storage/{}/Controllers",
+        "/redfish/v1/Systems/" PLATFORMSYSTEMID "/Storage/{}/Controllers",
         storageId);
 }
 
