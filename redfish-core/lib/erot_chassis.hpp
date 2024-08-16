@@ -367,12 +367,7 @@ inline void getEROTChassis(const crow::Request& req,
             asyncResp->res.jsonValue["Links"]["ComputerSystems"] = {
                 {{"@odata.id", "/redfish/v1/Systems/" PLATFORMSYSTEMID}}};
 
-            asyncResp->res
-                .jsonValue["Oem"]["Nvidia"]["RoTProtectedComponents"] = {
-                {"@odata.id",
-                 boost::urls::format("/redfish/v1/Chassis/{}/Oem/NvidiaRoT/"
-                                     "RoTProtectedComponents",
-                                     chassisId)}};
+            firmware_info::updateProtectedComponentLink(asyncResp, chassisId);
 
             redfish::chassis_utils::getChassisUUID(
                 req, asyncResp, connectionNames[0].first, path, true);

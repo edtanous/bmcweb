@@ -211,6 +211,33 @@ inline void handleNvidiaRoTImageSlot(
     });
 }
 
+inline void updateProtectedComponentLink(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId)
+{
+    dbus::utility::getSubTreePaths(
+        chassisDbusPath + chassisId, 0, interfaces,
+        [chassisId, asyncResp](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetSubTreePathsResponse& subtreePaths) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Service not available {}", ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        if (subtreePaths.size() > 0)
+        {
+            asyncResp->res
+                .jsonValue["Oem"]["Nvidia"]["RoTProtectedComponents"] = {
+                {"@odata.id",
+                 boost::urls::format("/redfish/v1/Chassis/{}/Oem/NvidiaRoT/"
+                                     "RoTProtectedComponents",
+                                     chassisId)}};
+        }
+    });
+}
+
 inline void handleNvidiaRoTProtectedComponentCollection(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
