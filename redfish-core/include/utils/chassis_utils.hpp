@@ -974,7 +974,7 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
                               const GetSubTreeType& subtree) {
         if (ec)
         {
-            callback(false);
+            callback(false, false);
             return;
         }
         const auto objIt = std::find_if(
@@ -990,7 +990,7 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
         if (objIt == subtree.end())
         {
             BMCWEB_LOG_DEBUG("Dbus Object not found:{}", chassisID);
-            callback(false);
+            callback(false, false);
             return;
         }
         std::string serviceName;
@@ -1011,7 +1011,7 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
         }
         if (serviceName.empty())
         {
-            callback(false);
+            callback(false, false);
             return;
         }
         sdbusplus::asio::getProperty<Associations>(
@@ -1021,18 +1021,33 @@ inline void isEROTChassis(const std::string& chassisID, CallbackFunc&& callback)
                                   const Associations& associations) {
             if (ec)
             {
-                callback(false);
+                callback(false, false);
                 return;
             }
             for (const auto& assoc : associations)
             {
                 if (std::get<1>(assoc) == "associated_ROT")
                 {
-                    callback(true);
+                    // check if it is CPU ERoT
+                    std::string path = std::get<2>(assoc);
+                    dbus::utility::findAssociations(
+                        path + "/processors",
+                        [callback, path](
+                            const boost::system::error_code ec,
+                            [[maybe_unused]] std::variant<std::vector<std::string>> &assoc)
+                        {
+                            if (ec)
+                            {
+                                callback(true, false);
+                                return;
+                            }
+                            // It's CPU ERoT for DOT actions
+                            callback(true, true);
+                        });
                     return;
                 }
             }
-            callback(false);
+            callback(false, false);
         });
     },
         "xyz.openbmc_project.ObjectMapper",

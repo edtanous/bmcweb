@@ -249,15 +249,15 @@ inline void getChassisOEMComponentProtected(
  */
 inline void getEROTChassis(const crow::Request& req,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& chassisId)
+                           const std::string& chassisId, bool isCpuEROT)
 {
     const std::array<const char*, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
 
     crow::connections::systemBus->async_method_call(
-        [req, asyncResp, chassisId(std::string(chassisId))](
-            const boost::system::error_code ec,
-            const crow::openbmc_mapper::GetSubTreeType& subtree) {
+        [req, asyncResp, chassisId(std::string(chassisId)),
+         isCpuEROT](const boost::system::error_code ec,
+                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
         if (ec)
         {
             messages::internalError(asyncResp->res);
@@ -292,30 +292,32 @@ inline void getEROTChassis(const crow::Request& req,
                 .jsonValue["Actions"]["#Chassis.Reset"]["@Redfish.ActionInfo"] =
                 "/redfish/v1/Chassis/" + chassisId + "/ResetActionInfo";
 #endif
-
+            if (isCpuEROT)
+            {
 #ifdef BMCWEB_ENABLE_DOT
-            auto& oemActionsJsonDot =
-                asyncResp->res.jsonValue["Actions"]["Oem"];
-            std::string oemActionsRouteDot = "/redfish/v1/Chassis/" +
-                                             chassisId + "/Actions/Oem/";
-            oemActionsJsonDot["#CAKInstall"]["target"] = oemActionsRouteDot +
-                                                         "CAKInstall";
-            oemActionsJsonDot["#CAKLock"]["target"] = oemActionsRouteDot +
-                                                      "CAKLock";
-            oemActionsJsonDot["#CAKTest"]["target"] = oemActionsRouteDot +
-                                                      "CAKTest";
-            oemActionsJsonDot["#DOTDisable"]["target"] = oemActionsRouteDot +
-                                                         "DOTDisable";
-            oemActionsJsonDot["#DOTTokenInstall"]["target"] =
-                oemActionsRouteDot + "DOTTokenInstall";
+                auto& oemActionsJsonDot =
+                    asyncResp->res.jsonValue["Actions"]["Oem"];
+                std::string oemActionsRouteDot = "/redfish/v1/Chassis/" +
+                                                 chassisId + "/Actions/Oem/";
+                oemActionsJsonDot["#CAKInstall"]["target"] =
+                    oemActionsRouteDot + "CAKInstall";
+                oemActionsJsonDot["#CAKLock"]["target"] = oemActionsRouteDot +
+                                                          "CAKLock";
+                oemActionsJsonDot["#CAKTest"]["target"] = oemActionsRouteDot +
+                                                          "CAKTest";
+                oemActionsJsonDot["#DOTDisable"]["target"] =
+                    oemActionsRouteDot + "DOTDisable";
+                oemActionsJsonDot["#DOTTokenInstall"]["target"] =
+                    oemActionsRouteDot + "DOTTokenInstall";
 #endif
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
-            auto& oemActionsJsonManualBoot =
-                asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"];
-            oemActionsJsonManualBoot["#BootProtectedDevice"]["target"] =
-                "/redfish/v1/Chassis/" + chassisId +
-                "/Actions/Oem/Nvidia/BootProtectedDevice";
+                auto& oemActionsJsonManualBoot =
+                    asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"];
+                oemActionsJsonManualBoot["#BootProtectedDevice"]["target"] =
+                    "/redfish/v1/Chassis/" + chassisId +
+                    "/Actions/Oem/Nvidia/BootProtectedDevice";
 #endif
+            }
 
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
             auto health = std::make_shared<HealthRollup>(
@@ -405,7 +407,10 @@ inline void getEROTChassis(const crow::Request& req,
 #endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
 
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
-            manual_boot::bootModeQuery(req, asyncResp, chassisId);
+            if (isCpuEROT)
+            {
+                manual_boot::bootModeQuery(req, asyncResp, chassisId);
+            }
 #endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
             redfish::chassis_utils::getOemBootStatus(asyncResp, chassisId);
             return;
@@ -439,7 +444,8 @@ inline void requestRoutesEROTChassisCertificate(App& app)
             return;
         }
         redfish::chassis_utils::isEROTChassis(
-            chassisID, [req, asyncResp, chassisID, certificateID](bool isEROT) {
+            chassisID, [req, asyncResp, chassisID, certificateID](
+                           bool isEROT, [[maybe_unused]] bool isCpuEROT) {
             if (!isEROT)
             {
                 BMCWEB_LOG_DEBUG("Not a EROT chassis");
@@ -501,7 +507,7 @@ inline void requestRoutesEROTChassisCertificate(App& app)
 inline void
     handleEROTChassisPatch(const crow::Request& req,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& chassisId)
+                           const std::string& chassisId,[[maybe_unused]] bool isCpuEROT)
 {
     if (chassisId.empty())
     {
@@ -526,6 +532,13 @@ inline void
     std::optional<bool> backgroundCopyEnabled;
     std::optional<bool> inBandEnabled;
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
+    if (isCpuEROT == false)
+    {
+        // Couldn't find an object with that name.  return an error
+        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_17_0.Chassis",
+                                   chassisId);
+        return;
+    }
     std::optional<bool> manualBootModeEnabled;
 #endif
 

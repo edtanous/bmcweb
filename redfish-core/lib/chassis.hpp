@@ -799,11 +799,11 @@ inline void handleChassisGetPreCheck(
         return;
     }
     redfish::chassis_utils::isEROTChassis(
-        chassisId, [req, asyncResp, chassisId](bool isEROT) {
+        chassisId, [req, asyncResp, chassisId](bool isEROT, bool isCpuEROT) {
         if (isEROT)
         {
             BMCWEB_LOG_DEBUG(" EROT chassis");
-            getEROTChassis(req, asyncResp, chassisId);
+            getEROTChassis(req, asyncResp, chassisId, isCpuEROT);
         }
         else
         {
@@ -1042,11 +1042,11 @@ inline void
         return;
     }
     redfish::chassis_utils::isEROTChassis(param,
-                                          [req, asyncResp, param](bool isEROT) {
+                                          [req, asyncResp, param](bool isEROT, bool isCpuEROT) {
         if (isEROT)
         {
             BMCWEB_LOG_DEBUG(" EROT chassis");
-            handleEROTChassisPatch(req, asyncResp, param);
+            handleEROTChassisPatch(req, asyncResp, param, isCpuEROT);
         }
         else
         {
@@ -1190,7 +1190,7 @@ inline void handleChassisResetActionInfoPost(
     BMCWEB_LOG_DEBUG("Post Chassis Reset.");
 #ifdef BMCWEB_ENABLE_EROT_RESET
     redfish::chassis_utils::isEROTChassis(
-        chassisId, [req, asyncResp, chassisId](bool isEROT) {
+        chassisId, [req, asyncResp, chassisId](bool isEROT, bool isCpuEROT) {
         if (isEROT)
         {
             handleEROTChassisResetAction(req, asyncResp, chassisId);
