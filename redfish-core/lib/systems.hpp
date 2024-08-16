@@ -425,11 +425,10 @@ inline void
         asyncResp->res.jsonValue["SubModel"] = *subModel;
     }
 
+#ifdef BMCWEB_ENABLE_BIOS
     // Schema defaults for interop validator
     asyncResp->res.jsonValue["BiosVersion"] = "";
     asyncResp->res.jsonValue["AssetTag"] = "";
-
-#ifdef BMCWEB_ENABLE_BIOS
     // Grab the bios version
     sw_util::populateSoftwareInformation(asyncResp, sw_util::biosPurpose,
                                          "BiosVersion", false);
