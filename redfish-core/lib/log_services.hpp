@@ -5018,7 +5018,7 @@ inline void requestRoutesBMCDumpServiceActionInfo(App& app)
         parameter_diagnosticDataType["DataType"] = "String";
 
         nlohmann::json::array_t diagnosticDataType_allowableValues;
-        diagnosticDataType_allowableValues.push_back("BMC");
+        diagnosticDataType_allowableValues.push_back("Manager");
         parameter_diagnosticDataType["AllowableValues"] =
             std::move(diagnosticDataType_allowableValues);
 
