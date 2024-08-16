@@ -353,10 +353,12 @@ class StatusQueryHandler : public OperationHandler
                 finalize();
                 return;
             }
+            DebugTokenNsmEndpoint* nsmEp =
+                dynamic_cast<DebugTokenNsmEndpoint*>(ep.get());
             sdbusplus::asio::getProperty<NsmDbusTokenStatus>(
                 *crow::connections::systemBus, "xyz.openbmc_project.NSM",
                 object, std::string(debugTokenIntf), "TokenStatus",
-                [this, desc, &ep,
+                [this, desc, nsmEp,
                  object](const boost::system::error_code ec,
                          const NsmDbusTokenStatus& dbusStatus) {
                 const std::string desc = "NSM get call for " +
@@ -366,20 +368,18 @@ class StatusQueryHandler : public OperationHandler
                 {
                     BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                     errCallback(false, desc, ec.message());
-                    ep->setError();
+                    nsmEp->setError();
                     finalize();
                     return;
                 }
                 try
                 {
-                    DebugTokenNsmEndpoint* nsmEp =
-                        dynamic_cast<DebugTokenNsmEndpoint*>(ep.get());
                     nsmEp->setStatus(
                         std::make_unique<NsmTokenStatus>(dbusStatus));
                 }
                 catch (std::exception&)
                 {
-                    ep->setError();
+                    nsmEp->setError();
                 }
                 finalize();
             });
@@ -392,16 +392,18 @@ class StatusQueryHandler : public OperationHandler
             {
                 continue;
             }
+            DebugTokenNsmEndpoint* nsmEp =
+                dynamic_cast<DebugTokenNsmEndpoint*>(ep.get());
             auto objectPath = ep->getObject();
             crow::connections::systemBus->async_method_call(
-                [this, &ep, objectPath](const boost::system::error_code& ec) {
+                [this, nsmEp, objectPath](const boost::system::error_code& ec) {
                 const std::string desc = "NSM GetStatus call for " + objectPath;
                 BMCWEB_LOG_DEBUG("{}", desc);
                 if (ec)
                 {
                     BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                     errCallback(false, desc, ec.message());
-                    ep->setError();
+                    nsmEp->setError();
                     finalize();
                 }
             },
@@ -713,16 +715,18 @@ class RequestHandler : public OperationHandler
             {
                 continue;
             }
+            DebugTokenNsmEndpoint* nsmEp =
+                dynamic_cast<DebugTokenNsmEndpoint*>(ep.get());
             auto objectPath = ep->getObject();
             crow::connections::systemBus->async_method_call(
-                [this, &ep, objectPath](const boost::system::error_code& ec) {
+                [this, nsmEp, objectPath](const boost::system::error_code& ec) {
                 const std::string desc = "NSM GetStatus call for " + objectPath;
                 BMCWEB_LOG_DEBUG("{}", desc);
                 if (ec)
                 {
                     BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                     errCallback(false, desc, ec.message());
-                    ep->setError();
+                    nsmEp->setError();
                     finalize();
                 }
             },
@@ -757,16 +761,18 @@ class RequestHandler : public OperationHandler
             {
                 continue;
             }
+            DebugTokenSpdmEndpoint* spdmEp =
+                dynamic_cast<DebugTokenSpdmEndpoint*>(ep.get());
             auto objectPath = ep->getObject();
             const std::string desc = "SPDM refresh call for " + objectPath;
             BMCWEB_LOG_DEBUG("{}", desc);
             crow::connections::systemBus->async_method_call(
-                [this, desc, &ep](const boost::system::error_code ec) {
+                [this, desc, spdmEp](const boost::system::error_code ec) {
                 if (ec)
                 {
                     BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                     errCallback(false, desc, ec.message());
-                    ep->setError();
+                    spdmEp->setError();
                     finalize();
                 }
             },
@@ -821,18 +827,20 @@ class RequestHandler : public OperationHandler
             finalize();
             return;
         }
+        DebugTokenNsmEndpoint* nsmEp =
+            dynamic_cast<DebugTokenNsmEndpoint*>(ep.get());
         sdbusplus::asio::getProperty<sdbusplus::message::unix_fd>(
             *crow::connections::systemBus, "xyz.openbmc_project.NSM", object,
             std::string(debugTokenIntf), "RequestFd",
-            [this, object, &ep](const boost::system::error_code ec,
-                                const sdbusplus::message::unix_fd& unixfd) {
+            [this, object, nsmEp](const boost::system::error_code ec,
+                                  const sdbusplus::message::unix_fd& unixfd) {
             const std::string desc = "NSM get call for " + std::string(object);
             BMCWEB_LOG_DEBUG("{}", desc);
             if (ec)
             {
                 BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                 errCallback(false, desc, ec.message());
-                ep->setError();
+                nsmEp->setError();
                 finalize();
                 return;
             }
@@ -840,12 +848,12 @@ class RequestHandler : public OperationHandler
             std::vector<uint8_t> request;
             if (readNsmTokenRequestFd(unixfd.fd, request))
             {
-                ep->setRequest(request);
+                nsmEp->setRequest(request);
             }
             else
             {
                 errCallback(false, desc, "request file operation failure");
-                ep->setError();
+                nsmEp->setError();
             }
             finalize();
         });
@@ -876,12 +884,14 @@ class RequestHandler : public OperationHandler
         }
         else if (status == "Success")
         {
+            DebugTokenSpdmEndpoint* spdmEp =
+                dynamic_cast<DebugTokenSpdmEndpoint*>(ep.get());
             crow::connections::systemBus->async_method_call(
-                [this,
-                 &ep](const boost::system::error_code ec,
-                      const boost::container::flat_map<
-                          std::string, dbus::utility::DbusVariantType>& props) {
-                auto objectPath = ep->getObject();
+                [this, spdmEp](
+                    const boost::system::error_code ec,
+                    const boost::container::flat_map<
+                        std::string, dbus::utility::DbusVariantType>& props) {
+                auto objectPath = spdmEp->getObject();
                 const std::string desc = "Reading properties of " + objectPath +
                                          " object";
                 BMCWEB_LOG_DEBUG("{}", desc);
@@ -889,7 +899,7 @@ class RequestHandler : public OperationHandler
                 {
                     BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
                     errCallback(false, desc, ec.message());
-                    ep->setError();
+                    spdmEp->setError();
                     finalize();
                     return;
                 }
@@ -898,7 +908,7 @@ class RequestHandler : public OperationHandler
                 {
                     errCallback(false, desc,
                                 "cannot find SignedMeasurements property");
-                    ep->setError();
+                    spdmEp->setError();
                     finalize();
                     return;
                 }
@@ -907,7 +917,7 @@ class RequestHandler : public OperationHandler
                 {
                     errCallback(false, desc,
                                 "cannot decode SignedMeasurements property");
-                    ep->setError();
+                    spdmEp->setError();
                     finalize();
                     return;
                 }
@@ -916,7 +926,7 @@ class RequestHandler : public OperationHandler
                 {
                     errCallback(false, desc,
                                 "cannot find Capabilities property");
-                    ep->setError();
+                    spdmEp->setError();
                     finalize();
                     return;
                 }
@@ -925,7 +935,7 @@ class RequestHandler : public OperationHandler
                 {
                     errCallback(false, desc,
                                 "cannot decode Capabilities property");
-                    ep->setError();
+                    spdmEp->setError();
                     finalize();
                     return;
                 }
@@ -937,7 +947,7 @@ class RequestHandler : public OperationHandler
                     {
                         errCallback(false, desc,
                                     "cannot find Certificate property");
-                        ep->setError();
+                        spdmEp->setError();
                         finalize();
                         return;
                     }
@@ -948,7 +958,7 @@ class RequestHandler : public OperationHandler
                     {
                         errCallback(false, desc,
                                     "cannot decode Certificate property");
-                        ep->setError();
+                        spdmEp->setError();
                         finalize();
                         return;
                     }
@@ -959,7 +969,7 @@ class RequestHandler : public OperationHandler
                     {
                         errCallback(false, desc,
                                     "cannot find certificate for slot 0");
-                        ep->setError();
+                        spdmEp->setError();
                         finalize();
                         return;
                     }
@@ -969,7 +979,7 @@ class RequestHandler : public OperationHandler
                 request.reserve(sign->size() + pem.size());
                 request.insert(request.end(), sign->begin(), sign->end());
                 request.insert(request.end(), pem.begin(), pem.end());
-                ep->setRequest(request);
+                spdmEp->setRequest(request);
                 finalize();
                 return;
             },
