@@ -30,29 +30,6 @@ inline void getNvidiaPowerSupply(const std::shared_ptr<bmcweb::AsyncResp>& async
                         const std::string& powerSupplyId, const std::string& chassisId)
 {
     asyncResp->res.jsonValue["Name"] = powerSupplyId;
-#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
-    asyncResp->res.jsonValue["Status"]["HealthRollup"] = "OK";
-#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
-       // update health
-#ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-    std::shared_ptr<HealthRollup> health =
-        std::make_shared<HealthRollup>(
-            sensorPath,
-            [asyncResp](
-                const std::string& rootHealth,
-                const std::string& healthRollup) {
-        asyncResp->res.jsonValue["Status"]["Health"] =
-            rootHealth;
-#ifndef BMCWEB_DISABLE_HEALTH_ROLLUP
-    asyncResp->res
-        .jsonValue["Status"]["HealthRollup"] =
-        healthRollup;
-#endif // BMCWEB_DISABLE_HEALTH_ROLLUP
-    });
-    health->start();
-
-#endif // ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
-
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, service, path,
         "com.nvidia.PowerSupply.PowerSupplyInfo", "PowerSupplyType",
