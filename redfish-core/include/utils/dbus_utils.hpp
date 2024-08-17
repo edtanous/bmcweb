@@ -387,6 +387,35 @@ inline std::string toLocationType(const std::string& location)
     return "";
 }
 
+inline std::string toPowerSupplyType(const std::string& powerSupply)
+{
+    if (powerSupply ==
+        "com.nvidia.PowerSupply.PowerSupplyInfo.PowerSupplyTypes.AC")
+    {
+        return "AC";
+    }
+    if (powerSupply ==
+        "com.nvidia.PowerSupply.PowerSupplyInfo.PowerSupplyTypes.DC")
+    {
+        return "DC";
+    }
+    if (powerSupply ==
+        "com.nvidia.PowerSupply.PowerSupplyInfo.PowerSupplyTypes.ACorDC")
+    {
+        return "ACorDC";
+    }
+    if (powerSupply ==
+        "com.nvidia.PowerSupply.PowerSupplyInfo.PowerSupplyTypes.DCRegulator")
+    {
+        return "DCRegulator";
+    }
+    if (powerSupply ==
+        "com.nvidia.PowerSupply.PowerSupplyInfo.PowerSupplyTypes.Invalid")
+    {
+        return "Invalid";
+    }
+    return "";
+}
 /**
  * @brief Defer the callback function until the shared_ptr destroys the returned
  * object.
