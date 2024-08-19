@@ -54,8 +54,9 @@ class HTTP2Connection :
   public:
     HTTP2Connection(Adaptor&& adaptorIn, Handler* handlerIn,
                     std::function<std::string()>& getCachedDateStrF) :
-        adaptor(std::move(adaptorIn)), ngSession(initializeNghttp2Session()),
-        handler(handlerIn), getCachedDateStr(getCachedDateStrF)
+        adaptor(std::move(adaptorIn)),
+        ngSession(initializeNghttp2Session()), handler(handlerIn),
+        getCachedDateStr(getCachedDateStrF)
     {}
 
     void start()

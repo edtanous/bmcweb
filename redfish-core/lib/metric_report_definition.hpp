@@ -655,7 +655,8 @@ class AddReport
   public:
     AddReport(AddReportArgs&& argsIn,
               const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        asyncResp(asyncRespIn), args(std::move(argsIn))
+        asyncResp(asyncRespIn),
+        args(std::move(argsIn))
     {}
 
     ~AddReport()
@@ -771,7 +772,8 @@ class UpdateMetrics
   public:
     UpdateMetrics(std::string_view idIn,
                   const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        id(idIn), asyncResp(asyncRespIn)
+        id(idIn),
+        asyncResp(asyncRespIn)
     {}
 
     ~UpdateMetrics()

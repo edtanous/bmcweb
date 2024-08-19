@@ -1380,7 +1380,8 @@ struct SetPIDValues : std::enable_shared_from_this<SetPIDValues>
             std::pair<std::string, std::optional<nlohmann::json::object_t>>>&&
             configurationsIn,
         std::optional<std::string>& profileIn) :
-        asyncResp(asyncRespIn), configuration(std::move(configurationsIn)),
+        asyncResp(asyncRespIn),
+        configuration(std::move(configurationsIn)),
         profile(std::move(profileIn))
     {}
 

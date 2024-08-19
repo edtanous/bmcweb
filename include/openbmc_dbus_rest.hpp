@@ -268,7 +268,8 @@ struct InProgressEnumerateData
     InProgressEnumerateData(
         const std::string& objectPathIn,
         const std::shared_ptr<bmcweb::AsyncResp>& asyncRespIn) :
-        objectPath(objectPathIn), asyncResp(asyncRespIn)
+        objectPath(objectPathIn),
+        asyncResp(asyncRespIn)
     {}
 
     ~InProgressEnumerateData()
@@ -480,7 +481,8 @@ inline void getObjectAndEnumerate(
 struct InProgressActionData
 {
     explicit InProgressActionData(
-        const std::shared_ptr<bmcweb::AsyncResp>& res) : asyncResp(res)
+        const std::shared_ptr<bmcweb::AsyncResp>& res) :
+        asyncResp(res)
     {}
     ~InProgressActionData()
     {
