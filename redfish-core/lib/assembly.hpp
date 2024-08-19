@@ -61,18 +61,19 @@ inline void
     }
     std::regex assemblyRegex("[^0-9]*([0-9]+).*");
     std::cmatch match;
-    if (!regex_match(assemblyName.c_str(), match, assemblyRegex))
+    std::string memberId;
+    if (regex_match(assemblyName.c_str(), match, assemblyRegex))
     {
-        BMCWEB_LOG_ERROR("Assembly Id not found");
-        return;
-    }
     const std::string& assemblyId = match[1].first;
+        memberId = assemblyId;
+    }
     // Get interface properties
     crow::connections::systemBus->async_method_call(
-        [asyncResp{asyncResp}, chassisId, assemblyId](
+        [asyncResp{asyncResp}, chassisId, memberId](
             const boost::system::error_code ec,
-            const std::vector<std::pair<
-                std::string, std::variant<std::string>>>& propertiesList) {
+            const std::vector<
+                std::pair<std::string, std::variant<std::string, uint64_t>>>&
+                propertiesList) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("DBUS response error for assembly properties");
@@ -80,11 +81,9 @@ inline void
             return;
         }
         // Assemblies data
+        std::string id = memberId;
         nlohmann::json assemblyRes;
-        assemblyRes["@odata.id"] = "/redfish/v1/Chassis/" + chassisId +
-                                   "/Assembly#/Assemblies/" + assemblyId;
-        assemblyRes["MemberId"] = assemblyId;
-        for (const std::pair<std::string, std::variant<std::string>>& property :
+        for (const std::pair<std::string, std::variant<std::string, uint64_t>>& property :
              propertiesList)
         {
             // Store DBus properties that are also Redfish
@@ -159,7 +158,21 @@ inline void
                 assemblyRes["PhysicalContext"] =
                     redfish::dbus_utils::toPhysicalContext(*value);
             }
+            else if (propertyName == "AssemblyID")
+            {
+                const uint64_t* value = std::get_if<uint64_t>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("NULL Value returned AssemblyID");
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                id = std::to_string(*value);
+            }
         }
+        assemblyRes["@odata.id"] = "/redfish/v1/Chassis/" + chassisId +
+                                   "/Assembly#/Assemblies/" + id;
+        assemblyRes["MemberId"] = id;
         nlohmann::json& jResp = asyncResp->res.jsonValue["Assemblies"];
         jResp.push_back(assemblyRes);
     },
