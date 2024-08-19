@@ -222,7 +222,7 @@ inline void getSwitchObjectAndPortNum(
                                       const PropertiesMap& properties) {
                             if (ec)
                             {
-                                messages::internalError(resp->res);
+                                // no NVLinkDisableFuture = no failure
                                 return;
                             }
                             std::vector<uint8_t> portsToDisable;
@@ -404,21 +404,10 @@ inline void getSwitchObjectAndPortNum(
 }
 
 inline void getPortDisableFutureStatus(
-    const std::shared_ptr<bmcweb::AsyncResp>& resp, const std::string& fabricId,
-    const std::string& switchId, const std::string& portId,
+    const std::shared_ptr<bmcweb::AsyncResp>& resp,
     const uint32_t& portNumber, const std::vector<uint8_t>& portsList)
 {
     BMCWEB_LOG_DEBUG("Get port disable future status on switch resources.");
-
-    std::string portSettingURI =
-        (boost::format("/redfish/v1/Fabrics/%s/Switches/%s/Ports/"
-                       "%s/Settings") %
-         fabricId % switchId % portId)
-            .str();
-    resp->res.jsonValue["@odata.type"] = "#Port.v1_4_0.Port";
-    resp->res.jsonValue["@odata.id"] = portSettingURI;
-    resp->res.jsonValue["Name"] = switchId + " " + portId + " Pending Settings";
-    resp->res.jsonValue["Id"] = "Settings";
 
     // check in portsList if present
     auto it = std::find(portsList.begin(), portsList.end(), portNumber);
@@ -803,6 +792,25 @@ inline void updateSwitchPowerModeData(
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");
+}
+
+inline void
+    getSwitchPowerModeLink(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::vector<std::string>& interfaces,
+                           const std::string& switchURI)
+{
+    const std::string powerModeInterface = "com.nvidia.PowerMode";
+    if (std::find(interfaces.begin(), interfaces.end(), powerModeInterface) !=
+        interfaces.end())
+    {
+        std::string switchPowerModeURI = switchURI;
+        switchPowerModeURI += "/Oem/Nvidia/PowerMode";
+        asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaSwitch.v1_2_0.NvidiaSwitch";
+        asyncResp->res.jsonValue["Oem"]["Nvidia"]["PowerMode"]["@odata.id"] =
+            switchPowerModeURI;
+        return;
+    }
 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 

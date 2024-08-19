@@ -6627,6 +6627,21 @@ inline void requestRoutesProcessorPortSettings(App& app)
 
         BMCWEB_LOG_DEBUG("Setting for {} Processor and {} PortID.", processorId,
                          portId);
+
+        std::string processorPortSettingsURI =
+            std::format("/redfish/v1/Systems/{}/Processors/",
+                        BMCWEB_REDFISH_SYSTEM_URI_NAME);
+        processorPortSettingsURI += processorId;
+        processorPortSettingsURI += "/Ports/";
+        processorPortSettingsURI += portId;
+        processorPortSettingsURI += "/Settings";
+
+        asyncResp->res.jsonValue["@odata.type"] = "#Port.v1_4_0.Port";
+        asyncResp->res.jsonValue["@odata.id"] = processorPortSettingsURI;
+        asyncResp->res.jsonValue["Id"] = "Settings";
+        asyncResp->res.jsonValue["Name"] = processorId + " " + portId +
+                                       " Pending Settings";
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         redfish::processor_utils::getProcessorObject(
             asyncResp, processorId,

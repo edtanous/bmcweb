@@ -1852,9 +1852,8 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             getPCIeDeviceState(asyncResp, device,
                                                chassisPCIePath, connectionName);
                         }
-                        redfish::nvidia_chassis_utils::
-                            getChassisFabricSwitchesLinks(asyncResp,
-                                                          chassisPath);
+                        redfish::nvidia_pcie_utils::getFabricSwitchLink(
+                            asyncResp, chassisPath);
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                         redfish::conditions_utils::populateServiceConditions(
                             asyncResp, device);

@@ -131,5 +131,72 @@ static inline void
 
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
+inline void getFabricSwitchLink(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                                const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, objPath](const boost::system::error_code ec,
+                         std::variant<std::vector<std::string>>& resp) {
+        if (ec)
+        {
+            return; // no fabric = no failures
+        }
+        std::vector<std::string>* dataFabric =
+            std::get_if<std::vector<std::string>>(&resp);
+        if (dataFabric == nullptr || dataFabric->size() > 1)
+        {
+            // There must be single fabric
+            return;
+        }
+        const std::string& fabricPath = dataFabric->front();
+        sdbusplus::message::object_path objectPath(fabricPath);
+        std::string fabricId = objectPath.filename();
+        if (fabricId.empty())
+        {
+            BMCWEB_LOG_ERROR("Fabric name empty");
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        crow::connections::systemBus->async_method_call(
+            [aResp, fabricId](const boost::system::error_code ec,
+                              std::variant<std::vector<std::string>>& resp1) {
+            if (ec)
+            {
+                return; // no switches = no failures
+            }
+            std::vector<std::string>* dataSwitch =
+                std::get_if<std::vector<std::string>>(&resp1);
+            if (dataSwitch == nullptr || dataSwitch->size() > 1)
+            {
+                // There must be single fabric
+                return;
+            }
+
+            const std::string& switchPath = dataSwitch->front();
+            sdbusplus::message::object_path objectPath1(switchPath);
+            std::string switchId = objectPath1.filename();
+            if (switchId.empty())
+            {
+                BMCWEB_LOG_ERROR("Switch name empty");
+                messages::internalError(aResp->res);
+                return;
+            }
+            std::string switchLink =
+                (boost::format("/redfish/v1/Fabrics/%s/Switches/%s") %
+                 fabricId % switchId)
+                    .str();
+            aResp->res.jsonValue["Links"]["Switch"]["@odata.id"] = switchLink;
+            return;
+        },
+            "xyz.openbmc_project.ObjectMapper", objPath + "/all_switches",
+            "org.freedesktop.DBus.Properties", "Get",
+            "xyz.openbmc_project.Association", "endpoints");
+    },
+        "xyz.openbmc_project.ObjectMapper", objPath + "/fabrics",
+        "org.freedesktop.DBus.Properties", "Get",
+        "xyz.openbmc_project.Association", "endpoints");
+}
+
 } // namespace nvidia_pcie_utils
 } // namespace redfish

@@ -694,7 +694,7 @@ inline void
                 }
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["DeviceId"] = *value;
                 asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                    "#NvidiaSwitch.v1_0_0.NvidiaSwitch";
+                    "#NvidiaSwitch.v1_2_0.NvidiaSwitch";
             }
             else if (propertyName == "VendorId")
             {
@@ -1511,19 +1511,9 @@ inline void requestRoutesSwitch(App& app)
                             {"target", switchResetURI},
                             {"ResetType@Redfish.AllowableValues",
                              {"ForceRestart"}}};
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                        std::string switchPowerModeURI = switchURI;
-                        switchPowerModeURI += "/Oem/Nvidia/PowerMode";
-                        asyncResp->res
-                            .jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-                            "#NvidiaSwitch.v1_2_0.NvidiaSwitch";
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]["PowerMode"]
-                                                ["@odata.id"] =
-                            switchPowerModeURI;
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
                         crow::connections::systemBus->async_method_call(
-                            [asyncResp,
+                            [asyncResp, switchURI,
                              path](const boost::system::error_code ec,
                                    const std::vector<std::pair<
                                        std::string, std::vector<std::string>>>&
@@ -1535,6 +1525,12 @@ inline void requestRoutesSwitch(App& app)
                                 messages::internalError(asyncResp->res);
                                 return;
                             }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                            redfish::nvidia_fabric_utils::
+                                getSwitchPowerModeLink(asyncResp,
+                                                       object.front().second,
+                                                       switchURI);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                             updateSwitchData(asyncResp, object.front().first,
                                              path);
                         },
@@ -4150,17 +4146,30 @@ inline void requestRoutesPortSettings(App& app)
 
         BMCWEB_LOG_DEBUG("Setting for {} Fabric, {} Switch and {} PortID.",
                          fabricId, switchId, portId);
+
+        std::string portSettingURI =
+            (boost::format("/redfish/v1/Fabrics/%s/Switches/%s/Ports/"
+                           "%s/Settings") %
+             fabricId % switchId % portId)
+                .str();
+        asyncResp->res.jsonValue["@odata.type"] = "#Port.v1_4_0.Port";
+        asyncResp->res.jsonValue["@odata.id"] = portSettingURI;
+        asyncResp->res.jsonValue["Name"] = switchId + " " + portId +
+                                      " Pending Settings";
+        asyncResp->res.jsonValue["Id"] = "Settings";
+
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         redfish::nvidia_fabric_utils::getSwitchObjectAndPortNum(
             asyncResp, fabricId, switchId, portId,
             [portId](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                     const std::string& fabricId1, const std::string& switchId1,
+                     [[maybe_unused]] const std::string& fabricId1,
+                     [[maybe_unused]] const std::string& switchId1,
                      [[maybe_unused]] const std::string& objectPath,
                      [[maybe_unused]] const MapperServiceMap& serviceMap,
                      const uint32_t& portNumber,
                      const std::vector<uint8_t>& mask) {
             redfish::nvidia_fabric_utils::getPortDisableFutureStatus(
-                asyncResp1, fabricId1, switchId1, portId, portNumber, mask);
+                asyncResp1, portNumber, mask);
         });
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     });

@@ -631,9 +631,7 @@ inline void getPortDisableFutureStatus(
                      const PropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("Dbus response error"
-                             "while getting port disable status");
-            messages::internalError(aResp->res);
+            // no NVLinkDisableFuture = no failure
             return;
         }
         std::vector<uint8_t> portsToDisable;
@@ -681,20 +679,6 @@ inline void getPortDisableFutureStatus(
                 {
                     continue;
                 }
-
-                std::string processorPortSettingsURI =
-                    std::format("/redfish/v1/Systems/{}/Processors/",
-                                BMCWEB_REDFISH_SYSTEM_URI_NAME);
-                processorPortSettingsURI += processorId;
-                processorPortSettingsURI += "/Ports/";
-                processorPortSettingsURI += portId;
-                processorPortSettingsURI += "/Settings";
-
-                aResp->res.jsonValue["@odata.type"] = "#Port.v1_4_0.Port";
-                aResp->res.jsonValue["@odata.id"] = processorPortSettingsURI;
-                aResp->res.jsonValue["Id"] = "Settings";
-                aResp->res.jsonValue["Name"] = processorId + " " + portId +
-                                               " Pending Settings";
 
                 crow::connections::systemBus->async_method_call(
                     [aResp, processorId, portId, portPath, portsToDisable](
