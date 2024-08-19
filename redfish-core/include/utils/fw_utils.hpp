@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 #pragma once
+#include "utils/nvidia_async_set_callbacks.hpp"
+
 #include <async_resp.hpp>
 #include <dbus_utility.hpp>
 #include <sdbusplus/asio/property.hpp>
@@ -538,49 +540,10 @@ inline void patchFwWriteProtectedStatus(
     const std::shared_ptr<std::string>& swId, const std::string& dbusSvc,
     const bool writeProtected)
 {
-    BMCWEB_LOG_DEBUG("patchFwWriteProtectedStatus: swId {} serviceName {}",
-                     *swId, dbusSvc);
-    crow::connections::systemBus->async_method_call(
-        [asyncResp, swId](const boost::system::error_code ec,
-                          sdbusplus::message::message& msg) {
-        if (!ec)
-        {
-            BMCWEB_LOG_DEBUG("Set WriteProtect succeeded");
-            messages::success(asyncResp->res);
-            return;
-        }
-
-        BMCWEB_LOG_DEBUG("SWInventory:{} set writeprotect property failed: {}",
-                         *swId, ec);
-        // Read and convert dbus error message to redfish error
-        const sd_bus_error* dbusError = msg.get_error();
-        if (dbusError == nullptr)
-        {
-            messages::internalError(asyncResp->res);
-            return;
-        }
-
-        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                    "Device.Error.WriteFailure") == 0)
-        {
-            // Service failed to change writeproteect
-            messages::operationFailed(asyncResp->res);
-        }
-        if (strcmp(dbusError->name, "xyz.openbmc_project.Common."
-                                    "Error.NotAllowed") == 0)
-        {
-            // pcieswitch wp error
-            messages::propertyNotWritable(asyncResp->res, "WriteProtected");
-        }
-        else
-        {
-            messages::internalError(asyncResp->res);
-        }
-    },
-        dbusSvc, "/xyz/openbmc_project/software/" + *swId,
-        "org.freedesktop.DBus.Properties", "Set",
+    nvidia_async_operation_utils::patch(
+        asyncResp, dbusSvc, "/xyz/openbmc_project/software/" + *swId,
         "xyz.openbmc_project.Software.Settings", "WriteProtected",
-        dbus::utility::DbusVariantType(writeProtected));
+        writeProtected, false);
 }
 
 /**
