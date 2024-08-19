@@ -2115,9 +2115,10 @@ inline void requestRoutesChassisPCIeFunction(App& app)
             std::array<const char*, 1>{
                 "xyz.openbmc_project.Inventory.Item.Chassis"});
     });
-    // Todo Telemetry team - Need to migrate downstream code to this function 
+    // Todo Telemetry team - Need to migrate downstream code to this function
     // BMCWEB_ROUTE(
-    //     app, "/redfish/v1/Systems/<str>/PCIeDevices/<str>/PCIeFunctions/<str>/")
+    //     app,
+    //     "/redfish/v1/Systems/<str>/PCIeDevices/<str>/PCIeFunctions/<str>/")
     //     .privileges(redfish::privileges::getPCIeFunction)
     //     .methods(boost::beast::http::verb::get)(
     //         std::bind_front(handlePCIeFunctionGet, std::ref(app)));

@@ -542,8 +542,8 @@ inline void requestRoutesEnvironmentMetrics(App& app)
 
 inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 {
-    BMCWEB_ROUTE(app,
-                 "/redfish/v1/Systems/<str>/Processors/<str>/EnvironmentMetrics")
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Systems/<str>/Processors/<str>/EnvironmentMetrics")
         .privileges(redfish::privileges::getProcessor)
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,

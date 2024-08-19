@@ -221,17 +221,17 @@ RedfishService::RedfishService(App& app)
         requestRoutesBMCDumpServiceActionInfo(app);
         requestRoutesBMCDumpEntryCollection(app);
         requestRoutesBMCDumpEntry(app);
-        // Need to migrate dump-offload feature to upstream work 
-        //requestRoutesBMCDumpEntryDownload(app);
+        // Need to migrate dump-offload feature to upstream work
+        // requestRoutesBMCDumpEntryDownload(app);
         requestRoutesBMCDumpCreate(app);
         requestRoutesBMCDumpClear(app);
 
 #ifdef BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
         // Nvidia has faultlog support under system
-        //requestRoutesFaultLogDumpService(app);
-        //requestRoutesFaultLogDumpEntryCollection(app);
-        //requestRoutesFaultLogDumpEntry(app);
-        //requestRoutesFaultLogDumpClear(app);
+        // requestRoutesFaultLogDumpService(app);
+        // requestRoutesFaultLogDumpEntryCollection(app);
+        // requestRoutesFaultLogDumpEntry(app);
+        // requestRoutesFaultLogDumpClear(app);
 #endif // BMCWEB_ENABLE_REDFISH_SYSTEM_FAULTLOG_DUMP_LOG
     }
 
