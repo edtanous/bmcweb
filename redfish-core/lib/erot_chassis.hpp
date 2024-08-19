@@ -373,6 +373,9 @@ inline void getEROTChassis(const crow::Request& req,
                 {{"@odata.id",
                   "/redfish/v1/Systems/" +
                       std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME)}}};
+
+            firmware_info::updateProtectedComponentLink(asyncResp, chassisId);
+
             redfish::chassis_utils::getChassisUUID(
                 req, asyncResp, connectionNames[0].first, path, true);
 
@@ -404,6 +407,7 @@ inline void getEROTChassis(const crow::Request& req,
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
             manual_boot::bootModeQuery(req, asyncResp, chassisId);
 #endif // BMCWEB_ENABLE_MANUAL_BOOT_MODE
+            redfish::chassis_utils::getOemBootStatus(asyncResp, chassisId);
             return;
         }
 

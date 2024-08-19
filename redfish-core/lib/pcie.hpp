@@ -58,6 +58,9 @@ static constexpr const char* nvlinkClockReferenceIntf =
 static constexpr const char* pcieLtssmIntf =
     "xyz.openbmc_project.PCIe.LTSSMState";
 
+static constexpr const char* pcieAerErrorStatusIntf =
+    "com.nvidia.PCIe.AERErrorStatus";
+
 static inline std::string getPCIeType(const std::string& pcieType)
 {
     if (pcieType ==
@@ -707,7 +710,7 @@ static inline void
                 if (value != nullptr)
                 {
                     std::optional<std::string> propValue =
-                        pcie_util::redfishPcieGenerationStringFromDbus(*value);
+                        pcie_util::redfishPcieTypeStringFromDbus(*value);
                     if (!propValue)
                     {
                         asyncResp->res
@@ -1780,7 +1783,8 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                 // Get Inventory Service
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, device, chassisPCIePath, interface, chassisId,
-                     chassisPCIeDevicePath](const boost::system::error_code ec,
+                     chassisPCIeDevicePath,
+                     chassisPath](const boost::system::error_code ec,
                                             const GetSubTreeType& subtree) {
                     if (ec)
                     {
@@ -1848,6 +1852,9 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             getPCIeDeviceState(asyncResp, device,
                                                chassisPCIePath, connectionName);
                         }
+                        redfish::nvidia_chassis_utils::
+                            getChassisFabricSwitchesLinks(asyncResp,
+                                                          chassisPath);
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                         redfish::conditions_utils::populateServiceConditions(
                             asyncResp, device);
@@ -1865,6 +1872,21 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                             getPCIeDeviceClkRefOem(asyncResp, device,
                                                    chassisPCIePath,
                                                    connectionName);
+                        }
+
+                        if (std::find(interfaces2.begin(), interfaces2.end(),
+                                      pcieAerErrorStatusIntf) !=
+                            interfaces2.end())
+                        {
+                           redfish::nvidia_pcie_utils::getAerErrorStatusOem(asyncResp, device,
+                                                 chassisPCIePath,
+                                                 connectionName);
+                            asyncResp->res.jsonValue
+                                ["Actions"]["Oem"]
+                                ["#NvidiaPCIeDevice.ClearAERErrorStatus"]
+                                ["target"] =
+                                pcieDeviceURI +
+                                "/Actions/Oem/NvidiaPCIeDevice.ClearAERErrorStatus";
                         }
 
                         getPCIeLTssmState(asyncResp, device, chassisPCIePath,
@@ -1950,7 +1972,7 @@ inline void requestRoutesChassisPCIeFunctionCollection(App& app)
                 pcieFunctionURI += chassisId;
                 pcieFunctionURI += "/PCIeDevices/";
                 pcieFunctionURI += device;
-                pcieFunctionURI += "/PCIeFunctions/";
+                pcieFunctionURI += "/PCIeFunctions";
                 asyncResp->res.jsonValue = {
                     {"@odata.type",
                      "#PCIeFunctionCollection.PCIeFunctionCollection"},

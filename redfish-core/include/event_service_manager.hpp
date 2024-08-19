@@ -246,6 +246,10 @@ enum redfish_bool
 static constexpr int redfishInvalidEvent = -1;
 static constexpr int redfishInvalidArgs = -2;
 
+void parseAdditionalDataForCPER(nlohmann::json::object_t& entry,
+                                const nlohmann::json::object_t& oem,
+                                const AdditionalData& additional);
+
 /*
  * Structure for an event which is based on Event v1.7.0 in "Redfish Schema
  * Supplement(DSP0268)".
@@ -266,7 +270,8 @@ class Event
     std::string message = "";
     std::string messageSeverity = "";
     std::string originOfCondition = "";
-    nlohmann::json oem = nlohmann::json::object();
+    nlohmann::json::object_t oem;
+    nlohmann::json::object_t cper;
     std::string eventResolution = "";
     std::string logEntryId = "";
     std::string satBMCLogEntryUrl = "";
@@ -433,6 +438,10 @@ class Event
         if (!oem.empty())
         {
             eventLogEntry.update(oem);
+        }
+        if (!cper.empty())
+        {
+            eventLogEntry.update(cper);
         }
         if (!originOfCondition.empty() && includeOriginOfCondition)
         {
@@ -704,12 +713,15 @@ class Subscription : public persistent_data::UserSubscription
         nlohmann::json logEntryArray;
         logEntryArray.push_back({});
         nlohmann::json& logEntryJson = logEntryArray.back();
+        // MemberId is 0 : since we are sending one event record.
+        uint64_t memberId = 0;
 
         logEntryJson = {{"EventId", "TestID"},
                         {"EventType", "Event"},
                         {"Severity", "OK"},
                         {"Message", "Generated test event"},
                         {"MessageId", "OpenBMC.0.2.TestEventLog"},
+                        {"MemberId", memberId},
                         {"MessageArgs", nlohmann::json::array()},
                         {"EventTimestamp",
                          redfish::time_utils::getDateTimeOffsetNow().first},
@@ -2044,7 +2056,25 @@ class EventServiceManager
         "/xyz/openbmc_project/led/groups/enclosure_identify";
     const std::string ledPrefix = "/redfish/v1/Systems/" +
                                   std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME);
-
+    const std::string biosPwdPathDbusPrefix =
+        "/xyz/openbmc_project/bios_config/password";
+    const std::string biosPwdPrefix =
+        std::format("/redfish/v1/Systems/{}/Bios/Actions/Bios.ChangePassword",
+                    BMCWEB_REDFISH_SYSTEM_URI_NAME);
+    const std::string biosConfigDbusPrefix =
+        "/xyz/openbmc_project/bios_config/manager";
+    const std::string biosConfigPrefix = std::format(
+        "/redfish/v1/Systems/{}/secureboot", BMCWEB_REDFISH_SYSTEM_URI_NAME);
+    const std::string biosSettingsDbusPrefix =
+        "/xyz/openbmc_project/bios_config/manager/bios/settings";
+    const std::string biosSettingsPrefix =
+        std::format("/redfish/v1/Systems/{}/Bios/Actions/Bios.ResetBios",
+                    BMCWEB_REDFISH_SYSTEM_URI_NAME);
+    const std::string chassisResetDbusPrefix =
+        "/xyz/openbmc_project/state/host0";
+    const std::string chassisResetPrefix =
+        std::format("/redfish/v1/Chassis/{}/Actions/Chassis.Reset",
+                    BMCWEB_REDFISH_SYSTEM_URI_NAME);
     /**
      *  @brief Table used to find OriginOfCondition
      */
@@ -2065,7 +2095,10 @@ class EventServiceManager
         {httpsCertificateDbusPrefix, httpsCertificatePrefix},
         {updateServiceDbusPrefix, updateServicePrefix},
         {managerResetDbusPrefix, managerResetPrefix},
-        {ledGroupsDbusPrefix, ledPrefix}};
+        {ledGroupsDbusPrefix, ledPrefix},
+        {biosSettingsDbusPrefix, biosSettingsPrefix},
+        {biosPwdPathDbusPrefix, biosPwdPrefix},
+        {chassisResetDbusPrefix, chassisResetPrefix}};
 
     const std::string minpasswordLengthDbus = "MinPasswordLength";
     const std::string minpasswordLength = "MinPasswordLength";
@@ -2107,7 +2140,18 @@ class EventServiceManager
     const std::string vlanEnable = "VLANEnable";
     const std::string dhcbEnableDbus = "DHCPEnabled";
     const std::string dhcbEnabled = "DHCPEnabled";
-
+    const std::string secureBootEnableDbus = "SecureBootEnable";
+    const std::string secureBootEnable = "SecureBootEnable";
+    const std::string secureBootModeDbus = "SecureBootMode";
+    const std::string secureBootMode = "SecureBootMode";
+    const std::string secureCurrentBootDbus = "ScureCurrentBoot";
+    const std::string secureCurrentBoot = "ScureCurrentBoot";
+    const std::string resetBIOSSettingsDbus = "ResetBIOSSettings";
+    const std::string resetBIOSSettings = "ResetBIOSSettings";
+    const std::string biosPassowrdDbus = "BIOSPassword";
+    const std::string biosPassword = "NewPassword";
+    const std::string hostPowerStateDbus = "RequestedHostTransition";
+    const std::string hostPowerState = "ResetType";
     /**
      * @brief Map Dbus Property to Redfish Property
      */
@@ -2130,7 +2174,13 @@ class EventServiceManager
         {groupNameDbus, remoteGroup},
         {modulePowercapDbus, setpoint},
         {nicEnabledDbus, vlanEnable},
-        {dhcbEnableDbus, dhcbEnabled}};
+        {dhcbEnableDbus, dhcbEnabled},
+        {secureBootEnableDbus, secureBootEnable},
+        {secureBootModeDbus, secureBootMode},
+        {resetBIOSSettingsDbus, resetBIOSSettings},
+        {biosPassowrdDbus, biosPassword},
+        {secureCurrentBootDbus, secureCurrentBoot},
+        {hostPowerStateDbus, hostPowerState}};
 
     const std::string certificateDbusPrefix = "/xyz/openbmc_project/certs";
     const std::string systemsDbusPrefix =
@@ -2219,6 +2269,7 @@ class EventServiceManager
             std::string resolution;
             std::vector<std::string> messageArgs = {};
             const std::vector<std::string>* additionalDataPtr;
+            nlohmann::json::object_t cper;
 
             msg.read(objPath, properties);
             for (const auto& [key, val] :
@@ -2302,6 +2353,9 @@ class EventServiceManager
                                     additional.count("REDFISH_MESSAGE_ID")));
                             return;
                         }
+
+                        nlohmann::json::object_t oem;
+                        parseAdditionalDataForCPER(cper, oem, additional);
                     }
                     else
                     {
@@ -2419,6 +2473,10 @@ class EventServiceManager
                         {"Device", deviceName},
                         {"ErrorId", eventId}}}}}};
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                if (!cper.empty())
+                {
+                    event.cper = cper;
+                }
                 event.eventResolution = resolution;
                 event.logEntryId = logEntryId;
                 event.satBMCLogEntryUrl = satBMCLogEntryUrl;

@@ -1227,23 +1227,6 @@ nlohmann::json arraySizeTooLong(std::string_view property, uint64_t length);
 void arraySizeTooLong(crow::Response& res, std::string_view property,
                       uint64_t length);
 
-/**
- * @brief Method to get message registry entry for DebugTokenRequestSuccess
- * message
- *
- * @param[in] arg1 - argument
- * @return nlohmann::json
- */
-nlohmann::json debugTokenRequestSuccess(const std::string& arg1);
-
-/**
- * @brief Method to get message registry entry for DebugTokenStatusSuccess
- * message
- *
- * @param[in] arg1 - argument
- * @return nlohmann::json
- */
-nlohmann::json debugTokenStatusSuccess(const std::string& arg1);
 } // namespace messages
 
 } // namespace redfish

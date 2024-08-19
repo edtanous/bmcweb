@@ -23,6 +23,7 @@
 #include "gzfile.hpp"
 #include "http_utility.hpp"
 #include "human_sort.hpp"
+#include "nvidia_messages.hpp"
 #include "query.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
@@ -1153,6 +1154,11 @@ inline void
             }
             else if (dumpType == "FaultLog")
             {
+                thisEntry["DiagnosticDataType"] = faultLogDiagnosticDataType;
+                thisEntry["AdditionalDataURI"] = entriesPath + entryID +
+                                                 "/attachment";
+                thisEntry["AdditionalDataSizeBytes"] = size;
+
                 std::string messageId = "Platform.1.0.PlatformError";
                 thisEntry["MessageId"] = messageId;
 
@@ -1165,54 +1171,12 @@ inline void
                     thisEntry["Resolution"] = msg->resolution;
                 }
 
-                thisEntry["DiagnosticDataType"] = faultLogDiagnosticDataType;
-                thisEntry["AdditionalDataURI"] = entriesPath + entryID +
-                                                 "/attachment";
-                thisEntry["AdditionalDataSizeBytes"] = size;
-
                 // CPER Properties
                 if (notificationType != "NA")
                 {
                     thisEntry["CPER"]["NotificationType"] = notificationType;
                 }
-                if (sectionType != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["SectionType"] = sectionType;
-                }
-                if (fruid != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["FruID"] = fruid;
-                }
-                if (severity != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["Severity"] = severity;
-                }
-                if (nvipSignature != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["NvIpSignature"] = nvipSignature;
-                }
-                if (nvSeverity != "NA")
-                {
-                    thisEntry["CPER"]["Oem"]["NvSeverity"] = nvSeverity;
-                }
-                else if (dumpType == "FDR")
-                {
-                    thisEntry["DiagnosticDataType"] = "OEM";
-                    thisEntry["OEMDiagnosticDataType"] = "FDR";
-                    thisEntry["AdditionalDataURI"] = entriesPath + entryID +
-                                                     "/attachment";
-                    thisEntry["AdditionalDataSizeBytes"] = size;
-                }
-                else if (dumpType == "FaultLog")
-                {
-                    thisEntry["DiagnosticDataType"] =
-                        faultLogDiagnosticDataType;
-                    thisEntry["AdditionalDataURI"] = entriesPath + entryID +
-                                                     "/attachment";
-                    thisEntry["AdditionalDataSizeBytes"] = size;
-                    // CPER Properties
-                    thisEntry["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
-                        "#NvidiaLogEntry.v1_0_0.CPER";
+                // CPER Oem properties
                     if (sectionType != "NA")
                     {
                         thisEntry["CPER"]["Oem"]["Nvidia"]["SectionType"] =
@@ -1224,8 +1188,7 @@ inline void
                     }
                     if (severity != "NA")
                     {
-                        thisEntry["CPER"]["Oem"]["Nvidia"]["Severity"] =
-                            severity;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["Severity"] = severity;
                     }
                     if (nvipSignature != "NA")
                     {
@@ -1259,8 +1222,8 @@ inline void
                     }
                     if (pcieFunctionNumber != "NA")
                     {
-                        thisEntry["CPER"]["Oem"]["Nvidia"]
-                                 ["PCIeFunctionNumber"] = pcieFunctionNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeFunctionNumber"] =
+                        pcieFunctionNumber;
                     }
                     if (pcieDeviceNumber != "NA")
                     {
@@ -1269,13 +1232,13 @@ inline void
                     }
                     if (pcieSegmentNumber != "NA")
                     {
-                        thisEntry["CPER"]["Oem"]["Nvidia"]
-                                 ["PCIeSegmentNumber"] = pcieSegmentNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeSegmentNumber"] =
+                        pcieSegmentNumber;
                     }
                     if (pcieDeviceBusNumber != "NA")
                     {
-                        thisEntry["CPER"]["Oem"]["Nvidia"]
-                                 ["PCIeDeviceBusNumber"] = pcieDeviceBusNumber;
+                    thisEntry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceBusNumber"] =
+                        pcieDeviceBusNumber;
                     }
                     if (pcieSecondaryBusNumber != "NA")
                     {
@@ -1289,7 +1252,6 @@ inline void
                             pcieSlotNumber;
                     }
                 }
-            }
             entriesArray.emplace_back(std::move(thisEntry));
         }
         asyncResp->res.jsonValue["Members@odata.count"] = entriesArray.size();
@@ -1449,89 +1411,92 @@ inline void
                     asyncResp->res.jsonValue["Resolution"] = msg->resolution;
                 }
 
+                // CPER Properties
                 if (notificationType != "NA")
                 {
                     asyncResp->res.jsonValue["CPER"]["NotificationType"] =
                         notificationType;
                 }
+                // CPER Oem properties
                 if (sectionType != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["SectionType"] =
-                        sectionType;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["SectionType"] = sectionType;
                 }
                 if (fruid != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["FruID"] = fruid;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]["FruID"] =
+                        fruid;
                 }
                 if (severity != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["Severity"] =
-                        severity;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["Severity"] = severity;
                 }
                 if (nvipSignature != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvIpSignature"] =
-                        nvipSignature;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["NvIpSignature"] = nvipSignature;
                 }
                 if (nvSeverity != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvSeverity"] =
-                        nvSeverity;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["NvSeverity"] = nvSeverity;
                 }
                 if (nvSocketNumber != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["NvSocketNumber"] =
-                        nvSocketNumber;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["NvSocketNumber"] = nvSocketNumber;
                 }
                 if (pcieVendorID != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeVendorId"] =
-                        pcieVendorID;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeVendorId"] = pcieVendorID;
                 }
                 if (pcieDeviceID != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeDeviceId"] =
-                        pcieDeviceID;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeDeviceId"] = pcieDeviceID;
                 }
                 if (pcieClassCode != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeClassCode"] =
-                        pcieClassCode;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeClassCode"] = pcieClassCode;
                 }
                 if (pcieFunctionNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PCIeFunctionNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeFunctionNumber"] =
                         pcieFunctionNumber;
                 }
                 if (pcieDeviceNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PCIeDeviceNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeDeviceNumber"] =
                         pcieDeviceNumber;
                 }
                 if (pcieSegmentNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PCIeSegmentNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeSegmentNumber"] =
                         pcieSegmentNumber;
                 }
                 if (pcieDeviceBusNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PCIeDeviceBusNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeDeviceBusNumber"] =
                         pcieDeviceBusNumber;
                 }
                 if (pcieSecondaryBusNumber != "NA")
                 {
-                    asyncResp->res
-                        .jsonValue["CPER"]["Oem"]["PCIeSecondaryBusNumber"] =
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeSecondaryBusNumber"] =
                         pcieSecondaryBusNumber;
                 }
                 if (pcieSlotNumber != "NA")
                 {
-                    asyncResp->res.jsonValue["CPER"]["Oem"]["PCIeSlotNumber"] =
-                        pcieSlotNumber;
+                    asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
+                                            ["PCIeSlotNumber"] = pcieSlotNumber;
                 }
                 asyncResp->res.jsonValue["AdditionalDataSizeBytes"] = size;
             }
@@ -2854,6 +2819,72 @@ inline void requestRoutesJournalEventLogEntry(App& app)
     });
 }
 
+inline void parseAdditionalDataForCPER(nlohmann::json::object_t& entry,
+                                       const nlohmann::json::object_t& oem,
+                                       const AdditionalData& additional)
+{
+    const auto& type = additional.find("DiagnosticDataType");
+    if (additional.end() == type ||
+        ("CPER" != type->second && "CPERSection" != type->second))
+        return;
+
+    BMCWEB_LOG_DEBUG("Got {}", type->second);
+
+    entry = oem;
+    entry["DiagnosticDataType"] = type->second;
+
+    for (const auto& iter : additional)
+    {
+        if ("DiagnosticData" == iter.first)
+            entry["DiagnosticData"] = iter.second;
+
+        if ("NotificationTypeGUID" == iter.first && "CPER" == type->second)
+            entry["CPER"]["NotificationType"] = iter.second;
+
+        if ("SectionTypeGUID" == iter.first && "CPERSection" == type->second)
+            entry["CPER"]["SectionType"] = iter.second;
+
+        // Common
+        if ("SectionTypeGUID" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["SectionGUID"] = iter.second;
+        if ("SectionType" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["SectionType"] = iter.second;
+        if ("SectionSeverity" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["Severity"] = iter.second;
+        if ("FruID" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["FruID"] = iter.second;
+        // NVIDIA
+        if ("NvSignature" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["NvIpSignature"] = iter.second;
+        if ("NvSeverity" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["NvSeverity"] = iter.second;
+        if ("NvSocket" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["NvSocket"] = iter.second;
+        //  PCIe
+        if ("PCIeVendorId" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeVendorId"] = iter.second;
+        if ("PCIeDeviceId" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceId"] = iter.second;
+        if ("PCIeClassCode" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeClassCode"] = iter.second;
+        if ("PCIeFunctionNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeFunctionNumber"] = iter.second;
+        if ("PCIeDeviceNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceNumber"] = iter.second;
+        if ("PCIeSegmentNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeSegmentNumber"] = iter.second;
+        if ("PCIeDeviceBusNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeDeviceBusNumber"] = iter.second;
+        if ("PCIeSecondaryBusNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeSecondaryBusNumber"] =
+                iter.second;
+        if ("PCIeSlotNumber" == iter.first)
+            entry["CPER"]["Oem"]["Nvidia"]["PCIeSlotNumber"] = iter.second;
+    }
+
+    BMCWEB_LOG_DEBUG("Done {}", type->second);
+}
+
 inline void requestRoutesDBusEventLogEntryCollection(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/LogServices/EventLog/Entries/")
@@ -3033,6 +3064,7 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                 std::string messageArgs;
                 std::string originOfCondition;
                 std::string deviceName;
+                nlohmann::json::object_t cper;
                 if (additionalDataRaw != nullptr)
                 {
                     AdditionalData additional(*additionalDataRaw);
@@ -3056,6 +3088,10 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     {
                         deviceName = additional["DEVICE_NAME"];
                     }
+
+                    // populate CPER section (checks are in the fn)
+                    nlohmann::json::object_t oem;
+                    parseAdditionalDataForCPER(cper, oem, additional);
                 }
                 if (isMessageRegistry)
                 {
@@ -3125,6 +3161,11 @@ inline void requestRoutesDBusEventLogEntryCollection(App& app)
                     {
                         thisEntry["ServiceProviderNotified"] = *notifyAction;
                     }
+                }
+                // add CPER to entry if it is present
+                if (!cper.empty())
+                {
+                    thisEntry.update(cper);
                 }
                 if (filePath != nullptr)
                 {
@@ -3224,6 +3265,7 @@ inline void requestRoutesDBusEventLogEntry(App& app)
             std::string messageArgs;
             std::string originOfCondition;
             std::string deviceName;
+            nlohmann::json::object_t cper;
             if (additionalDataRaw != nullptr)
             {
                 AdditionalData additional(*additionalDataRaw);
@@ -3247,6 +3289,10 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 {
                     deviceName = additional["DEVICE_NAME"];
                 }
+
+                // populate CPER section (checks are in the fn)
+                nlohmann::json::object_t oem;
+                parseAdditionalDataForCPER(cper, oem, additional);
             }
 
             if (isMessageRegistry)
@@ -3338,6 +3384,11 @@ inline void requestRoutesDBusEventLogEntry(App& app)
                 {
                     getLogEntryAdditionalDataURI(std::to_string(*id));
                 }
+            }
+            // add CPER to entry if it is present
+            if (!cper.empty())
+            {
+                asyncResp->res.jsonValue.update(cper);
             }
         });
     });
@@ -5159,6 +5210,7 @@ inline void requestRoutesSystemDumpServiceActionInfo(App& app)
             "DiagnosticType=SelfTest");
         OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=FPGA");
         OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=EROT");
+        OEMDiagnosticDataType_allowableValues.push_back("DiagnosticType=ROT");
         OEMDiagnosticDataType_allowableValues.push_back(
             "DiagnosticType=RetLTSSM");
         OEMDiagnosticDataType_allowableValues.push_back(
@@ -7943,42 +7995,52 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             return;
         }
 
-        int index = 0;
-        std::string matchString;
-        if (oemDiagnosticDataType == "DebugTokenStatus")
+        debug_token::RequestType type;
+        if (oemDiagnosticDataType != "DebugTokenStatus")
         {
-            matchString = "0";
+            if (oemDiagnosticDataType == "GetDebugTokenRequest")
+            {
+                type = debug_token::RequestType::DebugTokenRequest;
         }
-        else
+#ifdef BMCWEB_ENABLE_DOT
+            else if (oemDiagnosticDataType == "GetDOTCAKUnlockTokenRequest")
         {
-            index = redfish::debug_token::getMeasurementIndex(
-                oemDiagnosticDataType);
-            if (index < 0)
+                type = debug_token::RequestType::DOTCAKUnlockTokenRequest;
+            }
+            else if (oemDiagnosticDataType == "GetDOTEnableTokenRequest")
+            {
+                type = debug_token::RequestType::DOTEnableTokenRequest;
+            }
+            else if (oemDiagnosticDataType == "GetDOTSignTestToken")
+            {
+                type = debug_token::RequestType::DOTSignTestToken;
+            }
+            else if (oemDiagnosticDataType == "GetDOTOverrideTokenRequest")
+            {
+                type = debug_token::RequestType::DOTOverrideTokenRequest;
+            }
+#endif
+            else
             {
                 BMCWEB_LOG_ERROR("Unsupported OEMDiagnosticDataType: {}",
                                  oemDiagnosticDataType);
                 messages::actionParameterValueFormatError(
                     asyncResp->res, oemDiagnosticDataType,
                     "OEMDiagnosticDataType", "CollectDiagnosticData");
-                return;
             }
-            matchString =
-                "type='signal',interface='org.freedesktop.DBus.Properties',"
-                "member='PropertiesChanged',"
-                "path_namespace='/xyz/openbmc_project/SPDM'";
         }
 
         static std::unique_ptr<debug_token::OperationHandler> op;
         if (op)
         {
-            messages::serviceTemporarilyUnavailable(asyncResp->res, "20");
+            messages::serviceTemporarilyUnavailable(
+                asyncResp->res, std::to_string(debugTokenTaskTimeoutSec));
             return;
         }
 
         std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-            [](boost::system::error_code ec, sdbusplus::message_t& msg,
+            [](boost::system::error_code ec, sdbusplus::message_t&,
                const std::shared_ptr<task::TaskData>& taskData) {
-            bool completed = true;
             if (ec)
             {
                 BMCWEB_LOG_ERROR("Debug token operation task error: {}",
@@ -7991,19 +8053,14 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 }
                 op.reset();
             }
-            else if (op)
-            {
-                completed = op->update(msg);
-                taskData->extendTimer(std::chrono::seconds(20));
-            }
-            return completed ? task::completed : !task::completed;
+            return op == nullptr ? task::completed : !task::completed;
         },
-            matchString);
+            "0");
 
         auto resultHandler =
             [oemDiagnosticDataType,
-             task](const std::shared_ptr<
-                   std::vector<debug_token::DebugTokenEndpoint>>& endpoints) {
+             task](const std::shared_ptr<std::vector<std::unique_ptr<
+                       debug_token::DebugTokenEndpoint>>>& endpoints) {
             std::string result;
             int totalEpCount = 0;
             int validEpCount = 0;
@@ -8013,7 +8070,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 totalEpCount = static_cast<int>(endpoints->size());
                 for (const auto& ep : *endpoints)
                 {
-                    const auto& state = std::get<3>(ep);
+                    const auto& state = ep->getState();
                     if (oemDiagnosticDataType == "DebugTokenStatus")
                     {
                         if (state == debug_token::EndpointState::StatusAcquired)
@@ -8030,13 +8087,16 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                             ++validEpCount;
                         }
                     }
-                    const auto& mctpEp = std::get<0>(ep);
-                    const auto spdmObject = mctpEp.getSpdmObject();
+                    const auto& objectName = ep->getObject();
                     const auto deviceName =
-                        sdbusplus::message::object_path(spdmObject).filename();
+                        sdbusplus::message::object_path(objectName).filename();
                     std::string stateDesc;
                     switch (state)
                     {
+                        case debug_token::EndpointState::DebugTokenUnsupported:
+                            task->messages.emplace_back(
+                                messages::debugTokenUnsupported(deviceName));
+                            break;
                         case debug_token::EndpointState::StatusAcquired:
                             task->messages.emplace_back(
                                 messages::debugTokenStatusSuccess(deviceName));
@@ -8061,7 +8121,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                             stateDesc = "Invalid state";
                             task->messages.emplace_back(
                                 messages::resourceErrorsDetectedFormatError(
-                                    spdmObject, stateDesc));
+                                    objectName, stateDesc));
                             break;
                     }
                 }
@@ -8105,10 +8165,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
             task->finishTask();
             task->sendTaskEvent(task->state, task->index);
             boost::asio::post(crow::connections::systemBus->get_io_context(),
-                              [task] {
-                task->match.reset();
-                op.reset();
-            });
+                              [task] { op.reset(); });
         };
         auto errorHandler = [task](bool critical, const std::string& desc,
                                    const std::string& error) {
@@ -8123,10 +8180,8 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                 task->finishTask();
                 task->sendTaskEvent(task->state, task->index);
                 boost::asio::post(
-                    crow::connections::systemBus->get_io_context(), [task] {
-                    task->match.reset();
-                    op.reset();
-                });
+                    crow::connections::systemBus->get_io_context(),
+                    [] { op.reset(); });
             }
         };
 
@@ -8138,7 +8193,7 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
         else
         {
             op = std::make_unique<debug_token::RequestHandler>(
-                resultHandler, errorHandler, index);
+                resultHandler, errorHandler, type);
         }
         task->payload.emplace(req);
         task->populateResp(asyncResp->res);

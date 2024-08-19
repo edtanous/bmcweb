@@ -247,6 +247,17 @@ inline const char* toImplementation(const std::string& implementation)
     return "";
 }
 
+inline const char* toReadingBasis(const std::string& readingBasis)
+{
+    if (readingBasis ==
+        "xyz.openbmc_project.Sensor.ReadingBasis.ReadingBasisType.Headroom")
+    {
+        return "Headroom";
+    }
+
+    return "";
+}
+
 } // namespace sensors
 
 /**
@@ -964,6 +975,14 @@ inline void objectPropertiesToJson(
             "HardShutdownLow", "/Thresholds/LowerFatal/Reading"_json_pointer);
         properties.emplace_back("xyz.openbmc_project.Time.EpochTime", "Elapsed",
                                 "/ReadingTime"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.ReadingBasis",
+                                "ReadingBasis", "/ReadingBasis"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.Description",
+                                "Description", "/Description"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.PeakValue",
+                                "PeakValue", "/PeakReading"_json_pointer);
+        properties.emplace_back("xyz.openbmc_project.Sensor.PeakValue",
+                                "Timestamp", "/PeakReadingTime"_json_pointer);
     }
     else if (sensorType != "power")
     {
@@ -1104,10 +1123,19 @@ inline void objectPropertiesToJson(
                         sensors::toImplementation(implementation);
                     sensorJson[key] = value;
                 }
+                if (valueName == "ReadingBasis")
+                {
+                    sensorJson[key] = sensors::toReadingBasis(
+                        static_cast<std::string>(*stringValue));
+                }
+                if (valueName == "Description")
+                {
+                    sensorJson[key] = static_cast<std::string>(*stringValue);
+                }
             }
             else if (uint64Value != nullptr)
             {
-                if (valueName == "Elapsed")
+                if (valueName == "Elapsed" || valueName == "Timestamp")
                 {
                     sensorJson[key] =
                         time_utils::getDateTimeUintMs(*uint64Value);

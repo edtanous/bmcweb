@@ -522,12 +522,6 @@ class Router
     {
         FindRouteResponse findRoute;
 
-        std::optional<HttpVerb> verb = httpVerbFromBoost(req.method());
-        if (!verb)
-        {
-            return findRoute;
-        }
-        size_t reqMethodIndex = static_cast<size_t>(*verb);
         // Check to see if this url exists at any verb
         for (size_t perMethodIndex = 0; perMethodIndex <= maxVerbIndex;
              perMethodIndex++)
@@ -547,10 +541,24 @@ class Router
             }
             HttpVerb thisVerb = static_cast<HttpVerb>(perMethodIndex);
             findRoute.allowHeader += httpVerbToString(thisVerb);
-            if (perMethodIndex == reqMethodIndex)
+        }
+
+        std::optional<HttpVerb> verb = httpVerbFromBoost(req.method());
+        if (!verb)
             {
-                findRoute.route = route;
+            return findRoute;
             }
+        size_t reqMethodIndex = static_cast<size_t>(*verb);
+        if (reqMethodIndex >= perMethods.size())
+        {
+            return findRoute;
+        }
+
+        FindRoute route = findRouteByPerMethod(req.url().encoded_path(),
+                                               perMethods[reqMethodIndex]);
+        if (route.rule != nullptr)
+        {
+            findRoute.route = route;
         }
         return findRoute;
     }
@@ -600,13 +608,6 @@ class Router
     void handle(const std::shared_ptr<Request>& req,
                 const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
     {
-        std::optional<HttpVerb> verb = httpVerbFromBoost(req->method());
-        if (!verb || static_cast<size_t>(*verb) >= perMethods.size())
-        {
-            asyncResp->res.result(boost::beast::http::status::not_found);
-            return;
-        }
-
         FindRouteResponse foundRoute = findRoute(*req);
 
         if (foundRoute.route.rule == nullptr)
@@ -653,7 +654,7 @@ class Router
         std::vector<std::string> params = std::move(foundRoute.route.params);
 
         BMCWEB_LOG_DEBUG("Matched rule '{}' {} / {}", rule.rule,
-                         static_cast<uint32_t>(*verb), rule.getMethods());
+                         req->methodString(), rule.getMethods());
 
         if (req->session == nullptr)
         {

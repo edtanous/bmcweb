@@ -104,6 +104,22 @@ class AdditionalData
         return data.count(key);
     }
 
+    std::map<std::string, std::string>::const_iterator begin() const
+    {
+        return data.cbegin();
+    }
+
+    std::map<std::string, std::string>::const_iterator end() const
+    {
+        return data.cend();
+    }
+
+    std::map<std::string, std::string>::const_iterator
+        find(const std::string& key) const
+    {
+        return data.find(key);
+    }
+
   protected:
     std::map<std::string, std::string> data;
 };

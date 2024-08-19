@@ -47,6 +47,54 @@ constexpr std::array registry =
             "None.",
         }},
     MessageEntry{
+        "DebugTokenInstallationSuccess",
+        {
+            "Signifies the successful completion of debug token installation.",
+            "The operation to install a debug token for device '%1' has been successfully completed.",
+            "OK",
+            1,
+            {
+                "string",
+            },
+            "None.",
+        }},
+    MessageEntry{
+        "DebugTokenRequestSuccess",
+        {
+            "Signifies the successful completion of the debug token request.",
+            "The operation to request a debug token for device '%1' has been successfully completed.",
+            "OK",
+            1,
+            {
+                "string",
+            },
+            "None.",
+        }},
+    MessageEntry{
+        "DebugTokenStatusSuccess",
+        {
+            "Signifies the successful completion of the debug token status request.",
+            "The operation to obtain a token status for device '%1' has been successfully completed.",
+            "OK",
+            1,
+            {
+                "string",
+            },
+            "None.",
+        }},
+    MessageEntry{
+        "DebugTokenUnsupported",
+        {
+            "Indicates that the device does not support debug token functionality.",
+            "Device '%1' does not support debug token functionality.",
+            "OK",
+            1,
+            {
+                "string",
+            },
+            "None.",
+        }},
+    MessageEntry{
         "FirmwareNotInRecovery",
         {
             "Indicates that a firmware is not in Recovery Mode",
@@ -88,8 +136,12 @@ constexpr std::array registry =
 enum class Index
 {
     componentUpdateSkipped = 0,
-    firmwareNotInRecovery = 1,
-    recoveryStarted = 2,
-    recoverySuccessful = 3,
+    debugTokenInstallationSuccess = 1,
+    debugTokenRequestSuccess = 2,
+    debugTokenStatusSuccess = 3,
+    debugTokenUnsupported = 4,
+    firmwareNotInRecovery = 5,
+    recoveryStarted = 6,
+    recoverySuccessful = 7,
 };
 } // namespace redfish::registries::nvidia

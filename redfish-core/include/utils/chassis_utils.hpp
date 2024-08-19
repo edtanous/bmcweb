@@ -4,6 +4,7 @@
 #include "dbus_utility.hpp"
 #include "error_messages.hpp"
 #include "in_band.hpp"
+#include "nvidia_async_call_utils.hpp"
 
 #include <async_resp.hpp>
 #include <sdbusplus/asio/connection.hpp>
@@ -25,8 +26,8 @@ constexpr const char* cpuInvIntf = "xyz.openbmc_project.Inventory.Item.Cpu";
 constexpr const char* nvLinkMgmtInvIntf =
     "xyz.openbmc_project.Inventory.Item.NetworkInterface";
 
-constexpr const char* switchInvIntf =
-    "xyz.openbmc_project.Inventory.Item.Switch";
+constexpr const char* nvSwitchInvIntf =
+    "xyz.openbmc_project.Inventory.Item.NvSwitch";
 
 constexpr const char* bmcInvInterf = "xyz.openbmc_project.Inventory.Item.BMC";
 
@@ -94,6 +95,47 @@ inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& path,
                             const std::string& connection)
 {
+    static const std::string clearPowerCapAsyncIntf{
+        "com.nvidia.Common.ClearPowerCapAsync"};
+
+    dbus::utility::getDbusObject(
+        path, std::array<std::string_view, 1>{clearPowerCapAsyncIntf},
+        [asyncResp, path,
+         connection](const boost::system::error_code& ec,
+                     const dbus::utility::MapperGetObject& object) {
+        if (!ec)
+        {
+            for (const auto& [serv, _] : object)
+            {
+                if (serv != connection)
+                {
+                    continue;
+                }
+
+                BMCWEB_LOG_DEBUG("Performing Post using Async Method Call");
+
+                nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
+                    int>(asyncResp, std::chrono::seconds(60), connection, path,
+                         clearPowerCapAsyncIntf, "ClearPowerCap",
+                         [asyncResp](const std::string& status,
+                                     [[maybe_unused]] const int* retValue) {
+                    if (status ==
+                        nvidia_async_operation_utils::asyncStatusValueSuccess)
+                    {
+                        BMCWEB_LOG_DEBUG("PowerLimit Reset Succeeded");
+                        messages::success(asyncResp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_ERROR("resetPowerLimit error {}", status);
+                    messages::internalError(asyncResp->res);
+                });
+
+                return;
+            }
+        }
+
+        BMCWEB_LOG_DEBUG("Performing Post using Sync Method Call");
+
     crow::connections::systemBus->async_method_call(
         [asyncResp](boost::system::error_code ec1, const int retValue) {
         if (!ec1)
@@ -107,11 +149,12 @@ inline void resetPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             messages::success(asyncResp->res);
             return;
         }
-        BMCWEB_LOG_DEBUG("PowerLimit Reset error {}", ec1);
+            BMCWEB_LOG_ERROR("PowerLimit Reset error {}", ec1);
         messages::internalError(asyncResp->res);
         return;
-    },
-        connection, path, "com.nvidia.Common.ClearPowerCap", "ClearPowerCap");
+        }, connection, path, "com.nvidia.Common.ClearPowerCap",
+            "ClearPowerCap");
+    });
 }
 
 inline std::string getFeatureReadyStateType(const std::string& stateType)
@@ -647,6 +690,92 @@ inline void
 }
 
 /**
+ * @brief Retrieves Oem BootStatus code for the chassis endpoint
+ * @param asyncResp   Pointer to object holding response data
+ * @param chassisObjPath   Path of the chassis endpoint
+ */
+inline void getOemBootStatus(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string chassisObjPath)
+{
+    static constexpr std::array<std::string_view, 1> interfaces = {
+        "com.nvidia.RoT.BootStatus"};
+
+    dbus::utility::getSubTree(
+        "/xyz/openbmc_project/inventory/system/chassis", 0, interfaces,
+        [asyncResp, chassisObjPath](
+            const boost::system::error_code& ec,
+            const dbus::utility::MapperGetSubTreeResponse& subtree) {
+
+            std::string statusService{};
+
+            if (ec)
+            {
+                BMCWEB_LOG_DEBUG("No D-Bus object found implementing"
+                        "com.nvidia.RoT.BootStatus for {}", chassisObjPath);
+                return;
+            }
+
+            for (const auto& obj : subtree)
+            {
+                sdbusplus::message::object_path objPath(obj.first);
+                if (!boost::equals(objPath.filename(), chassisObjPath))
+                {
+                    continue;
+                }
+
+                for (const auto& [service, interfaces] : obj.second)
+                {
+                    statusService = service;
+                    break;
+
+                }
+            }
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, chassisObjPath](
+                const boost::system::error_code errorCode,
+                const boost::container::flat_map<
+                    std::string, dbus::utility::DbusVariantType>& propertiesList) {
+            if (errorCode)
+            {
+                // OK since not all fwtypes support bootstatus
+                return;
+            }
+
+            const auto& it = propertiesList.find("BootStatus");
+            if (it == propertiesList.end())
+            {
+                BMCWEB_LOG_ERROR("Can't find D-Bus property \"com.nvidia.RoT.BootStatus.BootStatus\"!");
+                messages::propertyMissing(asyncResp->res, "BootStatus");
+                return;
+            }
+
+            const auto* bootStatus =
+                std::get_if<std::vector<uint8_t>>(&it->second);
+            if (bootStatus == nullptr)
+            {
+                BMCWEB_LOG_ERROR("wrong types for D-Bus property \"com.nvidia.RoT.BootStatus.BootStatus\"!");
+                messages::propertyValueTypeError(asyncResp->res, "", "BootStatus");
+                return;
+            }
+            std::string out{};
+
+            std::ostringstream oss;
+            for (auto byte : *bootStatus)
+            {
+                // Convert each byte to a two-character hexadecimal string
+                oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+            }
+            out = "0x" + oss.str();
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["BootStatus"] = out;
+        },
+            statusService, "/xyz/openbmc_project/inventory/system/chassis/" + chassisObjPath,
+            "org.freedesktop.DBus.Properties", "GetAll",
+            "com.nvidia.RoT.BootStatus");
+        });
+}
+
+/**
  *@brief Sets the background copy for particular chassis
  *
  * @param req   Pointer to object holding request data
@@ -1041,7 +1170,7 @@ inline void getRedfishURL(const std::filesystem::path& invObjPath,
                         return;
                     }
                 }
-                if (interface == switchInvIntf)
+                if (interface == nvSwitchInvIntf)
                 {
                     /* busctl call xyz.openbmc_project.ObjectMapper
                     /xyz/openbmc_project/object_mapper

@@ -18,6 +18,7 @@
 #include "app.hpp"
 #include "dbus_utility.hpp"
 #include "led.hpp"
+#include "nvidia_protected_component.hpp"
 #include "query.hpp"
 #include "redfish_util.hpp"
 #include "registries/privilege_registry.hpp"
@@ -38,6 +39,10 @@
 #include <utils/chassis_utils.hpp>
 #include <utils/conditions_utils.hpp>
 #include <utils/nvidia_chassis_util.hpp>
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#include "nvidia_debug_token.hpp"
+#endif
 
 #include <array>
 #include <ranges>
@@ -711,6 +716,15 @@ inline void handleChassisGetSubTree(
                 {
                     getChassisLocationCode(asyncResp, connectionName, path);
                 }
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                else if (
+                    interface ==
+                    "xyz.openbmc_project.Inventory.Decorator.VendorInformation")
+                { 
+                    //CBC chassis extention
+                    redfish::nvidia_chassis_utils::getOemCBCChassisAsset(asyncResp, connectionName, path);
+                }
+#endif
             }
 
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
@@ -743,6 +757,10 @@ inline void handleChassisGetSubTree(
             // association
             redfish::nvidia_chassis_utils::getHealthByAssociation(
                 asyncResp, path, "all_states", chassisId);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+            // get debug token resource
+            redfish::getChassisDebugToken(asyncResp, chassisId);
+#endif
         }
         return;
     }
@@ -1396,6 +1414,40 @@ inline void requestRoutesChassisResetActionInfo(App& app)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleOemChassisResetActionInfoGet, std::ref(app)));
 #endif
+}
+
+inline void requestRoutesChassisFirmwareInfo(App& app)
+{
+    using namespace firmware_info;
+
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleNvidiaRoTProtectedComponentCollection, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTProtectedComponent, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "ImageSlots/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTImageSlotCollection, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "ImageSlots/<str>/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTImageSlot, std::ref(app)));
 }
 
 } // namespace redfish

@@ -65,6 +65,8 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             messages::internalError(resp->res);
             return;
         }
+
+        bool isFoundProcessorObject = false;
         for (const auto& [objectPath, serviceMap] : subtree)
         {
             // Ignore any objects which don't end with our desired cpu name
@@ -108,9 +110,13 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
             handler(resp, processorId, objectPath, serviceMap, deviceType);
 
-            return;
+            isFoundProcessorObject = true;
+            // need to check all objpath because a few configs are set by another service
         }
+        if (isFoundProcessorObject == false)
+        {
         messages::resourceNotFound(resp->res, "Processor", processorId);
+        }
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
@@ -227,6 +233,18 @@ inline void getPCIeErrorData(std::shared_ptr<bmcweb::AsyncResp> aResp,
                     return;
                 }
                 aResp->res.jsonValue["PCIeErrors"]["NAKReceivedCount"] = *value;
+            }
+            else if (property.first == "UnsupportedRequestCount")
+            {
+                const int64_t* value = std::get_if<int64_t>(&property.second);
+                if (value == nullptr)
+                {  
+                    BMCWEB_LOG_ERROR("Invalid Data Type");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PCIeErrors"]["UnsupportedRequestCount"] =
+                    *value;
             }
         }
     },

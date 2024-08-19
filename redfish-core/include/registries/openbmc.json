@@ -1809,24 +1809,6 @@
             "Resolution": "None.",
             "Severity": "OK"
         },
-        "DebugTokenRequestSuccess": {
-            "Description": "Signifies the successful completion of the debug token request.",
-            "Message": "The operation to request a debug token for device '%1' has been successfully completed.",
-            "MessageSeverity": "OK",
-            "NumberOfArgs": 1,
-            "ParamTypes": ["string"],
-            "Resolution": "None.",
-            "Severity": "OK"
-        },
-        "DebugTokenStatusSuccess": {
-            "Description": "Signifies the successful completion of the debug token status request.",
-            "Message": "The operation to obtain a token status for device '%1' has been successfully completed.",
-            "MessageSeverity": "OK",
-            "NumberOfArgs": 1,
-            "ParamTypes": ["string"],
-            "Resolution": "None.",
-            "Severity": "OK"
-        },
         "IPCWarningThresholdCrossed": {
             "Description": "Indicates that the IPC monitor has detected a service crossing the warning threshold limit set on a property",
             "Message": "DBus IPC Monitor detected %1 unit crossing warning threshold set on %2 IPC property. Property Reading=%3 Threshold=%4.",

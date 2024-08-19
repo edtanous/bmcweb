@@ -3478,7 +3478,7 @@ inline void requestRoutesManager(App& app)
 
         // NvidiaManager
         nlohmann::json& oemNvidia = oem["Nvidia"];
-        oemNvidia["@odata.type"] = "#OemManager.Nvidia";
+        oemNvidia["@odata.type"] = "#NvidiaManager.v1_2_0.NvidiaManager";
         nlohmann::json& oemResetToDefaults =
             asyncResp->res
                 .jsonValue["Actions"]["Oem"]["#NvidiaManager.ResetToDefaults"];
@@ -3771,6 +3771,16 @@ inline void requestRoutesManager(App& app)
                         {
                             sdbusplus::message::object_path objPath(p);
                             const std::string& chassisId = objPath.filename();
+                            asyncResp->res
+                                .jsonValue["Links"]["ManagerForChassis"].clear();
+                            nlohmann::json::array_t managerForChassis;
+                            nlohmann::json::object_t managerObj;
+                            boost::urls::url chassiUrl =
+                                boost::urls::format("/redfish/v1/Chassis/{}", chassisId);
+                            managerObj["@odata.id"] = chassiUrl;
+                            managerForChassis.emplace_back(std::move(managerObj));
+                            asyncResp->res.jsonValue["Links"]["ManagerForChassis"] =
+                                std::move(managerForChassis);
                             asyncResp->res
                                 .jsonValue["Links"]["ManagerInChassis"]
                                           ["@odata.id"] =

@@ -54,6 +54,9 @@
 #ifdef BMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC
 #include "network_adapters_generic.hpp"
 #endif
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+#include "nvidia_debug_token.hpp"
+#endif
 #include "boot_options.hpp"
 #include "erot_chassis.hpp"
 #include "fabric.hpp"
@@ -158,6 +161,9 @@ RedfishService::RedfishService(App& app)
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     requestRoutesChassisResetAction(app);
     requestRoutesChassisResetActionInfo(app);
+#endif
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    requestRoutesChassisDebugToken(app);
 #endif
     requestRoutesUpdateService(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -285,6 +291,8 @@ RedfishService::RedfishService(App& app)
     requestRoutesProcessorReset(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     requestRoutesEdppReset(app);
+    requestRoutesClearPCIeCountersActionInfo(app);
+    requestRoutesPCIeClearCounter(app);
     requestRoutesNvidiaManagerResetToDefaultsAction(app);
     requestRoutesNvidiaManagerEmmcSecureErase(app);
     requestRoutesManagerEmmcSecureEraseActionInfo(app);
@@ -298,6 +306,7 @@ RedfishService::RedfishService(App& app)
     requestRoutesProcessorPortCollection(app);
     requestRoutesProcessorPort(app);
     requestRoutesProcessorPortMetrics(app);
+    requestRoutesProcessorPortSettings(app);
     requestRoutesMemoryCollection(app);
     requestRoutesMemory(app);
     requestRoutesMemoryMetrics(app);
@@ -399,10 +408,14 @@ RedfishService::RedfishService(App& app)
     requestRoutesPortCollection(app);
     requestRoutesPort(app);
     requestRoutesPortMetrics(app);
+    requestRoutesPortSettings(app);
     requestRoutesEndpointCollection(app);
     requestRoutesEndpoint(app);
     requestRoutesZoneCollection(app);
     requestRoutesZone(app);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    requestRoutesSwitchPowerMode(app);
+#endif
 
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
     requestRoutesTriggerCollection(app);
@@ -422,6 +435,7 @@ RedfishService::RedfishService(App& app)
     requestRoutesChassisControls(app);
     requestRoutesChassisControlsCollection(app);
     requestRoutesUpdateServiceCommitImage(app);
+    requestRoutesChassisControlsReset(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     requestRoutesComputeDigestPost(app);
 #endif
@@ -441,6 +455,10 @@ RedfishService::RedfishService(App& app)
     requestRoutesProcessorPowerSmoothingAdminProfile(app);
     requestRoutesProcessorPowerSmoothingPresetProfileCollection(app);
     requestRoutesProcessorPowerSmoothingPresetProfile(app);
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    requestRoutesChassisFirmwareInfo(app);
+#endif
     // Note, this must be the last route registered
     requestRoutesRedfish(app);
 }
