@@ -140,6 +140,7 @@ feature_map = {
   'enable-sse'                                  : '-DBMCWEB_ENABLE_SSE',
   'erot-reset'                                  : '-DBMCWEB_ENABLE_EROT_RESET',
   'cpu-diag-support'                            : '-DBMCWEB_ENABLE_CPU_DIAG_FEATURE',
+  'command-smbpbi-oob'                          : '-DBMCWEB_COMMAND_SMBPBI_OOB',
 }
 
 if(get_option('tls-auth-opt-in').enabled())

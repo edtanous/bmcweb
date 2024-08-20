@@ -3595,6 +3595,8 @@ inline void requestRoutesManager(App& app)
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         nlohmann::json& oemActions = asyncResp->res.jsonValue["Actions"]["Oem"];
+
+#ifdef BMCWEB_COMMAND_SMBPBI_OOB
         nlohmann::json& oemActionsNvidia = oemActions["Nvidia"];
 
         oemActionsNvidia["#NvidiaManager.SyncOOBRawCommand"]["target"] =
@@ -3616,6 +3618,7 @@ inline void requestRoutesManager(App& app)
                             "/redfish/v1/Managers/" +
                             std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
                             "/Oem/Nvidia/AsyncOOBRawCommandActionInfo";
+#endif // BMCWEB_COMMAND_SMBPBI_OOB
 
         oemActions["#eMMC.SecureErase"]["target"] =
             "/redfish/v1/Managers/" +

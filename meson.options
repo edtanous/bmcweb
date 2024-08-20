@@ -604,3 +604,10 @@ option ('enable-fabric-adapter', type : 'feature', value : 'disabled', descripti
 option ('enable-sse', type : 'feature', value : 'enabled', description : 'Enables Event SSE.')
 option('tls-cacert-path', type : 'string', value : '/etc/ssl/certs/authority/', description : 'CA certificate path truststore')
 option ('cpu-diag-support', type : 'feature', value : 'disabled', description : 'Enables cpu diag support.')
+
+option(
+    'command-smbpbi-oob',
+    type: 'feature',
+    value: 'enabled',
+    description: 'Enable/Disable SMBPBI out of band raw command'
+)

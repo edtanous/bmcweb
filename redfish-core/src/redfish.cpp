@@ -296,11 +296,12 @@ RedfishService::RedfishService(App& app)
     requestRoutesNvidiaManagerResetToDefaultsAction(app);
     requestRoutesNvidiaManagerEmmcSecureErase(app);
     requestRoutesManagerEmmcSecureEraseActionInfo(app);
-
+#ifdef BMCWEB_COMMAND_SMBPBI_OOB
     requestRouteSyncRawOobCommand(app);
     requestRouteAsyncRawOobCommand(app);
     requestRoutesNvidiaAsyncOOBRawCommandActionInfo(app);
     requestRoutesNvidiaSyncOOBRawCommandActionInfo(app);
+#endif // BMCWEB_COMMAND_SMBPBI_OOB
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
     requestRoutesProcessorPortCollection(app);
