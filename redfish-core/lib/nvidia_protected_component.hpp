@@ -84,11 +84,11 @@ inline void
                          const std::string& service,
                          const std::string& objectPath)
 {
-    sdbusplus::asio::getAllProperties(
-        *crow::connections::systemBus, service, objectPath,
-        "xyz.openbmc_project.Software.BuildType",
-        [asyncResp](const boost::system::error_code& ec,
-                    const dbus::utility::DBusPropertiesMap& propertiesList) {
+    crow::connections::systemBus->async_method_call(
+        [asyncResp](
+            const boost::system::error_code ec,
+            const boost::container::flat_map<
+                std::string, dbus::utility::DbusVariantType>& properties) {
         if (ec)
         {
             if (ec == boost::system::errc::host_unreachable)
@@ -102,22 +102,81 @@ inline void
             messages::internalError(asyncResp->res);
             return;
         }
-        std::optional<std::string> buildType;
-        const bool success = sdbusplus::unpackPropertiesNoThrow(
-            dbus_utils::UnpackErrorPrinter(), propertiesList, "BuildType",
-            buildType);
-        if (!success)
+        for (const auto& [key, val] : properties)
         {
-            BMCWEB_LOG_ERROR("Unpack BuildType properites error");
-            messages::internalError(asyncResp->res);
-            return;
+            if (key == "SlotId")
+            {
+                if (const uint8_t* value = std::get_if<uint8_t>(&val))
+                {
+                    asyncResp->res.jsonValue["SlotId"] = *value;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for SlotId");
+                }
+            }
+            else if (key == "FirmwareComparisonNumber")
+            {
+                if (const uint32_t* value = std::get_if<uint32_t>(&val))
+                {
+                    asyncResp->res.jsonValue["FirmwareComparisonNumber"] =
+                        *value;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR(
+                        "Null value returned for FirmwareComparisonNumber");
+                }
+            }
+            else if (key == "ExtendedVersion")
+            {
+                if (const std::string* value = std::get_if<std::string>(&val))
+                {
+                    asyncResp->res.jsonValue["Version"] = *value;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
+            else if (key == "BuildType")
+            {
+                if (const std::string* value = std::get_if<std::string>(&val))
+                {
+                    asyncResp->res.jsonValue["BuildType"] =
+                        getStrBeforeLastDot(*value);
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
+            else if (key == "State")
+            {
+                if (const std::string* value = std::get_if<std::string>(&val))
+                {
+                    asyncResp->res.jsonValue["FirmwareState"] =
+                        getStrBeforeLastDot(*value);
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
+            else if (key == "WriteProtected")
+            {
+                if (const bool* value = std::get_if<bool>(&val))
+                {
+                    asyncResp->res.jsonValue["WriteProtected"] = *value;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
         }
-        if (buildType)
-        {
-            asyncResp->res.jsonValue["BuildType"] =
-                getStrBeforeLastDot(*buildType);
-        }
-    });
+    },
+        service, objectPath, "org.freedesktop.DBus.Properties", "GetAll", "");
 }
 
 inline void handleNvidiaRoTImageSlot(
