@@ -378,7 +378,7 @@ inline void handleEnvironmentMetricsGet(
             "/redfish/v1/Chassis/{}/EnvironmentMetrics", chassisId);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         asyncResp->res
-            .jsonValue["Actions"]["Oem"]["Nvidia"]
+            .jsonValue["Actions"]["Oem"]
                       ["#NvidiaEnvironmentMetrics.ClearOOBSetPoint"] = {
             {"target",
              "/redfish/v1/Chassis/" + chassisId +
@@ -568,7 +568,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
         asyncResp->res
-            .jsonValue["Actions"]["Oem"]["Nvidia"]
+            .jsonValue["Actions"]["Oem"]
                       ["#NvidiaEnvironmentMetrics.ClearOOBSetPoint"] = {
             {"target",
              "/redfish/v1/Systems/" +
@@ -576,7 +576,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                  processorId +
                  "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ClearOOBSetPoint"}};
 
-        asyncResp->res.jsonValue["Actions"]["Oem"]["Nvidia"]
+        asyncResp->res.jsonValue["Actions"]["Oem"]
                                 ["#NvidiaEnvironmentMetrics.ResetEDPp"] = {
             {"target",
              "/redfish/v1/Systems/" +

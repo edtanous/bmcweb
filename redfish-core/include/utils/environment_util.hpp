@@ -1516,7 +1516,7 @@ inline void
                 {
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                     aResp->res
-                        .jsonValue["Actions"]["Oem"]["Nvidia"]
+                        .jsonValue["Actions"]["Oem"]
                                   ["#NvidiaEnvironmentMetrics.ResetEDPp"] = {
                         {"target",
                          "/redfish/v1/Systems/" +
