@@ -750,7 +750,7 @@ class Connection :
         ForceChunking chunked = ForceChunking::Disabled;
 
 #ifdef BMCWEB_ENABLE_CHUNKING
-        if (req->version() == 11)
+        if (req && req->version() == 11)
         {
             std::string_view accept_encodings =
                 req->getHeaderValue(boost::beast::http::field::accept_encoding);
