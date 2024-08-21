@@ -3866,11 +3866,13 @@ inline void requestRoutesProcessor(App& app)
         {
             std::optional<bool> migMode;
             std::optional<bool> remoteDebugEnabled;
+            std::optional<nlohmann::json> inbandReconfigPermissions;
 
             if (oemNvidiaObject &&
                 redfish::json_util::readJson(
                     *oemNvidiaObject, asyncResp->res, "MIGModeEnabled", migMode,
-                    "RemoteDebugEnabled", remoteDebugEnabled))
+                    "RemoteDebugEnabled", remoteDebugEnabled,
+                    "InbandReconfigPermissions", inbandReconfigPermissions))
             {
                 if (migMode)
                 {
@@ -3901,6 +3903,12 @@ inline void requestRoutesProcessor(App& app)
                         patchRemoteDebug(asyncResp, processorId,
                                          *remoteDebugEnabled, objectPath);
                     });
+                }
+
+                if (inbandReconfigPermissions)
+                {
+                    nvidia_processor_utils::patchInbandReconfigPermissions(
+                        asyncResp, processorId, *inbandReconfigPermissions);
                 }
             }
         }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/nvidia_async_set_callbacks.hpp"
+
 namespace redfish
 {
 namespace nvidia_processor_utils
@@ -9,6 +11,158 @@ using OperatingConfigProperties =
     std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>;
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+using InbandReconfigPermission = std::tuple<std::string, std::string, bool>;
+
+/**
+ * Parses the json of the InbandReconfigSettings properties.
+ *
+ * @param[in,out]   resp                Async HTTP response.
+ * @param[in]       json                New json data to apply.
+ * @param[in]       featureName         Name of permission feature
+ * @param[in,out]   permissions         Collection of parsed permissions
+ */
+inline void parseInbandReconfigSettingsJson(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, nlohmann::json& json,
+    const std::string& featureName,
+    std::vector<InbandReconfigPermission>& permissions)
+{
+    std::optional<bool> allowOneShotConfig;
+    std::optional<bool> allowPersistentConfig;
+    std::optional<bool> allowFLRPersistentConfig;
+    if (redfish::json_util::readJson(
+            json, aResp->res, "AllowOneShotConfig", allowOneShotConfig,
+            "AllowPersistentConfig", allowPersistentConfig,
+            "AllowFLRPersistentConfig", allowFLRPersistentConfig))
+    {
+        if (allowOneShotConfig)
+        {
+            permissions.emplace_back(std::make_tuple(
+                featureName, "AllowOneShotConfig", *allowOneShotConfig));
+        }
+        if (allowPersistentConfig)
+        {
+            permissions.emplace_back(std::make_tuple(
+                featureName, "AllowPersistentConfig", *allowPersistentConfig));
+        }
+        if (allowFLRPersistentConfig)
+        {
+            permissions.emplace_back(
+                std::make_tuple(featureName, "AllowFLRPersistentConfig",
+                                *allowFLRPersistentConfig));
+        }
+    }
+}
+
+/**
+ * Parses the json of the InbandReconfigPermissions.
+ *
+ * @param[in,out]   resp                Async HTTP response.
+ * @param[in]       json                New json data to apply.
+ *
+ * @return Collection of parsed Inband Reconfig Permissions requests
+ */
+inline std::vector<InbandReconfigPermission> parseInbandReconfigPermissionsJson(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, nlohmann::json& json)
+{
+    std::vector<InbandReconfigPermission> permissions;
+    std::map<std::string, std::optional<nlohmann::json>> features = {
+        {"InSystemTest", {}},
+        {"FusingMode", {}},
+        {"CCMode", {}},
+        {"BAR0Firewall", {}},
+        {"CCDevMode", {}},
+        {"TGPCurrentLimit", {}},
+        {"TGPRatedLimit", {}},
+        {"TGPMaxLimit", {}},
+        {"TGPMinLimit", {}},
+        {"ClockLimit", {}},
+        {"NVLinkDisable", {}},
+        {"ECCEnable", {}},
+        {"PCIeVFConfiguration", {}},
+        {"RowRemappingAllowed", {}},
+        {"RowRemappingFeature", {}},
+        {"HBMFrequencyChange", {}},
+        {"HULKLicenseUpdate", {}},
+        {"ForceTestCoupling", {}},
+        {"BAR0TypeConfig", {}},
+        {"EDPpScalingFactor", {}},
+        {"PowerSmoothing", {}},
+        {"PowerSmoothingPrivilegeLevel0", {}},
+        {"PowerSmoothingPrivilegeLevel1", {}},
+        {"PowerSmoothingPrivilegeLevel2", {}},
+    };
+
+    if (redfish::json_util::readJson(
+            json, aResp->res, "InSystemTest", features["InSystemTest"],
+            "FusingMode", features["FusingMode"], "CCMode", features["CCMode"],
+            "BAR0Firewall", features["BAR0Firewall"], "CCDevMode",
+            features["CCDevMode"], "TGPCurrentLimit",
+            features["TGPCurrentLimit"], "TGPRatedLimit",
+            features["TGPRatedLimit"], "TGPMaxLimit", features["TGPMaxLimit"],
+            "TGPMinLimit", features["TGPMinLimit"], "ClockLimit",
+            features["ClockLimit"], "NVLinkDisable", features["NVLinkDisable"],
+            "ECCEnable", features["ECCEnable"], "PCIeVFConfiguration",
+            features["PCIeVFConfiguration"], "RowRemappingAllowed",
+            features["RowRemappingAllowed"], "RowRemappingFeature",
+            features["RowRemappingFeature"], "HBMFrequencyChange",
+            features["HBMFrequencyChange"], "HULKLicenseUpdate",
+            features["HULKLicenseUpdate"], "ForceTestCoupling",
+            features["ForceTestCoupling"], "BAR0TypeConfig",
+            features["BAR0TypeConfig"], "EDPpScalingFactor",
+            features["EDPpScalingFactor"], "PowerSmoothing",
+            features["PowerSmoothing"], "PowerSmoothingPrivilegeLevel0",
+            features["PowerSmoothingPrivilegeLevel0"],
+            "PowerSmoothingPrivilegeLevel1",
+            features["PowerSmoothingPrivilegeLevel1"],
+            "PowerSmoothingPrivilegeLevel2",
+            features["PowerSmoothingPrivilegeLevel2"]))
+    {
+        for (auto& [featureName, feature] : features)
+        {
+            if (feature)
+            {
+                parseInbandReconfigSettingsJson(aResp, *feature, featureName,
+                                                permissions);
+            }
+        }
+    }
+    return permissions;
+}
+
+/**
+ * Parses the json of the InbandReconfigSettings properties.
+ *
+ * @param[in,out]   asyncResp       Async HTTP response.
+ * @param[in]       processorId     Processor's Id.
+ * @param[in]       json            InbandReconfigPermissions json data to
+ * apply.
+ */
+void patchInbandReconfigPermissions(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& processorId, nlohmann::json& json)
+{
+    auto patchRequests = parseInbandReconfigPermissionsJson(asyncResp, json);
+    processor_utils::getProcessorObject(
+        asyncResp, processorId,
+        [patchRequests](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        [[maybe_unused]] const std::string& processorId,
+                        const std::string& objectPath,
+                        const MapperServiceMap& serviceMap,
+                        [[maybe_unused]] const std::string& deviceType) {
+        for (const auto& [service, _] : serviceMap)
+        {
+            for (const auto& [featureName, property, value] : patchRequests)
+            {
+                BMCWEB_LOG_DEBUG("inbandReconfigPermissions - {} {} {}",
+                                 featureName, property, value);
+                nvidia_async_operation_utils::patch(
+                    asyncResp, service,
+                    objectPath + "/InbandReconfigPermissions/" + featureName,
+                    "com.nvidia.InbandReconfigSettings", property, value);
+            }
+        }
+    });
+}
 
 /**
  * Handle the PATCH operation of the CC Mode Property. Do basic
@@ -264,7 +418,8 @@ inline void getInbandReconfigPermissionsData(
                     std::get_if<bool>(&property.second);
                 if (alowFLRPersistentConfig == nullptr)
                 {
-                    BMCWEB_LOG_ERROR("AllowFLRPersistentConfig shall be boolean");
+                    BMCWEB_LOG_ERROR(
+                        "AllowFLRPersistentConfig shall be boolean");
                     messages::internalError(aResp->res);
                     return;
                 }
