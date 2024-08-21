@@ -346,15 +346,41 @@ class StatusQueryHandler : public OperationHandler
                 finalize();
                 return;
             }
-            if (status == "Aborted")
-            {
-                errCallback(false, desc, "operation failure");
-                ep->setError();
-                finalize();
-                return;
-            }
             DebugTokenNsmEndpoint* nsmEp =
                 dynamic_cast<DebugTokenNsmEndpoint*>(ep.get());
+            if (status == "Aborted")
+            {
+                sdbusplus::asio::getProperty<std::tuple<uint16_t, std::string>>(
+                    *crow::connections::systemBus, "xyz.openbmc_project.NSM",
+                    object, std::string(debugTokenIntf), "ErrorCode",
+                    [this, desc, nsmEp, object](
+                        const boost::system::error_code ec,
+                        const std::tuple<uint16_t, std::string>& errorCode) {
+                    const std::string desc =
+                        object.substr(object.find_last_of('/') + 1);
+                    BMCWEB_LOG_DEBUG("{}", desc);
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
+                        errCallback(false, desc, ec.message());
+                        nsmEp->setError();
+                        finalize();
+                        return;
+                    }
+                    static const uint16_t unsupportedErrorCode = 5;
+                    if (std::get<uint16_t>(errorCode) == unsupportedErrorCode)
+                    {
+                        nsmEp->setStatus(EndpointState::DebugTokenUnsupported);
+                        finalize();
+                        return;
+                    }
+                    errCallback(false, desc, "operation failure");
+                    nsmEp->setError();
+                    finalize();
+                    return;
+                });
+                return;
+            }
             sdbusplus::asio::getProperty<NsmDbusTokenStatus>(
                 *crow::connections::systemBus, "xyz.openbmc_project.NSM",
                 object, std::string(debugTokenIntf), "TokenStatus",
@@ -820,15 +846,41 @@ class RequestHandler : public OperationHandler
             finalize();
             return;
         }
-        if (status == "Aborted")
-        {
-            errCallback(false, desc, "operation failure");
-            ep->setError();
-            finalize();
-            return;
-        }
         DebugTokenNsmEndpoint* nsmEp =
             dynamic_cast<DebugTokenNsmEndpoint*>(ep.get());
+        if (status == "Aborted")
+        {
+            sdbusplus::asio::getProperty<std::tuple<uint16_t, std::string>>(
+                *crow::connections::systemBus, "xyz.openbmc_project.NSM",
+                object, std::string(debugTokenIntf), "ErrorCode",
+                [this, desc, object,
+                 nsmEp](const boost::system::error_code ec,
+                        const std::tuple<uint16_t, std::string>& errorCode) {
+                const std::string desc =
+                    object.substr(object.find_last_of('/') + 1);
+                BMCWEB_LOG_DEBUG("{}", desc);
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR("{}: {}", desc, ec.message());
+                    errCallback(false, desc, ec.message());
+                    nsmEp->setError();
+                    finalize();
+                    return;
+                }
+                static const uint16_t unsupportedErrorCode = 5;
+                if (std::get<uint16_t>(errorCode) == unsupportedErrorCode)
+                {
+                    nsmEp->setStatus(EndpointState::DebugTokenUnsupported);
+                    finalize();
+                    return;
+                }
+                errCallback(false, desc, "operation failure");
+                nsmEp->setError();
+                finalize();
+                return;
+            });
+            return;
+        }
         sdbusplus::asio::getProperty<sdbusplus::message::unix_fd>(
             *crow::connections::systemBus, "xyz.openbmc_project.NSM", object,
             std::string(debugTokenIntf), "RequestFd",

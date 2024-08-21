@@ -8073,7 +8073,10 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     const auto& state = ep->getState();
                     if (oemDiagnosticDataType == "DebugTokenStatus")
                     {
-                        if (state == debug_token::EndpointState::StatusAcquired)
+                        if (state ==
+                                debug_token::EndpointState::StatusAcquired ||
+                            state == debug_token::EndpointState::
+                                         DebugTokenUnsupported)
                         {
                             ++validEpCount;
                         }
@@ -8082,7 +8085,10 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                     {
                         if (state ==
                                 debug_token::EndpointState::RequestAcquired ||
-                            state == debug_token::EndpointState::TokenInstalled)
+                            state ==
+                                debug_token::EndpointState::TokenInstalled ||
+                            state == debug_token::EndpointState::
+                                         DebugTokenUnsupported)
                         {
                             ++validEpCount;
                         }

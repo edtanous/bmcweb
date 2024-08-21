@@ -136,6 +136,11 @@ class DebugTokenNsmEndpoint : public DebugTokenEndpoint
         state = EndpointState::StatusAcquired;
     }
 
+    void setStatus(EndpointState s)
+    {
+        state = s;
+    }
+
     EndpointType getType() const override
     {
         return EndpointType::NSM;
