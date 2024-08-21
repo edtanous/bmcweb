@@ -5555,8 +5555,14 @@ inline void getConnectedProcessorPorts(
                 processorPortUri += portNames[i];
 
                 thisProcessorPort["@odata.id"] = processorPortUri;
-                connectedPortslinksArray.push_back(
-                    std::move(thisProcessorPort));
+                // Check if thisProcessorPort is not already in the array
+                if (std::find(connectedPortslinksArray.begin(),
+                    connectedPortslinksArray.end(),
+                    thisProcessorPort) == connectedPortslinksArray.end())
+                {
+                    // If not found, push back the value
+                    connectedPortslinksArray.push_back(std::move(thisProcessorPort));
+                }
                 i++;
             }
         }
