@@ -212,6 +212,111 @@ inline void getCCModeData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  * @param[in]       service     D-Bus service to query.
  * @param[in]       objPath     D-Bus object to query.
  */
+inline void getInbandReconfigPermissionsData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
+    const std::string& service, const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [aResp, cpuId, objPath](const boost::system::error_code ec,
+                                const OperatingConfigProperties& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            return;
+        }
+        auto& json = aResp->res.jsonValue;
+        auto reconfigPermissionsName =
+            sdbusplus::message::object_path(objPath).filename();
+        auto& reconfigPermissionsJson =
+            json["Oem"]["Nvidia"]["InbandReconfigPermissions"]
+                [reconfigPermissionsName];
+        for (const auto& property : properties)
+        {
+            if (property.first == "AllowOneShotConfig")
+            {
+                const bool* allowOneShotConfig =
+                    std::get_if<bool>(&property.second);
+                if (allowOneShotConfig == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("AllowOneShotConfig shall be boolean");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                reconfigPermissionsJson["AllowOneShotConfig"] =
+                    *allowOneShotConfig;
+            }
+            else if (property.first == "AllowPersistentConfig")
+            {
+                const bool* allowPersistentConfig =
+                    std::get_if<bool>(&property.second);
+                if (allowPersistentConfig == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("AllowPersistentConfig shall be boolean");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                reconfigPermissionsJson["AllowPersistentConfig"] =
+                    *allowPersistentConfig;
+            }
+            else if (property.first == "AllowFLRPersistentConfig")
+            {
+                const bool* alowFLRPersistentConfig =
+                    std::get_if<bool>(&property.second);
+                if (alowFLRPersistentConfig == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("AllowFLRPersistentConfig shall be boolean");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                reconfigPermissionsJson["AllowFLRPersistentConfig"] =
+                    *alowFLRPersistentConfig;
+            }
+        }
+    },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "com.nvidia.InbandReconfigSettings");
+}
+
+inline void getInbandReconfigPermissionsData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId,
+    const std::string& objPath)
+{
+    BMCWEB_LOG_DEBUG("get PRC Knobs data {}", objPath);
+    // Ask for all objects implementing OperatingConfig so we can search
+    // for one with a matching name
+    crow::connections::systemBus->async_method_call(
+        [aResp, cpuId](boost::system::error_code ec,
+                       const dbus::utility::MapperGetSubTreeResponse& subtree) {
+        if (ec)
+        {
+            BMCWEB_LOG_WARNING("D-Bus error: {}, {}", ec, ec.message());
+            return;
+        }
+        for (const auto& [objectPath, serviceMap] : subtree)
+        {
+            for (const auto& [serviceName, interfaceList] : serviceMap)
+            {
+                BMCWEB_LOG_DEBUG("PRC knob found at path {}", objectPath);
+                getInbandReconfigPermissionsData(aResp, cpuId, serviceName,
+                                                 objectPath);
+            }
+        }
+    },
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTree", objPath, 0,
+        std::array<const char*, 1>{"com.nvidia.InbandReconfigSettings"});
+}
+
+/**
+ * @brief Fill out processor nvidia specific info by
+ * requesting data from the given D-Bus object.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       cpuId       Processor ID.
+ * @param[in]       service     D-Bus service to query.
+ * @param[in]       objPath     D-Bus object to query.
+ */
 
 inline void
     getCCModePendingData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,

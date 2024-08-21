@@ -2914,6 +2914,11 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     // Get system and fpga interfaces properties
     getProcessorSystemPCIeInterface(aResp, objectPath);
     getProcessorFPGAPCIeInterface(aResp, objectPath);
+
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    redfish::nvidia_processor_utils::getInbandReconfigPermissionsData(
+        aResp, processorId, objectPath);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
