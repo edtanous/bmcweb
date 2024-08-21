@@ -666,6 +666,14 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         asyncResp->res.jsonValue["PowerLimitWatts"]
                                                 ["DefaultSetPoint"] = *value;
                     }
+
+                    else if (propertyName == "Persistency")
+                    {
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
+                                                ["PowerLimitPersistency"] = {};
+#endif
+                    }
                 }
             },
                 element.first, objPath, "org.freedesktop.DBus.Properties",
@@ -952,12 +960,13 @@ inline void
 inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                             const std::string& resourceId, const int powerLimit,
                             const std::string& objectPath,
-                            const std::string& resourceType)
+                            const std::string& resourceType,
+                            const bool persistency = false)
 {
     const std::array<const char*, 1> powerCapInterfaces = {
         "xyz.openbmc_project.Control.Power.Cap"};
     crow::connections::systemBus->async_method_call(
-        [resp, resourceId, powerLimit, resourceType, objectPath](
+        [resp, resourceId, persistency, powerLimit, resourceType, objectPath](
             const boost::system::error_code errorno,
             const std::vector<std::pair<std::string, std::vector<std::string>>>&
                 objInfo) {
@@ -974,7 +983,7 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 objectPath,
                 std::array<std::string_view, 1>{
                     nvidia_async_operation_utils::setAsyncInterfaceName},
-                [resp, objectPath, powerLimit, element, resourceId,
+                [resp, objectPath, powerLimit, element, persistency, resourceId,
                  resourceType](const boost::system::error_code& ec,
                                const dbus::utility::MapperGetObject& object) {
                 if (!ec)
@@ -986,6 +995,9 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                             continue;
                         }
 
+                        std::tuple<bool, uint32_t> reqPowerLimit(
+                            persistency, static_cast<uint32_t>(powerLimit));
+
                         BMCWEB_LOG_DEBUG(
                             "Performing Patch using Set Async Method Call");
 
@@ -995,8 +1007,8 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                                 objectPath,
                                 "xyz.openbmc_project.Control.Power.Cap",
                                 "PowerCap",
-                                std::variant<uint32_t>(
-                                    static_cast<uint32_t>(powerLimit)),
+                                std::variant<std::tuple<bool, uint32_t>>(
+                                    reqPowerLimit),
                                 nvidia_async_operation_utils::
                                     PatchPowerCapCallback{resp, powerLimit});
 

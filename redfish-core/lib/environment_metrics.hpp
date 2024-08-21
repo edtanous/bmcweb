@@ -603,6 +603,7 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
         }
         std::optional<nlohmann::json> powerLimit;
         std::optional<nlohmann::json> oemObject;
+        std::optional<bool> powerLimitPersistency;
 
         // Read json request
         if (!json_util::readJsonAction(req, asyncResp->res, "PowerLimitWatts",
@@ -620,8 +621,9 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
         {
             if (std::optional<nlohmann::json> EdppObject;
                 oemNvidiaObject &&
-                json_util::readJson(*oemNvidiaObject, asyncResp->res,
-                                    "EDPpPercent", EdppObject))
+                json_util::readJson(
+                    *oemNvidiaObject, asyncResp->res, "EDPpPercent", EdppObject,
+                    "PowerLimitPersistency", powerLimitPersistency))
             {
                 if (EdppObject)
                 {
@@ -686,8 +688,14 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                     "xyz.openbmc_project.Inventory.Item.Cpu",
                     "xyz.openbmc_project.Inventory.Item.Accelerator"};
 
+                bool persistency = false; 
+                if(powerLimitPersistency)
+                {
+                   persistency = *powerLimitPersistency;
+                }
+
                 crow::connections::systemBus->async_method_call(
-                    [asyncResp, processorId, setPoint](
+                    [asyncResp, processorId, setPoint, persistency](
                         const boost::system::error_code ec,
                         const crow::openbmc_mapper::GetSubTreeType& subtree) {
                     if (ec)
@@ -730,8 +738,8 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                         {
                             std::string resourceType = "Processors";
                             redfish::nvidia_env_utils::patchPowerLimit(
-                                asyncResp, processorId, *setPoint, objPath,
-                                resourceType);
+                                asyncResp, processorId, *setPoint,
+                                objPath, resourceType, persistency);
                         }
 
                         return;
