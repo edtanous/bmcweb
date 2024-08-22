@@ -47,9 +47,9 @@ inline void getNvidiaPowerSupply(const std::shared_ptr<bmcweb::AsyncResp>& async
         asyncResp->res.jsonValue["PowerSupplyType"] =  redfish::dbus_utils::toPowerSupplyType(property);
     });
 
-    std::string powerSupplyURI = "/redfish/v1/Chassis";
+    std::string powerSupplyURI = "/redfish/v1/Chassis/";
     powerSupplyURI += chassisId;
-    powerSupplyURI += "/PowerSubsystems/PowerSupplies/";
+    powerSupplyURI += "/PowerSubsystem/PowerSupplies/";
     powerSupplyURI += powerSupplyId;
     std::string powerSupplyMetricURI = powerSupplyURI;
     powerSupplyMetricURI += "/Metrics";
@@ -72,8 +72,6 @@ getNvidiaPowerSupplyMetrics(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
         "/redfish/v1/Chassis/{}/PowerSubsystem/PowerSupplies/{}/Metrics",
         chassisId, powerSupplyId);
-    asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-    asyncResp->res.jsonValue["Status"]["Health"] = "OK";
     // Construct the association path by appending "/all_sensors"
     std::string sensorsAssociationPath = powerSupplyPath + "/all_sensors";
     // Retrieve all associated sensor objects
