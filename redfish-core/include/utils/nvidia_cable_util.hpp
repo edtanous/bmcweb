@@ -132,10 +132,14 @@ inline void fetchCableInventoryProperties(
             return;
         }
         std::sort(data1->begin(), data1->end());
-        asyncResp->res.jsonValue["Links"]["UpstreamChassis"] = {"@odata.id",
-                                                                data1->front()};
+        sdbusplus::message::object_path objPathUp(data1->front());
+        sdbusplus::message::object_path objPathDown(data1->back());
+        asyncResp->res.jsonValue["Links"]["UpstreamChassis"] = {
+            "@odata.id", boost::urls::format("/redfish/v1/Chassis/{}",
+                                             objPathUp.filename())};
         asyncResp->res.jsonValue["Links"]["DownstreamChassis"] = {
-            "@odata.id", data1->back()};
+            "@odata.id", boost::urls::format("/redfish/v1/Chassis/{}",
+                                             objPathDown.filename())};
     },
         "xyz.openbmc_project.ObjectMapper", cableObjectPath + "/connecting",
         "org.freedesktop.DBus.Properties", "Get",
