@@ -1207,7 +1207,7 @@ inline void handleChassisResetActionInfoPost(
     BMCWEB_LOG_DEBUG("Post Chassis Reset.");
 #ifdef BMCWEB_ENABLE_EROT_RESET
     redfish::chassis_utils::isEROTChassis(
-        chassisId, [req, asyncResp, chassisId](bool isEROT) {
+        chassisId, [req, asyncResp, chassisId](bool isEROT, bool /*isCpuEROT*/) {
         if (isEROT)
         {
             handleEROTChassisResetAction(req, asyncResp, chassisId);
