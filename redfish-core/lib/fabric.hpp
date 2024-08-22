@@ -2285,17 +2285,6 @@ inline void requestRoutesPort(App& app)
                                             .jsonValue["Metrics"]["@odata.id"] =
                                             portMetricsURI;
 
-                                        std::string portSettingURI =
-                                            portURI + "/Settings";
-                                        asyncResp->res
-                                            .jsonValue["@Redfish.Settings"]
-                                                      ["@odata.type"] =
-                                            "#Settings.v1_3_3.Settings";
-                                        asyncResp->res
-                                            .jsonValue["@Redfish.Settings"]
-                                                      ["SettingsObject"]
-                                                      ["@odata.id"] =
-                                            portSettingURI;
 #ifndef BMCWEB_DISABLE_CONDITIONS_ARRAY
                                         asyncResp->res
                                             .jsonValue["Status"]["Conditions"] =
@@ -4126,94 +4115,6 @@ inline void requestRoutesPortMetrics(App& app)
             "/xyz/openbmc_project/inventory", 0,
             std::array<const char*, 1>{
                 "xyz.openbmc_project.Inventory.Item.Fabric"});
-    });
-}
-
-inline void requestRoutesPortSettings(App& app)
-{
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Settings")
-        .privileges({{"Login"}})
-        .methods(boost::beast::http::verb::get)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                   const std::string& fabricId, const std::string& switchId,
-                   const std::string& portId) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-        {
-            return;
-        }
-
-        BMCWEB_LOG_DEBUG("Setting for {} Fabric, {} Switch and {} PortID.",
-                         fabricId, switchId, portId);
-
-        std::string portSettingURI =
-            (boost::format("/redfish/v1/Fabrics/%s/Switches/%s/Ports/"
-                           "%s/Settings") %
-             fabricId % switchId % portId)
-                .str();
-        asyncResp->res.jsonValue["@odata.type"] = "#Port.v1_4_0.Port";
-        asyncResp->res.jsonValue["@odata.id"] = portSettingURI;
-        asyncResp->res.jsonValue["Name"] = switchId + " " + portId +
-                                      " Pending Settings";
-        asyncResp->res.jsonValue["Id"] = "Settings";
-
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        redfish::nvidia_fabric_utils::getSwitchObjectAndPortNum(
-            asyncResp, fabricId, switchId, portId,
-            [portId](const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                     [[maybe_unused]] const std::string& fabricId1,
-                     [[maybe_unused]] const std::string& switchId1,
-                     [[maybe_unused]] const std::string& objectPath,
-                     [[maybe_unused]] const MapperServiceMap& serviceMap,
-                     const uint32_t& portNumber,
-                     const std::vector<uint8_t>& mask) {
-            redfish::nvidia_fabric_utils::getPortDisableFutureStatus(
-                asyncResp1, portNumber, mask);
-        });
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    });
-
-    BMCWEB_ROUTE(
-        app, "/redfish/v1/Fabrics/<str>/Switches/<str>/Ports/<str>/Settings")
-        .privileges(redfish::privileges::patchSwitch)
-        .methods(boost::beast::http::verb::patch)(
-            [&app](const crow::Request& req,
-                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                   const std::string& fabricId, const std::string& switchId,
-                   const std::string& portId) {
-        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
-        {
-            return;
-        }
-
-        BMCWEB_LOG_DEBUG("Setting for {} Fabric, {} Switch and {} PortID.",
-                         fabricId, switchId, portId);
-        std::optional<std::string> linkState;
-        if (!redfish::json_util::readJsonAction(req, asyncResp->res,
-                                                "LinkState", linkState))
-        {
-            return;
-        }
-
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-        if (linkState)
-        {
-            redfish::nvidia_fabric_utils::getSwitchObjectAndPortNum(
-                asyncResp, fabricId, switchId, portId,
-                [linkState](
-                    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp1,
-                    const std::string& fabricId1, const std::string& switchId1,
-                    const std::string& objectPath,
-                    const MapperServiceMap& serviceMap,
-                    const uint32_t& portNumber,
-                    const std::vector<uint8_t>& mask) {
-                redfish::nvidia_fabric_utils::patchPortDisableFuture(
-                    asyncResp1, fabricId1, switchId1, *linkState,
-                    "PortDisableFuture", portNumber, mask, objectPath, serviceMap);
-            });
-        }
-#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     });
 }
 

@@ -409,7 +409,6 @@ RedfishService::RedfishService(App& app)
     requestRoutesPortCollection(app);
     requestRoutesPort(app);
     requestRoutesPortMetrics(app);
-    requestRoutesPortSettings(app);
     requestRoutesEndpointCollection(app);
     requestRoutesEndpoint(app);
     requestRoutesZoneCollection(app);
