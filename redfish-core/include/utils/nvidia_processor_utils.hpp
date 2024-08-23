@@ -597,6 +597,15 @@ inline void
                     return;
                 }
 
+                if (*value == 0)
+                {
+                    // no error
+                    // Ports other than NVLinks will have default value
+                    // (value-0) for PortNumber property on pdi. Valid values
+                    // for link disable are 1 based.
+                    return;
+                }
+
                 // check port number if present in vector
                 auto it = std::find(portsToDisable.begin(),
                                     portsToDisable.end(), *value);
