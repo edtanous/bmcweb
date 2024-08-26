@@ -291,6 +291,59 @@ inline void getSwitchObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             "xyz.openbmc_project.Inventory.Item.Fabric"});
 }
 
+/**
+ * Populate the ErrorInjection path if interface exists. Do basic
+ * validation of the input data, and then update using async way.
+ *
+ * @param[in,out]   resp            Async HTTP response.
+ * @param[in]       fabricId        Fabric's Id.
+ * @param[in]       switchId        Switch's Id.
+ */
+inline void
+    populateErrorInjectionData(const std::shared_ptr<bmcweb::AsyncResp>& resp,
+                               const std::string& fabricId,
+                               const std::string& switchId)
+{
+    getSwitchObject(resp, fabricId, switchId,
+                    [](const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                       const std::string& fabricId, const std::string& switchId,
+                       const std::string& path,
+                       [[maybe_unused]] const MapperServiceMap& serviceMap) {
+        crow::connections::systemBus->async_method_call(
+            [aResp, fabricId, switchId,
+             path](const boost::system::error_code ec,
+                   const MapperServiceMap& serviceMap) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("Error while fetching service for {}", path);
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& [_, interfaces] : serviceMap)
+            {
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "com.nvidia.ErrorInjection.ErrorInjection") ==
+                    interfaces.end())
+                {
+                    continue;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaSwitch.v1_2_0.NvidiaSwitch";
+                aResp->res.jsonValue["Oem"]["Nvidia"]["ErrorInjection"] = {
+                    {"@odata.id", "/redfish/v1/Fabrics/" + fabricId +
+                                      "/Switches/" + switchId +
+                                      "/Oem/Nvidia/ErrorInjection"}};
+                return;
+            }
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetObject",
+            path + "/ErrorInjection", std::array<const char*, 0>());
+    });
+}
+
 inline void updateSwitchPowerModeData(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& service, const std::string& objPath)

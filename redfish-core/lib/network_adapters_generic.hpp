@@ -537,6 +537,14 @@ inline void
     getAssetData(asyncResp, *validNetworkAdapterPath, networkAdapterId);
     getHealthByAssociation(asyncResp, *validNetworkAdapterPath,
                            networkAdapterId);
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    auto& nvidiaJson = asyncResp->res.jsonValue["Oem"]["Nvidia"];
+    nvidiaJson["@odata.type"] =
+        "#NvidiaNetworkAdapter.v1_0_0.NvidiaNetworkAdapter";
+    nvidiaJson["ErrorInjection"] = {
+        {"@odata.id", "/redfish/v1/Chassis/" + chassisId + "/NetworkAdapters/" +
+                          networkAdapterId + "/Oem/Nvidia/ErrorInjection"}};
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 }
 
 inline void

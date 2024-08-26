@@ -381,6 +381,8 @@ inline void getInbandReconfigPermissionsData(
         auto& json = aResp->res.jsonValue;
         auto reconfigPermissionsName =
             sdbusplus::message::object_path(objPath).filename();
+        aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+            "#NvidiaProcessor.v1_3_0.NvidiaGPU";
         auto& reconfigPermissionsJson =
             json["Oem"]["Nvidia"]["InbandReconfigPermissions"]
                 [reconfigPermissionsName];
@@ -461,6 +463,57 @@ inline void getInbandReconfigPermissionsData(
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetSubTree", objPath, 0,
         std::array<const char*, 1>{"com.nvidia.InbandReconfigSettings"});
+}
+
+/**
+ * @brief Fill out processor nvidia ErrorInjection info.
+ *
+ * @param[in,out]   aResp       Async HTTP response.
+ * @param[in]       cpuId       Processor ID.
+ */
+inline void populateErrorInjectionData(
+    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId)
+{
+    processor_utils::getProcessorObject(
+        aResp, cpuId,
+        [](const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+           const std::string& processorId, const std::string& path,
+           [[maybe_unused]] const MapperServiceMap& serviceMap,
+           [[maybe_unused]] const std::string& deviceType) {
+        crow::connections::systemBus->async_method_call(
+            [aResp, processorId, path](const boost::system::error_code ec,
+                                       const MapperServiceMap& serviceMap) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("Error while fetching service for {}", path);
+                messages::internalError(aResp->res);
+                return;
+            }
+
+            for (const auto& [_, interfaces] : serviceMap)
+            {
+                if (std::find(interfaces.begin(), interfaces.end(),
+                              "com.nvidia.ErrorInjection.ErrorInjection") ==
+                    interfaces.end())
+                {
+                    continue;
+                }
+                aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaProcessor.v1_3_0.NvidiaGPU";
+                aResp->res.jsonValue["Oem"]["Nvidia"]["ErrorInjection"] = {
+                    {"@odata.id",
+                     "/redfish/v1/Systems/" +
+                         std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +
+                         "/Processors/" + processorId +
+                         "/Oem/Nvidia/ErrorInjection"}};
+                return;
+            }
+        },
+            "xyz.openbmc_project.ObjectMapper",
+            "/xyz/openbmc_project/object_mapper",
+            "xyz.openbmc_project.ObjectMapper", "GetObject",
+            path + "/ErrorInjection", std::array<const char*, 0>());
+    });
 }
 
 /**

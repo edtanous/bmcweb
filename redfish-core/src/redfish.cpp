@@ -57,6 +57,7 @@
 #include "nvidia_debug_token.hpp"
 #include "nvidia_power_smoothing.hpp"
 #include "nvidia_workload_power_profiles.hpp"
+#include "nvidia_error_injection.hpp"
 #endif
 #include "boot_options.hpp"
 #include "erot_chassis.hpp"
@@ -442,6 +443,7 @@ RedfishService::RedfishService(App& app)
     requestRoutesChassisControlsReset(app);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     requestRoutesComputeDigestPost(app);
+    requestRoutesErrorInjection(app);
 #endif
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_BF_PROPERTIES

@@ -1552,6 +1552,11 @@ inline void requestRoutesSwitch(App& app)
                         redfish::conditions_utils::populateServiceConditions(
                             asyncResp, switchId);
 #endif // BMCWEB_DISABLE_CONDITIONS_ARRAY
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+                        redfish::nvidia_fabric_utils::
+                            populateErrorInjectionData(asyncResp, fabricId,
+                                                       switchId);
+#endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                         return;
                     }
                     // Couldn't find an object with that name.
