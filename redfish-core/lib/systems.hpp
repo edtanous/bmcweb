@@ -516,6 +516,20 @@ inline void afterSystemGetSubTree(
                         });
                     }
 #endif
+#ifdef BMCWEB_ENABLE_UUID_FROM_PLATFORM_CHASSIS_NAME
+                    sdbusplus::message::object_path uuidPath(path);
+                    if (uuidPath.filename() == PLATFORMCHASSISNAME)
+                    {
+                        sdbusplus::asio::getAllProperties(
+                            *crow::connections::systemBus, connection.first,
+                            path, "xyz.openbmc_project.Common.UUID",
+                            [asyncResp](const boost::system::error_code& ec3,
+                                        const dbus::utility::DBusPropertiesMap&
+                                            properties) {
+                            afterGetUUID(asyncResp, ec3, properties);
+                        });
+                    }
+#endif
                 }
                 else if (interfaceName ==
                          "xyz.openbmc_project.Inventory.Item.System")

@@ -92,6 +92,7 @@ feature_map = {
   'nvidia-oem-oberon-properties'                : '-DBMCWEB_ENABLE_NVIDIA_OEM_OBERON_PROPERTIES',
   'nvidia-retimer-debugmode'                    : '-DBMCWEB_ENABLE_NVIDIA_RETIMER_DEBUGMODE',
   'nvidia-oem-device-status-from-file'          : '-DBMCWEB_ENABLE_DEVICE_STATUS_FROM_FILE',
+  'nvidia-uuid-from-platform-chassis-name'      : '-DBMCWEB_ENABLE_UUID_FROM_PLATFORM_CHASSIS_NAME',
   'network-adapters'                            : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS',
   'host-eth-iface'                              : '-DBMCWEB_ENABLE_HOST_ETH_IFACE',
   'network-adapters-generic'                    : '-DBMCWEB_ENABLE_NETWORK_ADAPTERS_GENERIC',
