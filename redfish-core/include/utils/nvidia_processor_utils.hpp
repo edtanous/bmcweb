@@ -1069,7 +1069,7 @@ inline void getPortNumberAndCallSetAsync(
                 uint32_t portNumber = static_cast<uint32_t>(*value);
 
                 dbus::utility::getDbusObject(
-                    objectPath,
+                    processorPath,
                     std::array<std::string_view, 1>{
                         nvidia_async_operation_utils::setAsyncInterfaceName},
                     [aResp, propertyValue, propertyName, portNumber,
