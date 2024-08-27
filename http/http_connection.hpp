@@ -622,10 +622,10 @@ class Connection :
                     BMCWEB_LOG_DEBUG("Starting quick deadline");
                 }
             }
-            if (!handleContentLengthError())
-            {
-                return;
-            }
+            // if (!handleContentLengthError())
+            // {
+            //     return;
+            // }
 
             parser->body_limit(getContentLengthLimit());
 
