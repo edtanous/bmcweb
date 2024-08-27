@@ -18,6 +18,7 @@
 #pragma once
 
 #include "dbus_utility.hpp"
+#include "human_sort.hpp"
 #include "query.hpp"
 #include "registries/privilege_registry.hpp"
 #include "utils/collection.hpp"
@@ -131,7 +132,7 @@ inline void fetchCableInventoryProperties(
         {
             return;
         }
-        std::sort(data1->begin(), data1->end());
+        std::ranges::sort(*data1, AlphanumLess<std::string>());
         sdbusplus::message::object_path objPathUp(data1->front());
         sdbusplus::message::object_path objPathDown(data1->back());
         asyncResp->res.jsonValue["Links"]["UpstreamChassis"] = {
