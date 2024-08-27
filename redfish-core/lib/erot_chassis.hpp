@@ -493,9 +493,51 @@ inline void requestRoutesEROTChassisCertificate(App& app)
             }
             BMCWEB_LOG_DEBUG("URL={}", req.url());
 
-            std::string objectPath =
-                "/xyz/openbmc_project/inventory/system/chassis/" + chassisID;
-            getChassisCertificate(req, asyncResp, objectPath, certificateID);
+            // Get the correct objpath based on DBus interface
+            const std::array<const char*, 2> interfaces = {
+                "xyz.openbmc_project.Inventory.Item.Chassis",
+                "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
+
+            crow::connections::systemBus->async_method_call(
+                [req, asyncResp, chassisID(std::string(chassisID)),
+                certificateID](const boost::system::error_code ec,
+                               const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                if (ec)
+                {
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+                // Iterate over all retrieved ObjectPaths.
+                for (const std::pair<
+                         std::string,
+                         std::vector<std::pair<std::string, std::vector<std::string>>>>&
+                         object : subtree)
+                {
+                    const std::string& path = object.first;
+                    const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                        connectionNames = object.second;
+
+                    sdbusplus::message::object_path objectPath(path);
+                    if (objectPath.filename() != chassisID)
+                    {
+                        continue;
+                    }
+
+                    if (connectionNames.size() < 1)
+                    {
+                        BMCWEB_LOG_ERROR("Got 0 Connection names");
+                        continue;
+                    }
+
+                    getChassisCertificate(req, asyncResp, objectPath, certificateID);
+                    break;
+                }
+            },
+
+                "xyz.openbmc_project.ObjectMapper",
+                "/xyz/openbmc_project/object_mapper",
+                "xyz.openbmc_project.ObjectMapper", "GetSubTree",
+                "/xyz/openbmc_project/inventory", 0, interfaces);
         });
     });
 
