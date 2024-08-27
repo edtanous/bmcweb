@@ -78,6 +78,7 @@ using PatchMigModeCallback = PatchGenericCallback;
 using PatchEccModeCallback = PatchGenericCallback;
 using PatchPortDisableCallback = PatchGenericCallback;
 using PatchPowerModeCallback = PatchGenericCallback;
+using PatchEdppSetPointCallback = PatchGenericCallback;
 
 class PatchSpeedConfigCallback
 {
