@@ -500,6 +500,10 @@ inline void handleChassisGetSubTree(
             asyncResp, chassisId, path);
         getChassisConnectivity(asyncResp, chassisId, path);
 
+#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+        // get debug token resource
+        redfish::getChassisDebugToken(asyncResp, chassisId);
+#endif
 #ifdef BMCWEB_ENABLE_HEALTH_ROLLUP_ALTERNATIVE
         std::shared_ptr<HealthRollup> health = std::make_shared<HealthRollup>(
             objPath, [asyncResp](const std::string& rootHealth,
@@ -769,10 +773,6 @@ inline void handleChassisGetSubTree(
             // association
             redfish::nvidia_chassis_utils::getHealthByAssociation(
                 asyncResp, path, "all_states", chassisId);
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-            // get debug token resource
-            redfish::getChassisDebugToken(asyncResp, chassisId);
-#endif
         }
         isFoundChassisObject = true;
         // need to check all objpath because a few configs are set by another service

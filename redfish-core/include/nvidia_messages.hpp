@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
+
+#include "error_messages.hpp"
 #include "registries/oem/nvidia_message_registry.hpp"
 
 #include <nlohmann/json.hpp>
@@ -44,32 +47,39 @@ inline nlohmann::json getLogNvidia(redfish::registries::nvidia::Index name,
                               args);
 }
 
-inline nlohmann::json debugTokenInstallationSuccess(const std::string& arg1)
+inline nlohmann::json debugTokenInstallationSuccess(std::string_view arg1)
 {
     std::array<std::string_view, 1> args{arg1};
     return getLogNvidia(
-        redfish::registries::nvidia::Index::debugTokenInstallationSuccess, args);
+        redfish::registries::nvidia::Index::debugTokenInstallationSuccess,
+        args);
 }
 
-inline nlohmann::json debugTokenRequestSuccess(const std::string& arg1)
+inline nlohmann::json debugTokenRequestSuccess(std::string_view arg1)
 {
     std::array<std::string_view, 1> args{arg1};
     return getLogNvidia(
         redfish::registries::nvidia::Index::debugTokenRequestSuccess, args);
 }
 
-inline nlohmann::json debugTokenStatusSuccess(const std::string& arg1)
+inline nlohmann::json debugTokenStatusSuccess(std::string_view arg1)
 {
     std::array<std::string_view, 1> args{arg1};
     return getLogNvidia(
         redfish::registries::nvidia::Index::debugTokenStatusSuccess, args);
 }
 
-inline nlohmann::json debugTokenUnsupported(const std::string& arg1)
+inline nlohmann::json debugTokenUnsupported(std::string_view arg1)
 {
     std::array<std::string_view, 1> args{arg1};
     return getLogNvidia(
         redfish::registries::nvidia::Index::debugTokenUnsupported, args);
+}
+
+inline void debugTokenUnsupported(crow::Response& res, std::string_view arg1)
+{
+    res.result(boost::beast::http::status::not_implemented);
+    addMessageToErrorJson(res.jsonValue, debugTokenUnsupported(arg1));
 }
 
 } // namespace redfish::messages

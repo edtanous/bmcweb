@@ -367,8 +367,8 @@ class StatusQueryHandler : public OperationHandler
                         finalize();
                         return;
                     }
-                    static const uint16_t unsupportedErrorCode = 5;
-                    if (std::get<uint16_t>(errorCode) == unsupportedErrorCode)
+                    if (std::get<uint16_t>(errorCode) ==
+                        debugTokenUnsupportedNsmErrorCode)
                     {
                         nsmEp->setStatus(EndpointState::DebugTokenUnsupported);
                         finalize();

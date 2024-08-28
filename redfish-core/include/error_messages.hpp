@@ -38,6 +38,12 @@ constexpr const char* messageVersionPrefix = "Base.1.11.0.";
 constexpr const char* messageAnnotation = "@Message.ExtendedInfo";
 
 /**
+ * @brief Adds |message| to the error field of |target| JSON.
+ */
+void addMessageToErrorJson(nlohmann::json& target,
+                           const nlohmann::json& message);
+
+/**
  * @brief Moves all error messages from the |source| JSON to |target|
  */
 void moveErrorsToErrorJson(nlohmann::json& target, nlohmann::json& source);

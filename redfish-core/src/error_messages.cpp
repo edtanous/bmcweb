@@ -45,8 +45,8 @@ namespace redfish
 namespace messages
 {
 
-static void addMessageToErrorJson(nlohmann::json& target,
-                                  const nlohmann::json& message)
+void addMessageToErrorJson(nlohmann::json& target,
+                           const nlohmann::json& message)
 {
     auto& error = target["error"];
 

@@ -17,24 +17,31 @@
 #pragma once
 
 #include "debug_token/targeted_operation.hpp"
-#include <query.hpp>
-#include <utils/json_utils.hpp>
+#include "nvidia_messages.hpp"
 #include "registries/privilege_registry.hpp"
 
+#include <query.hpp>
+#include <utils/json_utils.hpp>
+
+#include <map>
 #include <memory>
 
 namespace redfish
 {
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+static std::map<std::string,
+                std::unique_ptr<debug_token::TargetedOperationHandler>>
+    tokenOpMap;
+
 inline void
     getChassisDebugToken(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                          const std::string& chassisId)
 {
-    constexpr std::array<std::string_view, 1> interfaces = {
-        debug_token::debugTokenIntf};
+    using namespace debug_token;
+    constexpr std::array<std::string_view, 1> interfaces = {debugTokenIntf};
     dbus::utility::getSubTreePaths(
-        std::string(debug_token::debugTokenBasePath), 0, interfaces,
+        std::string(debugTokenBasePath), 0, interfaces,
         [asyncResp,
          chassisId](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreePathsResponse& resp) {
@@ -51,18 +58,45 @@ inline void
         {
             if (path.find(chassisId) != std::string::npos)
             {
-                auto& oemNvidia = asyncResp->res.jsonValue["Oem"]["Nvidia"];
-                oemNvidia["@odata.type"] =
-                    "#NvidiaChassis.v1_3_0.NvidiaChassis";
-                oemNvidia["DebugToken"]["@odata.id"] = boost::urls::format(
-                    "/redfish/v1/Chassis/{}/Oem/Nvidia/DebugToken", chassisId);
-                return;
+                int timeout;
+                auto currentOp = tokenOpMap.find(chassisId);
+                if (currentOp != tokenOpMap.end() &&
+                    !currentOp->second->finished(timeout))
+                {
+                    return;
+                }
+                auto resultCallback = [asyncResp,
+                                       chassisId](EndpointState state,
+                                                  TargetedOperationResult) {
+                    if (state != EndpointState::DebugTokenUnsupported)
+                    {
+                        auto& oemNvidia =
+                            asyncResp->res.jsonValue["Oem"]["Nvidia"];
+                        oemNvidia["@odata.type"] =
+                            "#NvidiaChassis.v1_3_0.NvidiaChassis";
+                        oemNvidia["DebugToken"]["@odata.id"] =
+                            boost::urls::format(
+                                "/redfish/v1/Chassis/{}/Oem/Nvidia/DebugToken",
+                                chassisId);
+                    }
+                };
+                std::string tokenType = "CRCS";
+                auto op = std::make_unique<TargetedOperationHandler>(
+                    chassisId, TargetedOperation::GetTokenStatus,
+                    resultCallback, tokenType);
+                if (currentOp != tokenOpMap.end())
+                {
+                    currentOp->second = std::move(op);
+                }
+                else
+                {
+                    tokenOpMap.insert(std::make_pair(chassisId, std::move(op)));
+                }
             }
         }
     });
 }
 
-static std::unique_ptr<debug_token::TargetedOperationHandler> tokenOp;
 inline void handleDebugTokenResourceInfo(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -74,42 +108,64 @@ inline void handleDebugTokenResourceInfo(
     {
         return;
     }
+
+    auto resultCallback =
+        [asyncResp, chassisId, resUri{std::string(req.url().buffer())}](
+            EndpointState state, TargetedOperationResult result) {
+        if (state == EndpointState::DebugTokenUnsupported)
+        {
+            messages::debugTokenUnsupported(asyncResp->res, chassisId);
+            return;
+        }
+        NsmTokenStatus* tokenStatus = std::get_if<NsmTokenStatus>(&result);
+        if (!tokenStatus)
+        {
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        auto& resJson = asyncResp->res.jsonValue;
+        nsmTokenStatusToJson(*tokenStatus, resJson);
+        resJson["@odata.type"] = "#NvidiaDebugToken.v1_0_0.NvidiaDebugToken";
+        resJson["@odata.id"] = resUri;
+        resJson["Id"] = "DebugToken";
+        resJson["Name"] = chassisId + " Debug Token Resource"s;
+
+        auto& actions = resJson["Actions"];
+        auto& generateAction = actions["#NvidiaDebugToken.GenerateToken"];
+        generateAction["target"] = resUri +
+                                   "/Actions/NvidiaDebugToken.GenerateToken"s;
+        generateAction["@Redfish.ActionInfo"] = resUri +
+                                                "/GenerateTokenActionInfo"s;
+        auto& installAction = actions["#NvidiaDebugToken.InstallToken"];
+        installAction["target"] = resUri +
+                                  "/Actions/NvidiaDebugToken.InstallToken"s;
+        installAction["@Redfish.ActionInfo"] = resUri +
+                                               "/InstallTokenActionInfo"s;
+        auto& disableAction = actions["#NvidiaDebugToken.DisableToken"];
+        disableAction["target"] = resUri +
+                                  "/Actions/NvidiaDebugToken.DisableToken"s;
+    };
+
     int timeout;
-    if (tokenOp && !tokenOp->finished(timeout))
+    auto currentOp = tokenOpMap.find(chassisId);
+    if (currentOp != tokenOpMap.end() && !currentOp->second->finished(timeout))
     {
         messages::serviceTemporarilyUnavailable(asyncResp->res,
                                                 std::to_string(timeout));
         return;
     }
-
-    std::string resUri = req.url().buffer();
-    asyncResp->res.jsonValue["@odata.type"] =
-        "#NvidiaDebugToken.v1_0_0.NvidiaDebugToken";
-    asyncResp->res.jsonValue["@odata.id"] = resUri;
-    asyncResp->res.jsonValue["Id"] = "DebugToken";
-    asyncResp->res.jsonValue["Name"] = chassisId + " Debug Token Resource"s;
-
-    auto& generateAction =
-        asyncResp->res.jsonValue["Actions"]["#NvidiaDebugToken.GenerateToken"];
-    generateAction["target"] = resUri +
-                               "/Actions/NvidiaDebugToken.GenerateToken"s;
-    generateAction["@Redfish.ActionInfo"] = resUri +
-                                            "/GenerateTokenActionInfo"s;
-
-    auto& installAction =
-        asyncResp->res.jsonValue["Actions"]["#NvidiaDebugToken.InstallToken"];
-    installAction["target"] = resUri +
-                              "/Actions/NvidiaDebugToken.InstallToken"s;
-    installAction["@Redfish.ActionInfo"] = resUri + "/InstallTokenActionInfo"s;
-
-    auto& disableAction =
-        asyncResp->res.jsonValue["Actions"]["#NvidiaDebugToken.DisableToken"];
-    disableAction["target"] = resUri +
-                              "/Actions/NvidiaDebugToken.DisableToken"s;
-
     std::string tokenType = "CRCS";
-    tokenOp = std::make_unique<TargetedOperationHandler>(
-        chassisId, asyncResp, TargetedOperation::GetTokenStatus, tokenType);
+    auto op = std::make_unique<TargetedOperationHandler>(
+        chassisId, TargetedOperation::GetTokenStatus, resultCallback,
+        tokenType);
+    if (currentOp != tokenOpMap.end())
+    {
+        currentOp->second = std::move(op);
+    }
+    else
+    {
+        tokenOpMap.insert(std::make_pair(chassisId, std::move(op)));
+    }
 }
 
 inline void handleGenerateTokenActionInfo(
@@ -161,7 +217,7 @@ inline void handleInstallTokenActionInfo(
     asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
 }
 
-template <debug_token::TargetedOperation op>
+template <debug_token::TargetedOperation operationType>
 inline void
     handleTargetedTokenOp(App& app, const crow::Request& req,
                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -174,7 +230,8 @@ inline void
         return;
     }
     int timeout;
-    if (tokenOp && !tokenOp->finished(timeout))
+    auto currentOp = tokenOpMap.find(chassisId);
+    if (currentOp != tokenOpMap.end() && !currentOp->second->finished(timeout))
     {
         messages::serviceTemporarilyUnavailable(asyncResp->res,
                                                 std::to_string(timeout));
@@ -182,11 +239,26 @@ inline void
     }
 
     TargetedOperationArgument arg;
-    if (op == TargetedOperation::DisableTokens)
+    TargetedOperationResultCallback cb;
+    if (operationType == TargetedOperation::DisableTokens)
     {
         arg = std::monostate();
+        cb = [asyncResp, chassisId](EndpointState state,
+                                    TargetedOperationResult) {
+            if (state == EndpointState::DebugTokenUnsupported)
+            {
+                messages::debugTokenUnsupported(asyncResp->res, chassisId);
+                return;
+            }
+            if (state != EndpointState::Error)
+            {
+                messages::success(asyncResp->res);
+                return;
+            }
+            messages::internalError(asyncResp->res);
+        };
     }
-    if (op == TargetedOperation::GenerateTokenRequest)
+    if (operationType == TargetedOperation::GenerateTokenRequest)
     {
         std::string tokenType;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res,
@@ -201,8 +273,28 @@ inline void
             return;
         }
         arg = tokenType;
+        cb = [asyncResp, chassisId](EndpointState state,
+                                    TargetedOperationResult result) {
+            if (state == EndpointState::DebugTokenUnsupported)
+            {
+                messages::debugTokenUnsupported(asyncResp->res, chassisId);
+                return;
+            }
+            std::vector<uint8_t>* request =
+                std::get_if<std::vector<uint8_t>>(&result);
+            if (!request)
+            {
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            std::string_view binaryData(
+                reinterpret_cast<const char*>(request->data()),
+                request->size());
+            asyncResp->res.jsonValue["Token"] =
+                crow::utility::base64encode(binaryData);
+        };
     }
-    if (op == TargetedOperation::InstallToken)
+    if (operationType == TargetedOperation::InstallToken)
     {
         std::string tokenData;
         if (!redfish::json_util::readJsonAction(req, asyncResp->res,
@@ -218,10 +310,32 @@ inline void
             return;
         }
         arg = std::vector<uint8_t>(binaryData.begin(), binaryData.end());
+        cb = [asyncResp, chassisId](EndpointState state,
+                                    TargetedOperationResult) {
+            if (state == EndpointState::DebugTokenUnsupported)
+            {
+                messages::debugTokenUnsupported(asyncResp->res, chassisId);
+                return;
+            }
+            if (state != EndpointState::Error)
+            {
+                messages::success(asyncResp->res);
+                return;
+            }
+            messages::internalError(asyncResp->res);
+        };
     }
 
-    tokenOp = std::make_unique<TargetedOperationHandler>(chassisId, asyncResp,
-                                                         op, arg);
+    auto op = std::make_unique<TargetedOperationHandler>(
+        chassisId, operationType, std::move(cb), arg);
+    if (currentOp != tokenOpMap.end())
+    {
+        currentOp->second = std::move(op);
+    }
+    else
+    {
+        tokenOpMap.insert(std::make_pair(chassisId, std::move(op)));
+    }
 }
 
 inline void requestRoutesChassisDebugToken(App& app)

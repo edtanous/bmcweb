@@ -29,4 +29,6 @@ constexpr const std::string_view debugTokenOpcodesEnumPrefix =
 constexpr const std::string_view debugTokenTypesEnumPrefix =
     "com.nvidia.DebugToken.TokenTypes.";
 
+constexpr const uint16_t debugTokenUnsupportedNsmErrorCode = 5;
+
 } // namespace redfish::debug_token

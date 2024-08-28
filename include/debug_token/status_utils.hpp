@@ -153,7 +153,6 @@ struct VdmTokenStatus
         if (bytes.size() < vdmStatusErrorCodeOffset + 1)
         {
             responseStatus = VdmResponseStatus::INVALID_LENGTH;
-            BMCWEB_LOG_DEBUG("{}", __LINE__);
             return;
         }
         try

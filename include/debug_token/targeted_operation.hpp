@@ -18,6 +18,7 @@
 
 #include "dbus_utility.hpp"
 #include "debug_token/base.hpp"
+#include "debug_token/endpoint.hpp"
 #include "debug_token/request_utils.hpp"
 #include "debug_token/status_utils.hpp"
 
@@ -43,15 +44,21 @@ enum class TargetedOperation
 using TargetedOperationArgument =
     std::variant<std::monostate, std::string, std::vector<uint8_t>>;
 
+using TargetedOperationResult =
+    std::variant<std::monostate, uint16_t, NsmTokenStatus,
+                 std::vector<uint8_t>>;
+
+using TargetedOperationResultCallback =
+    std::function<void(EndpointState, TargetedOperationResult)>;
+
 class TargetedOperationHandler
 {
   public:
-    TargetedOperationHandler(const std::string& chassisId,
-                             const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                             TargetedOperation op,
+    TargetedOperationHandler(const std::string& chassisId, TargetedOperation op,
+                             TargetedOperationResultCallback&& cb,
                              TargetedOperationArgument arg = std::monostate()) :
         operation(op),
-        argument(arg), asyncResp(aResp)
+        argument(arg), callback(cb)
     {
         constexpr std::array<std::string_view, 1> interfaces = {debugTokenIntf};
         dbus::utility::getSubTree(
@@ -62,13 +69,13 @@ class TargetedOperationHandler
             if (ec)
             {
                 BMCWEB_LOG_ERROR("GetSubTreePaths error: {}", ec);
-                errorHandler();
+                tokenUnsupportedHandler();
                 return;
             }
             if (resp.size() == 0)
             {
                 BMCWEB_LOG_ERROR("No objects with DebugToken interface found");
-                errorHandler();
+                tokenUnsupportedHandler();
                 return;
             }
             std::string objectPath;
@@ -86,8 +93,7 @@ class TargetedOperationHandler
             {
                 BMCWEB_LOG_ERROR("DebugToken interface not implemented for {}",
                                  chassisId);
-                asyncResp->res.result(boost::beast::http::status::not_found);
-                cleanup();
+                tokenUnsupportedHandler();
                 return;
             }
             tokenOperationTimer = std::make_unique<boost::asio::steady_timer>(
@@ -100,13 +106,13 @@ class TargetedOperationHandler
                 if (!ec)
                 {
                     BMCWEB_LOG_ERROR("Debug token operation timeout");
-                    errorHandler();
+                    generalErrorHandler();
                     return;
                 }
                 if (ec != boost::asio::error::operation_aborted)
                 {
                     BMCWEB_LOG_ERROR("async_wait error {}", ec);
-                    errorHandler();
+                    generalErrorHandler();
                 }
             });
             std::string matchRule("type='signal',"
@@ -130,7 +136,8 @@ class TargetedOperationHandler
                         auto status = std::get_if<std::string>(&(it->second));
                         if (status)
                         {
-                            opStatus = *status;
+                            opStatus =
+                                status->substr(status->find_last_of('.') + 1);
                         }
                     }
                 }
@@ -139,34 +146,37 @@ class TargetedOperationHandler
                     return;
                 }
                 tokenOperationTimer.reset(nullptr);
-                if (opStatus !=
-                    "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
+                if (opStatus == "Completed")
                 {
-                    BMCWEB_LOG_ERROR("End status: {}", opStatus);
-                    errorHandler();
+                    switch (operation)
+                    {
+                        case TargetedOperation::GenerateTokenRequest:
+                            requestHandler(objectPath, service);
+                            return;
+
+                        case TargetedOperation::GetTokenStatus:
+                            statusHandler(objectPath, service);
+                            return;
+
+                        default:
+                            successHandler();
+                            return;
+                    }
+                }
+                if (opStatus == "Aborted")
+                {
+                    errorHandler(objectPath, service);
                     return;
                 }
-                switch (operation)
-                {
-                    case TargetedOperation::GenerateTokenRequest:
-                        requestHandler(objectPath, service);
-                        return;
-
-                    case TargetedOperation::GetTokenStatus:
-                        statusHandler(objectPath, service);
-                        return;
-
-                    default:
-                        genericHandler();
-                        return;
-                }
+                BMCWEB_LOG_ERROR("Status received: {}", opStatus);
+                generalErrorHandler();
             });
             auto dbusErrorHandler =
                 [this](const boost::system::error_code& ec) {
                 if (ec)
                 {
                     BMCWEB_LOG_ERROR("DBus error: {}", ec.message());
-                    errorHandler();
+                    generalErrorHandler();
                 }
             };
             switch (operation)
@@ -186,7 +196,7 @@ class TargetedOperationHandler
                     if (!tokenOpcode)
                     {
                         BMCWEB_LOG_ERROR("Invalid argument");
-                        errorHandler();
+                        generalErrorHandler();
                         return;
                     }
                     std::string arg = std::string(debugTokenOpcodesEnumPrefix) +
@@ -204,7 +214,7 @@ class TargetedOperationHandler
                     if (!tokenType)
                     {
                         BMCWEB_LOG_ERROR("Invalid argument");
-                        errorHandler();
+                        generalErrorHandler();
                         return;
                     }
                     std::string arg = std::string(debugTokenTypesEnumPrefix) +
@@ -222,7 +232,7 @@ class TargetedOperationHandler
                     if (!token)
                     {
                         BMCWEB_LOG_ERROR("Invalid argument");
-                        errorHandler();
+                        generalErrorHandler();
                         return;
                     }
                     crow::connections::systemBus->async_method_call(
@@ -234,7 +244,7 @@ class TargetedOperationHandler
                 default:
                 {
                     BMCWEB_LOG_ERROR("Invalid token operation");
-                    errorHandler();
+                    generalErrorHandler();
                     break;
                 }
             }
@@ -243,10 +253,10 @@ class TargetedOperationHandler
 
     bool finished(int& timeout) const
     {
-        BMCWEB_LOG_DEBUG("asyncResp: {}, match: {}, timeout: {}",
-                         static_cast<bool>(asyncResp), static_cast<bool>(match),
+        BMCWEB_LOG_DEBUG("callback: {}, match: {}, timeout: {}",
+                         static_cast<bool>(callback), static_cast<bool>(match),
                          static_cast<bool>(tokenOperationTimer));
-        bool isFinished = !asyncResp && !match && !tokenOperationTimer;
+        bool isFinished = !callback && !match && !tokenOperationTimer;
         timeout = isFinished ? 0 : targetedOpTimeoutSeconds;
         return isFinished;
     }
@@ -254,7 +264,7 @@ class TargetedOperationHandler
   private:
     TargetedOperation operation;
     TargetedOperationArgument argument;
-    std::shared_ptr<bmcweb::AsyncResp> asyncResp;
+    TargetedOperationResultCallback callback;
 
     std::unique_ptr<boost::asio::steady_timer> tokenOperationTimer;
     std::unique_ptr<sdbusplus::bus::match_t> match;
@@ -270,20 +280,17 @@ class TargetedOperationHandler
             if (ec)
             {
                 BMCWEB_LOG_ERROR("DBus Get error {}", ec);
-                errorHandler();
+                generalErrorHandler();
                 return;
             }
             BMCWEB_LOG_DEBUG("Received fd: {}", unixfd.fd);
             std::vector<uint8_t> request;
             if (!readNsmTokenRequestFd(unixfd.fd, request))
             {
-                errorHandler();
+                generalErrorHandler();
                 return;
             }
-            std::string_view binaryData(
-                reinterpret_cast<const char*>(request.data()), request.size());
-            asyncResp->res.jsonValue["Token"] =
-                crow::utility::base64encode(binaryData);
+            callback(EndpointState::RequestAcquired, request);
             cleanup();
         });
     }
@@ -299,39 +306,70 @@ class TargetedOperationHandler
             if (ec)
             {
                 BMCWEB_LOG_ERROR("DBus Get error {}", ec);
-                errorHandler();
+                generalErrorHandler();
                 return;
             }
             try
             {
                 NsmTokenStatus nsmStatus(dbusStatus);
-                nsmTokenStatusToJson(nsmStatus, asyncResp->res.jsonValue);
+                callback(EndpointState::StatusAcquired, nsmStatus);
                 cleanup();
             }
             catch (const std::exception&)
             {
-                errorHandler();
+                generalErrorHandler();
             }
         });
     }
 
-    void genericHandler()
+    void errorHandler(const std::string& objectPath, const std::string& service)
     {
-        messages::success(asyncResp->res);
+        sdbusplus::asio::getProperty<std::tuple<uint16_t, std::string>>(
+            *crow::connections::systemBus, service, objectPath,
+            std::string(debugTokenIntf), "ErrorCode",
+            [this](const boost::system::error_code ec,
+                   const std::tuple<uint16_t, std::string>& errorCode) {
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("DBus Get error {}", ec);
+                generalErrorHandler();
+                return;
+            }
+            uint16_t code = std::get<uint16_t>(errorCode);
+            if (code == debugTokenUnsupportedNsmErrorCode)
+            {
+                tokenUnsupportedHandler();
+                return;
+            }
+            BMCWEB_LOG_ERROR("NSM error code: {}", code);
+            callback(EndpointState::Error, code);
+            cleanup();
+        });
+    }
+
+    void generalErrorHandler()
+    {
+        callback(EndpointState::Error, std::monostate());
         cleanup();
     }
 
-    void errorHandler()
+    void successHandler()
     {
-        messages::internalError(asyncResp->res);
+        callback(EndpointState::None, std::monostate());
+        cleanup();
+    }
+
+    void tokenUnsupportedHandler()
+    {
+        callback(EndpointState::DebugTokenUnsupported, std::monostate());
         cleanup();
     }
 
     void cleanup()
     {
-        asyncResp = nullptr;
         boost::asio::post(crow::connections::systemBus->get_io_context(),
                           [this] {
+            callback = nullptr;
             match.reset(nullptr);
             tokenOperationTimer.reset(nullptr);
         });
