@@ -271,9 +271,14 @@ inline void getClockLimitControl(
                     "Control for " + processorName + " " + controlID;
                 asyncResp->res.jsonValue["ControlType"] = "FrequencyMHz";
                 asyncResp->res.jsonValue["Status"]["Health"] = "OK";
-                asyncResp->res.jsonValue["RelatedItem"]["@odata.id"] =
-                    "/redfish/v1/Systems/HGX_Baseboard_0/Processors/" +
-                    processorName;
+                nlohmann::json& relatedItemsArray =
+                    asyncResp->res.jsonValue["RelatedItem"];
+                relatedItemsArray = nlohmann::json::array();
+                relatedItemsArray.push_back(
+                    {{"@odata.id",
+                      "/redfish/v1/Systems/HGX_Baseboard_0/Processors/" +
+                          processorName}});
+
                 asyncResp->res.jsonValue["Actions"]["#Control.ResetToDefaults"]
                                         ["target"] =
                     "/redfish/v1/Chassis/" + chassisID + "/Controls/" +

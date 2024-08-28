@@ -1514,6 +1514,9 @@ inline void
                 }
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+
+                aResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaEnvironmentMetrics.v1_2_0.NvidiaEnvironmentMetrics";
                 if (std::find(interfaces.begin(), interfaces.end(),
                               "com.nvidia.Edpp") != interfaces.end())
                 {

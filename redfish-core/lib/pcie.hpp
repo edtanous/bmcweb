@@ -1862,7 +1862,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                         nlohmann::json& oem =
                             asyncResp->res.jsonValue["Oem"]["Nvidia"];
                         oem["@odata.type"] =
-                            "#NvidiaPCIeDevice.v1_1_0.NvidiaPCIeDevice";
+                            "#NvidiaPCIeDevice.v1_2_0.NvidiaPCIeDevice";
                         // Baseboard PCIeDevices Oem properties
                         if (std::find(interfaces2.begin(), interfaces2.end(),
                                       pcieClockReferenceIntf) !=
