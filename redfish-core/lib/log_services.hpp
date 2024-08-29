@@ -1177,6 +1177,8 @@ inline void
                     thisEntry["CPER"]["NotificationType"] = notificationType;
                 }
                 // CPER Oem properties
+                thisEntry["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaLogEntry.v1_0_0.CPER";
                     if (sectionType != "NA")
                     {
                         thisEntry["CPER"]["Oem"]["Nvidia"]["SectionType"] =
@@ -1418,6 +1420,9 @@ inline void
                         notificationType;
                 }
                 // CPER Oem properties
+                asyncResp->res
+                    .jsonValue["CPER"]["Oem"]["Nvidia"]["@odata.type"] =
+                    "#NvidiaLogEntry.v1_0_0.CPER";
                 if (sectionType != "NA")
                 {
                     asyncResp->res.jsonValue["CPER"]["Oem"]["Nvidia"]
