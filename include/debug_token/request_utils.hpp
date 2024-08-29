@@ -27,6 +27,41 @@
 namespace redfish::debug_token
 {
 
+enum NsmDebugTokenChallengeQueryStatus
+{
+    OK = 0,
+    TokenAlreadyApplied = 1,
+    TokenNotSupported = 2,
+    NoKeyConfigured = 3,
+    InterfaceNotAllowed = 4
+};
+
+#pragma pack(1)
+struct NsmDebugTokenRequest
+{
+    uint16_t tokenRequestVersion;
+    uint16_t tokenRequestSize;
+    uint8_t reserved1[20];
+    uint8_t deviceUuid[8];
+    uint16_t deviceType;
+    uint8_t reserved2[2];
+    uint8_t tokenOpcode;
+    uint8_t status;
+    uint16_t deviceIndex:12;
+    uint8_t reserved3:4;
+    uint8_t keypairUuid[16];
+    uint8_t baseMac[8];
+    uint8_t psid[16];
+    uint8_t reserved4[3];
+    uint8_t fwVersion[5];
+    uint8_t sourceAddress[16];
+    uint16_t sessionId;
+    uint8_t reserved5;
+    uint8_t challengeVersion;
+    uint8_t challenge[32];
+};
+#pragma pack()
+
 inline std::vector<uint8_t>
     convertNsmTokenRequestToSpdmTranscript(const std::vector<uint8_t>& request)
 {

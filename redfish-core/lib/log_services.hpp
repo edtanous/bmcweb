@@ -8113,10 +8113,9 @@ inline void requestRoutesDebugTokenServiceDiagnosticDataCollect(App& app)
                                 messages::debugTokenStatusSuccess(deviceName));
                             break;
                         case debug_token::EndpointState::TokenInstalled:
-                            stateDesc = "Debug token already installed";
                             task->messages.emplace_back(
-                                messages::resourceErrorsDetectedFormatError(
-                                    deviceName, stateDesc));
+                                messages::debugTokenAlreadyInstalled(
+                                    deviceName));
                             break;
                         case debug_token::EndpointState::RequestAcquired:
                             task->messages.emplace_back(

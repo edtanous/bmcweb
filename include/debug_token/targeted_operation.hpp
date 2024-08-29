@@ -290,7 +290,26 @@ class TargetedOperationHandler
                 generalErrorHandler();
                 return;
             }
-            callback(EndpointState::RequestAcquired, request);
+            NsmDebugTokenRequest* nsmReq =
+                reinterpret_cast<NsmDebugTokenRequest*>(request.data());
+            switch (nsmReq->status)
+            {
+                case NsmDebugTokenChallengeQueryStatus::OK:
+                    callback(EndpointState::RequestAcquired, request);
+                    break;
+                case NsmDebugTokenChallengeQueryStatus::TokenAlreadyApplied:
+                    callback(EndpointState::TokenInstalled, std::monostate());
+                    break;
+                case NsmDebugTokenChallengeQueryStatus::TokenNotSupported:
+                    callback(EndpointState::DebugTokenUnsupported,
+                             std::monostate());
+                    break;
+                default:
+                    BMCWEB_LOG_ERROR("NSM token request - status: {}",
+                                     nsmReq->status);
+                    callback(EndpointState::Error, std::monostate());
+                    break;
+            }
             cleanup();
         });
     }

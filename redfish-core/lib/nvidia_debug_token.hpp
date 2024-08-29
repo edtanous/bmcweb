@@ -275,6 +275,11 @@ inline void
         arg = tokenType;
         cb = [asyncResp, chassisId](EndpointState state,
                                     TargetedOperationResult result) {
+            if (state == EndpointState::TokenInstalled)
+            {
+                messages::debugTokenAlreadyInstalled(asyncResp->res, chassisId);
+                return;
+            }
             if (state == EndpointState::DebugTokenUnsupported)
             {
                 messages::debugTokenUnsupported(asyncResp->res, chassisId);

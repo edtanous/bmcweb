@@ -107,9 +107,27 @@ class DebugTokenNsmEndpoint : public DebugTokenEndpoint
 
     void setRequest(std::vector<uint8_t>& r) override
     {
-        state = EndpointState::RequestAcquired;
-        request =
-            addTokenRequestHeader(convertNsmTokenRequestToSpdmTranscript(r));
+        NsmDebugTokenRequest* nsmReq =
+            reinterpret_cast<NsmDebugTokenRequest*>(r.data());
+        switch (nsmReq->status)
+        {
+            case NsmDebugTokenChallengeQueryStatus::OK:
+                state = EndpointState::RequestAcquired;
+                request = addTokenRequestHeader(
+                    convertNsmTokenRequestToSpdmTranscript(r));
+                return;
+            case NsmDebugTokenChallengeQueryStatus::TokenAlreadyApplied:
+                state = EndpointState::TokenInstalled;
+                return;
+            case NsmDebugTokenChallengeQueryStatus::TokenNotSupported:
+                state = EndpointState::DebugTokenUnsupported;
+                return;
+            default:
+                BMCWEB_LOG_ERROR("NSM token request - object: {} status: {}",
+                                 objectPath, nsmReq->status);
+                state = EndpointState::Error;
+                return;
+        }
     }
 
     void getStatusAsJson(nlohmann::json& json) const override

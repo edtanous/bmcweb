@@ -47,6 +47,18 @@ constexpr std::array registry =
             "None.",
         }},
     MessageEntry{
+        "DebugTokenAlreadyInstalled",
+        {
+            "Indicates that the device has a token already installed and cannot finish current request.",
+            "Debug token for device '%1' has already been installed.",
+            "OK",
+            1,
+            {
+                "string",
+            },
+            "None.",
+        }},
+    MessageEntry{
         "DebugTokenInstallationSuccess",
         {
             "Signifies the successful completion of debug token installation.",
@@ -149,13 +161,14 @@ constexpr std::array registry =
 enum class Index
 {
     componentUpdateSkipped = 0,
-    debugTokenInstallationSuccess = 1,
-    debugTokenRequestSuccess = 2,
-    debugTokenStatusSuccess = 3,
-    debugTokenUnsupported = 4,
-    firmwareNotInRecovery = 5,
-    recoveryStarted = 6,
-    recoverySuccessful = 7,
-    stageSuccessful = 8,
+    debugTokenAlreadyInstalled = 1,
+    debugTokenInstallationSuccess = 2,
+    debugTokenRequestSuccess = 3,
+    debugTokenStatusSuccess = 4,
+    debugTokenUnsupported = 5,
+    firmwareNotInRecovery = 6,
+    recoveryStarted = 7,
+    recoverySuccessful = 8,
+    stageSuccessful = 9,
 };
 } // namespace redfish::registries::nvidia
