@@ -485,8 +485,7 @@ inline void populateErrorInjectionData(
                                        const MapperServiceMap& serviceMap) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("Error while fetching service for {}", path);
-                messages::internalError(aResp->res);
+                BMCWEB_LOG_DEBUG("ErrorInjection object not found in {}", path);
                 return;
             }
 
