@@ -3508,6 +3508,9 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
     std::ostringstream hexCodeEventDir;
     std::string messageArgs;
     std::string originOfCondition;
+    std::string sensorNumber;
+    log_entry::SensorType sensorType = log_entry::SensorType::Invalid;
+    log_entry::LogEntryCode entryCode = log_entry::LogEntryCode::Invalid;
     const std::string* resolution = nullptr;
 
     for (auto& propertyMap : resp)
@@ -3617,6 +3620,38 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
                     messageId = hexCodeEventDir.str() + sensorData;
                     BMCWEB_LOG_DEBUG("SEL MessageId: [{}]", messageId);
                 }
+                if (additional.end() != additional.find("EVENT_DIR"))
+                {
+                    uint8_t eventDir = 0;
+                    std::string_view eventDirView = additional["EVENT_DIR"];
+                    std::from_chars_result result = std::from_chars(
+                        eventDirView.begin(), eventDirView.end(), eventDir);
+                    if (result.ec != std::errc{} ||
+                        result.ptr != eventDirView.end())
+                    {
+                        BMCWEB_LOG_DEBUG("SEL EVENT_DIR value not found");
+                    }
+                    else
+                    {
+                        if (eventDir)
+                        {
+                            entryCode = log_entry::LogEntryCode::Assert;
+                        }
+                        else
+                        {
+                            entryCode = log_entry::LogEntryCode::Deassert;
+                        }
+                    }
+                }
+                if (additional.end() != additional.find("SENSOR_TYPE"))
+                {
+                    nlohmann::json sensorTypeJson = additional["SENSOR_TYPE"];
+                    sensorType = sensorTypeJson.get<log_entry::SensorType>();
+                }
+                if (additional.end() != additional.find("SENSOR_NUMBER"))
+                {
+                    sensorNumber = additional["SENSOR_NUMBER"];
+                }
                 if (additional.count("REDFISH_ORIGIN_OF_CONDITION") > 0)
                 {
                     originOfCondition =
@@ -3701,6 +3736,29 @@ inline void populateRedfishSELEntry(GetManagedPropertyType& resp,
             thisEntry.update(oem);
         }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
+    }
+    if (log_entry::SensorType::Invalid != sensorType)
+    {
+        thisEntry["SensorType"] = sensorType;
+    }
+    if (!sensorNumber.empty())
+    {
+        uint8_t number = 0;
+        std::string_view sensorNumberView = sensorNumber;
+        std::from_chars_result result = std::from_chars(
+            sensorNumberView.begin(), sensorNumberView.end(), number);
+        if (result.ec != std::errc{} || result.ptr != sensorNumberView.end())
+        {
+            BMCWEB_LOG_DEBUG("SEL sensor number value not found");
+        }
+        else
+        {
+            thisEntry["SensorNumber"] = number;
+        }
+    }
+    if (log_entry::LogEntryCode::Invalid != entryCode)
+    {
+        thisEntry["EntryCode"] = entryCode;
     }
 }
 
