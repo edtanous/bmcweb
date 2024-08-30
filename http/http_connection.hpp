@@ -491,7 +491,8 @@ class Connection :
     {
         if constexpr (!BMCWEB_INSECURE_DISABLE_AUTH)
         {
-            if (userSession == nullptr)
+            if (persistent_data::getConfig().isTLSAuthEnabled() &&
+                userSession == nullptr)
             {
                 return loggedOutPostBodyLimit;
             }
@@ -622,10 +623,10 @@ class Connection :
                     BMCWEB_LOG_DEBUG("Starting quick deadline");
                 }
             }
-            // if (!handleContentLengthError())
-            // {
-            //     return;
-            // }
+            if (!handleContentLengthError())
+            {
+                return;
+            }
 
             parser->body_limit(getContentLengthLimit());
 
