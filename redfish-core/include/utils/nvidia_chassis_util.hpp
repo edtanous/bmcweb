@@ -1296,6 +1296,7 @@ inline void handleChassisGetAllProperties(
     const bool* writeProtected = nullptr;
     const bool* writeProtectedControl = nullptr;
     const uint64_t* pCIeReferenceClockCount = nullptr;
+    const bool* pCIeReferenceClockEnabled = nullptr;
     const std::string* state = nullptr;
 
     const bool success = sdbusplus::unpackPropertiesNoThrow(
@@ -1307,7 +1308,8 @@ inline void handleChassisGetAllProperties(
         width, "Depth", depth, "MinPowerWatts", minPowerWatts, "MaxPowerWatts",
         maxPowerWatts, "AssetTag", assetTag, "WriteProtected", writeProtected,
         "WriteProtectedControl", writeProtectedControl,
-        "PCIeReferenceClockCount", pCIeReferenceClockCount, "State", state,
+        "PCIeReferenceClockCount", pCIeReferenceClockCount,
+        "PCIeReferenceClockEnabled", pCIeReferenceClockEnabled,"State", state,
         "LocationContext", locationContext);
 
     if (!success)
@@ -1423,8 +1425,10 @@ inline void handleChassisGetAllProperties(
 
     if (pCIeReferenceClockCount != nullptr)
     {
-        asyncResp->res.jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockCount"] =
+        if(pCIeReferenceClockEnabled != nullptr && *pCIeReferenceClockEnabled) {
+            asyncResp->res.jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockCount"] =
             *pCIeReferenceClockCount;
+        }
     }
     if (state != nullptr && operationalStatusPresent)
     {
