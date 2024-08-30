@@ -67,14 +67,12 @@ static inline bool stringToInt(const std::string& str, int& number)
 static inline std::string removeERoTFromStr(const std::string& input)
 {
     size_t first_underscore = input.find('_');
-    size_t last_underscore = input.rfind('_');
-    size_t second_last_underscore = input.rfind('_', last_underscore - 1);
-    if (second_last_underscore != std::string::npos &&
-        last_underscore != std::string::npos &&
+    size_t second_underscore = input.find('_', first_underscore + 1);
+    if (second_underscore != std::string::npos &&
         first_underscore != std::string::npos)
     {
         return input.substr(0, first_underscore + 1) +
-               input.substr(second_last_underscore + 1);
+               input.substr(second_underscore + 1);
     }
     return input;
 }
