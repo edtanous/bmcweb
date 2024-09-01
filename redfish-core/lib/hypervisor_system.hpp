@@ -488,7 +488,7 @@ inline void parseInterfaceData(nlohmann::json& jsonResponse,
 inline void setDHCPEnabled(const std::string& ifaceId, bool ipv4DHCPEnabled,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    const std::string dhcp = getDhcpEnabledEnumeration(ipv4DHCPEnabled, false);
+    const std::string dhcp = getDhcpEnabledEnumeration(ipv4DHCPEnabled, false, false);
 
     setDbusProperty(
         asyncResp, "DHCPv4/DHCPEnabled", "xyz.openbmc_project.Settings",

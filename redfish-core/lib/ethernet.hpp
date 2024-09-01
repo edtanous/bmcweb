@@ -158,6 +158,8 @@ inline bool translateDhcpEnabledToBool(const std::string& inputDHCP,
             (inputDHCP ==
              "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.v4") ||
             (inputDHCP ==
+             "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.v4v6stateless") ||
+            (inputDHCP ==
              "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.both"));
     }
     return ((inputDHCP ==
@@ -166,19 +168,28 @@ inline bool translateDhcpEnabledToBool(const std::string& inputDHCP,
              "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.both"));
 }
 
-inline std::string getDhcpEnabledEnumeration(bool isIPv4, bool isIPv6)
+
+inline std::string getDhcpEnabledEnumeration(bool isIPv4, bool isIPv6, bool ipv6AcceptRa)
 {
     if (isIPv4 && isIPv6)
     {
-        return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.both";
+        return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.both";       
     }
     if (isIPv4)
     {
-        return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.v4";
+        if (ipv6AcceptRa){
+            return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.v4v6stateless";
+        }else{
+            return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.v4";
+        }
     }
     if (isIPv6)
     {
         return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.v6";
+    }
+    if (ipv6AcceptRa)
+    {
+        return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.v6stateless";
     }
     return "xyz.openbmc_project.Network.EthernetInterface.DHCPConf.none";
 }
@@ -1357,10 +1368,10 @@ inline void
 
 inline void setDHCPEnabled(const std::string& ifaceId,
                            const std::string& propertyName, const bool v4Value,
-                           const bool v6Value,
+                           const bool v6Value, const bool ipv6AcceptRa, 
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
-    const std::string dhcp = getDhcpEnabledEnumeration(v4Value, v6Value);
+    const std::string dhcp = getDhcpEnabledEnumeration(v4Value, v6Value, ipv6AcceptRa);
     setDbusProperty(
         asyncResp, "DHCPv4", "xyz.openbmc_project.Network",
         sdbusplus::message::object_path("/xyz/openbmc_project/network") /
@@ -1480,7 +1491,7 @@ inline void handleDHCPPatch(const std::string& ifaceId,
     }
 
     BMCWEB_LOG_DEBUG("set DHCPEnabled...");
-    setDHCPEnabled(ifaceId, "DHCPEnabled", nextv4DHCPState, nextv6DHCPState,
+    setDHCPEnabled(ifaceId, "DHCPEnabled", nextv4DHCPState, nextv6DHCPState, ethData.ipv6AcceptRa, 
                    asyncResp);
     BMCWEB_LOG_DEBUG("set DNSEnabled...");
     setDHCPConfig("DNSEnabled", nextDNSv4, asyncResp, ifaceId,
@@ -2377,8 +2388,7 @@ inline void requestEthernetInterfacesRoutes(App& app)
                                            ifaceId);
                 return;
             }
-
-                handleDHCPPatch(ifaceId, ethData, v4dhcpParms, v6dhcpParms,
+            handleDHCPPatch(ifaceId, ethData, v4dhcpParms, v6dhcpParms,
                                 asyncResp);
 
             if (hostname)
