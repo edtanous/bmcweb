@@ -56,7 +56,7 @@ jobs:
         run: sudo apt update && sudo apt install libsystemd-dev libpam-dev ninja-build cmake
 
       - name: Install sonar-scanner and build-wrapper
-        uses: SonarSource/sonarcloud-github-c-cpp@v2
+        uses: SonarSource/sonarcloud-github-c-cpp@v3
 
       - name: Configure bmcweb
         run: meson setup builddir -Dtests=disabled
