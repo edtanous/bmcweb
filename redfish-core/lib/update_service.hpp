@@ -2077,6 +2077,13 @@ inline void forwardImage(
 
         boost::urls::url url(sat->second);
         url.set_path(req.url().path());
+        // Remove headers not handled for RFA firmware upgrade flow
+        if (!req.getHeaderValue("Expect").empty())
+        {
+            BMCWEB_LOG_INFO("Removed Expect header from the request");
+            req.clearHeader(boost::beast::http::field::expect);
+        }
+        BMCWEB_LOG_INFO("Expect header value {}", req.getHeaderValue("Expect"));
         client.sendDataWithCallback(std::move(data), url, req.fields(),
                                     boost::beast::http::verb::post, cb);
     }
