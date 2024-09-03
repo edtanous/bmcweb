@@ -865,7 +865,7 @@ inline void objectPropertiesToJson(
     nlohmann::json::json_pointer unit("/Reading");
     if (chassisSubNode == sensors::node::sensors)
     {
-        sensorJson["@odata.type"] = "#Sensor.v1_2_0.Sensor";
+        sensorJson["@odata.type"] = "#Sensor.v1_7_0.Sensor";
 
         sensor::ReadingType readingType = sensors::toReadingType(sensorType);
         if (readingType == sensor::ReadingType::Invalid)

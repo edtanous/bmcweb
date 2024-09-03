@@ -666,14 +666,6 @@ inline void getPowerCap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                         asyncResp->res.jsonValue["PowerLimitWatts"]
                                                 ["DefaultSetPoint"] = *value;
                     }
-
-                    else if (propertyName == "Persistency")
-                    {
-#ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-                        asyncResp->res.jsonValue["Oem"]["Nvidia"]
-                                                ["PowerLimitPersistency"] = {};
-#endif
-                    }
                 }
             },
                 element.first, objPath, "org.freedesktop.DBus.Properties",
@@ -754,6 +746,35 @@ inline void getEDPpData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         connectionName, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.Edpp");
 }
+
+inline void getPowerLimitPersistency(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& connectionName,
+                        const std::string& objPath)
+{
+    crow::connections::systemBus->async_method_call(
+        [asyncResp, connectionName,
+         objPath](const boost::system::error_code ec,
+                  const SetPointProperties& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_DEBUG("DBUS response error for "
+                             "procesor EDPp scaling properties");
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        for (const auto& [key, variant] : properties)
+        {
+            if (key == "Persistency")
+            {
+                asyncResp->res
+                    .jsonValue["Oem"]["Nvidia"]["PowerLimitPersistency"] = {};
+            }
+        }
+    },
+        connectionName, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "xyz.openbmc_project.Control.Power.Persistency");
+}
+
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 
 inline void getPowerLimits(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -1521,6 +1542,13 @@ inline void
                               "com.nvidia.Edpp") != interfaces.end())
                 {
                     getEDPpData(aResp, service, path);
+                }
+                if (std::find(
+                        interfaces.begin(), interfaces.end(),
+                        "xyz.openbmc_project.Control.Power.Persistency") !=
+                    interfaces.end())
+                {
+                    getPowerLimitPersistency(aResp, service, path);
                 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 

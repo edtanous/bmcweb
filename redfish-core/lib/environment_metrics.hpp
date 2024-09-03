@@ -384,7 +384,7 @@ inline void handleEnvironmentMetricsGet(
              "/redfish/v1/Chassis/" + chassisId +
                  "/EnvironmentMetrics/Actions/Oem/NvidiaEnvironmentMetrics.ClearOOBSetPoint"}};
         asyncResp->res.jsonValue["Oem"]["Nvidia"]["@odata.type"] =
-            "#NvidiaEnvironmentMetrics.v1_0_0.NvidiaEnvironmentMetrics";
+            "#NvidiaEnvironmentMetrics.v1_2_0.NvidiaEnvironmentMetrics";
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         getfanSpeedsPercent(asyncResp, chassisId);
         redfish::nvidia_env_utils::getPowerWattsEnergyJoules(
