@@ -48,8 +48,8 @@
 
 namespace redfish
 {
-constexpr auto diagServiceList            = "diag-flow-ctrl.timer "
-	                                    "diag-flow-ctrl.service";
+constexpr auto diagServiceList            = "cpu-diag-status.timer "
+	                                    "cpu-diag-status.service";
 
 inline void
     handleDiagSysConfigGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)

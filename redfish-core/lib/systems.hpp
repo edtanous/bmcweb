@@ -4258,36 +4258,36 @@ inline void
 #endif
 
 #ifdef BMCWEB_ENABLE_CPU_DIAG_FEATURE
-    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagMode"]
+    asyncResp->res.jsonValue["Actions"]["Oem"]["#NvidiaComputerSystem.ProcessorDiagMode"]
                             ["target"] = boost::urls::format(
         "/redfish/v1/Systems/{}/Oem/Nvidia/ProcessorDiagCapabilities",
         BMCWEB_REDFISH_SYSTEM_URI_NAME);
 
-    asyncResp->res.jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagMode"]
+    asyncResp->res.jsonValue["Actions"]["Oem"]["#NvidiaComputerSystem.ProcessorDiagMode"]
                             ["@Redfish.ActionInfo"] = boost::urls::format(
         "/redfish/v1/Systems/{}/Oem/Nvidia/ProcessorDiagCapabilitiesActionInfo",
         BMCWEB_REDFISH_SYSTEM_URI_NAME);
 
-    asyncResp->res.jsonValue["Oem"]["Nvidia"]
-                            ["#NvidiaSystem.ProcessorDiagSysConfig"]["target"] =
+    asyncResp->res.jsonValue["Actions"]["Oem"]
+                            ["#NvidiaComputerSystem.ProcessorDiagSysConfig"]["target"] =
         boost::urls::format(
             "/redfish/v1/Systems/{}/Oem/Nvidia/ProcessorDiagSysConfig",
             BMCWEB_REDFISH_SYSTEM_URI_NAME);
 
     asyncResp->res
-        .jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagSysConfig"]
+        .jsonValue["Actions"]["Oem"]["#NvidiaComputerSystem.ProcessorDiagSysConfig"]
                   ["@Redfish.ActionInfo"] = boost::urls::format(
         "/redfish/v1/Systems/{}/Oem/Nvidia/ProcessorDiagSysConfigActionInfo",
         BMCWEB_REDFISH_SYSTEM_URI_NAME);
 
-    asyncResp->res.jsonValue["Oem"]["Nvidia"]
-                            ["#NvidiaSystem.ProcessorDiagTidConfig"]["target"] =
+    asyncResp->res.jsonValue["Actions"]["Oem"]
+                            ["#NvidiaComputerSystem.ProcessorDiagTidConfig"]["target"] =
         boost::urls::format(
             "/redfish/v1/Systems/{}/Oem/Nvidia/ProcessorDiagTidConfig",
             BMCWEB_REDFISH_SYSTEM_URI_NAME);
 
     asyncResp->res
-        .jsonValue["Oem"]["Nvidia"]["#NvidiaSystem.ProcessorDiagTidConfig"]
+        .jsonValue["Actions"]["Oem"]["#NvidiaComputerSystem.ProcessorDiagTidConfig"]
                   ["@Redfish.ActionInfo"] = boost::urls::format(
         "/redfish/v1/Systems/{}/Oem/Nvidia/ProcessorDiagTidConfigActionInfo",
         BMCWEB_REDFISH_SYSTEM_URI_NAME);
@@ -4737,7 +4737,7 @@ inline void handleSystemProcessorDiagCapabilitiesActionGet(
         return;
     }
 
-    if (systemName != PLATFORMSYSTEMID )
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME )
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -4757,8 +4757,8 @@ inline void handleSystemProcessorDiagCapabilitiesActionGet(
     parameter["Required"] = true;
     parameter["DataType"] = "boolean";
     nlohmann::json::array_t allowableValues;
-    allowableValues.emplace_back("True");
-    allowableValues.emplace_back("False");
+    allowableValues.emplace_back("Enable");
+    allowableValues.emplace_back("Disable");
     parameter["AllowableValues"] = std::move(allowableValues);
     parameters.emplace_back(std::move(parameter));
 
@@ -4775,7 +4775,7 @@ inline void handleSystemProcessorDiagSysConfigActionGet(
         return;
     }
 
-    if (systemName != PLATFORMSYSTEMID )
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME )
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
@@ -4827,7 +4827,7 @@ inline void handleSystemProcessorDiagTidConfigActionGet(
         return;
     }
 
-    if (systemName != PLATFORMSYSTEMID )
+    if (systemName != BMCWEB_REDFISH_SYSTEM_URI_NAME )
     {
         messages::resourceNotFound(asyncResp->res, "ComputerSystem",
                                    systemName);
