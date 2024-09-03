@@ -670,7 +670,9 @@ inline void getNvLinkTotalCount(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
 inline void
     getPowerSmoothingInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                          const std::string& processorId)
+                          const std::string& processorId,
+                          [[maybe_unused]] const std::string& service,
+                          [[maybe_unused]] const std::string& objPath)
 {
     std::string powerSmoothingURI =
         "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) +

@@ -42,118 +42,6 @@ namespace redfish
 using DbusProperties =
     std::vector<std::pair<std::string, dbus::utility::DbusVariantType>>;
 
-inline void getProcessorPowerSmoothingControlData(
-    std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& service,
-    const std::string& objPath)
-{
-    BMCWEB_LOG_DEBUG("Get processor smoothing control data.");
-    crow::connections::systemBus->async_method_call(
-        [aResp{std::move(aResp)}](const boost::system::error_code ec,
-                                  const DbusProperties& properties) {
-        if (ec)
-        {
-            BMCWEB_LOG_ERROR("DBUS response error");
-            messages::internalError(aResp->res);
-            return;
-        }
-
-        for (const auto& property : properties)
-        {
-            if (property.first == "PowerSmoothingEnabled")
-            {
-                const bool* value = std::get_if<bool>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("PowerSmoothingEnable nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["Enabled"] = *value;
-            }
-            else if (property.first == "ImmediateRampDownEnabled")
-            {
-                const bool* value = std::get_if<bool>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("ImmediateRampDownEnabled nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["ImmediateRampDown"] = *value;
-            }
-            else if (property.first == "FeatureSupported")
-            {
-                const bool* value = std::get_if<bool>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("FeatureSupported nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["PowerSmoothingSupported"] = *value;
-            }
-            else if (property.first == "CurrentTempSetting")
-            {
-                const double* value = std::get_if<double>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("CurrentTempSetting nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["TMPWatts"] = *value;
-            }
-            else if (property.first == "CurrentTempFloorSetting")
-            {
-                const double* value = std::get_if<double>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("CurrentTempFloorSetting nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["TMPFloorWatts"] = *value;
-            }
-            else if (property.first == "MaxAllowedTmpFloorPercent")
-            {
-                const double* value = std::get_if<double>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("MaxAllowedTmpFloorPercent nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["MaxAllowedTMPFloorPercent"] = *value;
-            }
-            else if (property.first == "MinAllowedTmpFloorPercent")
-            {
-                const double* value = std::get_if<double>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("MinAllowedTmpFloorPercent nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["MinAllowedTMPFloorPercent"] = *value;
-            }
-            else if (property.first == "LifeTimeRemaining")
-            {
-                const double* value = std::get_if<double>(&property.second);
-                if (value == nullptr)
-                {
-                    BMCWEB_LOG_ERROR("LifeTimeRemaining nullptr");
-                    messages::internalError(aResp->res);
-                    return;
-                }
-                aResp->res.jsonValue["RemainingLifetimeCircuitryPercent"] =
-                    *value;
-            }
-        }
-    },
-        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
-        "com.nvidia.PowerSmoothing.PowerSmoothing");
-}
-
 inline void getProcessorCurrentProfileData(
     std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& service,
     const std::string& objPath, const std::string& presetProfileURI)
@@ -287,16 +175,126 @@ inline void getProcessorCurrentProfileData(
                 else
                 {
                     // AppliedProfilePath is invalid
-                    BMCWEB_LOG_ERROR("AppliedPresetProfile is invalid for {}",
-                                     objPath);
-                    aResp->res.jsonValue["AppliedPresetProfile"]["@odata.id"] =
-                        nullptr;
+                    aResp->res.jsonValue["AppliedPresetProfile"] = nullptr;
                 }
             }
         }
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
         "com.nvidia.PowerSmoothing.CurrentPowerProfile");
+}
+
+inline void getProcessorPowerSmoothingControlData(
+    std::shared_ptr<bmcweb::AsyncResp> aResp, const std::string& service,
+    const std::string& objPath, const std::string& presetProfileURI)
+{
+    BMCWEB_LOG_DEBUG("Get processor smoothing control data.");
+    crow::connections::systemBus->async_method_call(
+        [aResp{std::move(aResp)}, objPath, service,
+         presetProfileURI](const boost::system::error_code ec,
+                           const DbusProperties& properties) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("DBUS response error");
+            messages::internalError(aResp->res);
+            return;
+        }
+
+        for (const auto& property : properties)
+        {
+            if (property.first == "PowerSmoothingEnabled")
+            {
+                const bool* value = std::get_if<bool>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("PowerSmoothingEnable nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["Enabled"] = *value;
+            }
+            else if (property.first == "ImmediateRampDownEnabled")
+            {
+                const bool* value = std::get_if<bool>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("ImmediateRampDownEnabled nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["ImmediateRampDown"] = *value;
+            }
+            else if (property.first == "CurrentTempSetting")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("CurrentTempSetting nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["TMPWatts"] = *value;
+            }
+            else if (property.first == "CurrentTempFloorSetting")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("CurrentTempFloorSetting nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["TMPFloorWatts"] = *value;
+            }
+            else if (property.first == "MaxAllowedTmpFloorPercent")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("MaxAllowedTmpFloorPercent nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["MaxAllowedTMPFloorPercent"] = *value;
+            }
+            else if (property.first == "MinAllowedTmpFloorPercent")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("MinAllowedTmpFloorPercent nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["MinAllowedTMPFloorPercent"] = *value;
+            }
+            else if (property.first == "LifeTimeRemaining")
+            {
+                const double* value = std::get_if<double>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("LifeTimeRemaining nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["RemainingLifetimeCircuitryPercent"] =
+                    *value;
+            }
+            else if (property.first == "FeatureSupported")
+            {
+                const bool* value = std::get_if<bool>(&property.second);
+                if (value == nullptr)
+                {
+                    BMCWEB_LOG_ERROR("FeatureSupported nullptr");
+                    messages::internalError(aResp->res);
+                    return;
+                }
+                aResp->res.jsonValue["PowerSmoothingSupported"] = *value;
+            }
+        }
+    },
+        service, objPath, "org.freedesktop.DBus.Properties", "GetAll",
+        "com.nvidia.PowerSmoothing.PowerSmoothing");
 }
 
 inline void
@@ -379,15 +377,22 @@ inline void
                         processorId);
                     return;
                 }
-                getProcessorPowerSmoothingControlData(aResp, service, path);
+                getProcessorPowerSmoothingControlData(aResp, service, path,
+                                                      presetProfileURI);
                 if (std::find(
                         interfaces.begin(), interfaces.end(),
-                        "com.nvidia.PowerSmoothing.CurrentPowerProfile") !=
+                        "com.nvidia.PowerSmoothing.CurrentPowerProfile") ==
                     interfaces.end())
                 {
-                    getProcessorCurrentProfileData(aResp, service, path,
-                                                   presetProfileURI);
+                    // Object not found
+                    messages::resourceNotFound(
+                        aResp->res,
+                        "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+                        processorId);
+                    return;
                 }
+                getProcessorCurrentProfileData(aResp, service, path,
+                                               presetProfileURI);
             }
             return;
         }

@@ -2356,10 +2356,12 @@ inline void
 
 inline void
     getPowerSmoothingInfo(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
-                          std::string processorId)
+                          std::string processorId, const std::string& service,
+                          const std::string& objPath)
 {
     BMCWEB_LOG_DEBUG(" get getPowerSmoothingInfo data");
-    redfish::nvidia_processor_utils::getPowerSmoothingInfo(aResp, processorId);
+    redfish::nvidia_processor_utils::getPowerSmoothingInfo(aResp, processorId,
+                                                           service, objPath);
 }
 
 inline void
@@ -2871,7 +2873,8 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
             }
             else if (interface == "com.nvidia.PowerSmoothing.PowerSmoothing")
             {
-                getPowerSmoothingInfo(aResp, processorId);
+                getPowerSmoothingInfo(aResp, processorId, serviceName,
+                                      objectPath);
             }
             else if (interface == "com.nvidia.NVLink.NvLinkTotalCount")
             {
