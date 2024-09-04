@@ -188,7 +188,9 @@ class ConnectionInfo : public std::enable_shared_from_this<ConnectionInfo>
 
         BMCWEB_LOG_DEBUG("Trying to connect to: {}, id: {}", host, connId);
 
-        timer.expires_after(std::chrono::seconds(30));
+        // avoid waiting long time for establishing the connection, especially
+        // non-responsive devices.
+        timer.expires_after(std::chrono::seconds(5));
         timer.async_wait(std::bind_front(onTimeout, weak_from_this()));
 
         boost::asio::async_connect(
