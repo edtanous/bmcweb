@@ -2591,21 +2591,14 @@ inline void handleBiosAttrRegistryPut(
         "xyz.openbmc_project.User.Manager", "GetUserInfo",
         req.session->username);
 }
-#endif
 
 inline void requestRoutesBiosAttrRegistryService(App& app)
 {
     BMCWEB_ROUTE(app, "/redfish/v1/Registries/"
                       "BiosAttributeRegistry/BiosAttributeRegistry/")
-        .privileges(redfish::privileges::getBios)
-        .methods(boost::beast::http::verb::get)(
-            std::bind_front(handleBiosAttrRegistryGet, std::ref(app)));
-#ifdef BMCWEB_ENABLE_DPU_BIOS
-    BMCWEB_ROUTE(app, "/redfish/v1/Registries/"
-                      "BiosAttributeRegistry/BiosAttributeRegistry/")
         .privileges(redfish::privileges::putBios)
         .methods(boost::beast::http::verb::put)(
             std::bind_front(handleBiosAttrRegistryPut, std::ref(app)));
-#endif
 }
+#endif
 } // namespace redfish

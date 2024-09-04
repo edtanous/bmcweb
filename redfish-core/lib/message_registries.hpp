@@ -28,7 +28,7 @@
 #include "registries/telemetry_message_registry.hpp"
 
 #include <boost/url/format.hpp>
-
+#include "redfish-core/lib/bios.hpp"
 namespace redfish
 {
 
@@ -234,6 +234,7 @@ inline void handleMessageRegistryGet(
             registryEntries.emplace_back(&entry);
         }
     }
+#ifdef BMCWEB_ENABLE_BIOS
     else if (registry == "BiosAttributeRegistry")
     {
         header = &registries::bios::header;
@@ -241,7 +242,10 @@ inline void handleMessageRegistryGet(
         {
             registryEntries.emplace_back(&entry);
         }
+        handleBiosAttrRegistryGet(app, req, asyncResp);
+        return;
     }
+#endif
     else if (registry == "Telemetry")
     {
         header = &registries::telemetry::header;
@@ -275,7 +279,6 @@ inline void handleMessageRegistryGet(
     asyncResp->res.jsonValue["OwningEntity"] = header->owningEntity;
 
     nlohmann::json& messageObj = asyncResp->res.jsonValue["Messages"];
-
     // Go through the Message Registry and populate each Message
     for (const registries::MessageEntry* message : registryEntries)
     {

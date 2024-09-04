@@ -327,12 +327,13 @@ RedfishService::RedfishService(App& app)
     requestRoutesBiosSettings(app);
     requestRoutesBiosReset(app);
     requestRoutesBiosChangePassword(app);
-    requestRoutesBiosAttrRegistryService(app);
     requestRoutesBootOptions(app);
     requestRoutesSecureBoot(app);
     requestRoutesSecureBootDatabase(app);
 #endif
-
+#ifdef BMCWEB_ENABLE_DPU_BIOS
+    requestRoutesBiosAttrRegistryService(app);
+#endif
 #ifdef BMCWEB_ENABLE_HOST_IFACE
     requestHostInterfacesRoutes(app);
 #endif
