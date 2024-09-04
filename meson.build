@@ -527,6 +527,7 @@ srcfiles_unittest = files(
   'test/include/ossl_random.cpp',
   #'test/include/str_utility_test.cpp',
   'test/redfish-core/include/privileges_test.cpp',
+  'test/redfish-core/include/event_service_manager_test.cpp',
   'test/redfish-core/include/filter_expr_parser_test.cpp',
   'test/redfish-core/include/filter_expr_executor_test.cpp',
   'test/redfish-core/include/redfish_aggregator_test.cpp',

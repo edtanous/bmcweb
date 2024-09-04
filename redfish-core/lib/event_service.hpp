@@ -294,12 +294,14 @@ inline void requestRoutesEventDestinationCollection(App& app)
         std::optional<std::vector<std::string>> resTypes;
         std::optional<std::vector<nlohmann::json::object_t>> headers;
         std::optional<std::vector<nlohmann::json::object_t>> mrdJsonArray;
+        std::optional<std::vector<std::string>> originResources;
 
         if (!json_util::readJsonPatch(
                 req, asyncResp->res, "Destination", destUrl, "Context", context,
                 "Protocol", protocol, "SubscriptionType", subscriptionType,
                 "EventFormatType", eventFormatType2, "HttpHeaders", headers,
                 "RegistryPrefixes", regPrefixes, "MessageIds", msgIds,
+                "OriginResources", originResources,
                 "DeliveryRetryPolicy", retryPolicy, "MetricReportDefinitions",
                 mrdJsonArray, "ResourceTypes", resTypes))
         {
@@ -364,6 +366,7 @@ inline void requestRoutesEventDestinationCollection(App& app)
                                                 "EventFormatType", "Protocol");
                 return;
             }
+
             if (retryPolicy)
             {
                 messages::propertyValueConflict(asyncResp->res, "RetryPolicy",
@@ -518,6 +521,11 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 }
             }
             subValue->registryPrefixes = *regPrefixes;
+        }
+
+        if (originResources)
+        {
+            subValue->originResources = *originResources;
         }
 
         if (resTypes)
