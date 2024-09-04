@@ -17,29 +17,52 @@
 #pragma once
 
 #include "utils/dbus_utils.hpp"
+#include "utils/hex_utils.hpp"
 
-namespace redfish::firmware_info
+#include <string>
+
+namespace redfish
 {
 
-static constexpr auto slotInterface = "xyz.openbmc_project.Software.Slot";
-static constexpr auto secVersionInterface =
+namespace firmware_info
+{
+
+static constexpr auto securitySigningInterface =
+    "xyz.openbmc_project.Security.Signing";
+static constexpr auto securitySigningConfigInterface =
+    "xyz.openbmc_project.Security.SigningConfig";
+static constexpr auto softwareBuildTypeInterface =
+    "xyz.openbmc_project.Software.BuildType";
+static constexpr auto softwareSecurityCommonInterface =
+    "xyz.openbmc_project.Software.SecurityCommon";
+static constexpr auto softwareSigningInterface =
+    "xyz.openbmc_project.Software.Signing";
+static constexpr auto softwareStateInterface =
+    "xyz.openbmc_project.Software.State";
+static constexpr auto softwareSlotInterface =
+    "xyz.openbmc_project.Software.Slot";
+static constexpr auto securityVersionInterface =
     "xyz.openbmc_project.Software.SecurityVersion";
-static constexpr auto securityCfgIntf =
+static constexpr auto securityConfigInterface =
     "xyz.openbmc_project.Software.SecurityConfig";
-static constexpr auto minSecVersionInterface =
+static constexpr auto minSecVersionConfigInterface =
     "xyz.openbmc_project.Software.MinSecVersionConfig";
 
-static constexpr std::array<std::string_view, 4> interfaces = {
-    "xyz.openbmc_project.Software.Slot",
-    "xyz.openbmc_project.Software.BuildType",
-    "xyz.openbmc_project.Software.State", secVersionInterface};
+static constexpr std::array<std::string_view, 6> propertyInterfaces = {
+    securitySigningInterface, softwareBuildTypeInterface,
+    softwareSigningInterface, softwareStateInterface,
+    softwareSlotInterface,    securityVersionInterface};
 
 static const std::string chassisDbusPath =
     "/xyz/openbmc_project/inventory/system/chassis/";
+
 static std::unique_ptr<sdbusplus::bus::match_t> updateIrreversibleConfigMatch;
 static std::unique_ptr<boost::asio::steady_timer> irreversibleConfigTimer;
-static std::unique_ptr<boost::asio::steady_timer> updateMinSecVersionTimer;
 static std::unique_ptr<sdbusplus::bus::match_t> updateMinSecVersionMatch;
+static std::unique_ptr<boost::asio::steady_timer> updateMinSecVersionTimer;
+static std::unique_ptr<sdbusplus::bus::match_t> revokeKeysMatch;
+static std::unique_ptr<boost::asio::steady_timer> revokeKeysTimer;
+
 static constexpr auto timeoutTimeSeconds = 10;
 
 static inline void clearSecVersion()
@@ -49,7 +72,14 @@ static inline void clearSecVersion()
     updateMinSecVersionTimer = nullptr;
 }
 
-static inline std::string getStrBeforeLastDot(const std::string& text)
+static inline void clearRevokeKeys()
+{
+    revokeKeysMatch = nullptr;
+    revokeKeysTimer.reset();
+    revokeKeysTimer = nullptr;
+}
+
+static inline std::string getStrAfterLastDot(const std::string& text)
 {
     size_t lastDot = text.find_last_of('.');
     if (lastDot != std::string::npos)
@@ -130,7 +160,7 @@ inline void
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR("Null value returned for SlotId");
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
                 }
             }
             else if (key == "FirmwareComparisonNumber")
@@ -142,8 +172,7 @@ inline void
                 }
                 else
                 {
-                    BMCWEB_LOG_ERROR(
-                        "Null value returned for FirmwareComparisonNumber");
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
                 }
             }
             else if (key == "ExtendedVersion")
@@ -162,7 +191,7 @@ inline void
                 if (const std::string* value = std::get_if<std::string>(&val))
                 {
                     asyncResp->res.jsonValue["BuildType"] =
-                        getStrBeforeLastDot(*value);
+                        getStrAfterLastDot(*value);
                 }
                 else
                 {
@@ -174,7 +203,7 @@ inline void
                 if (const std::string* value = std::get_if<std::string>(&val))
                 {
                     asyncResp->res.jsonValue["FirmwareState"] =
-                        getStrBeforeLastDot(*value);
+                        getStrAfterLastDot(*value);
                 }
                 else
                 {
@@ -197,6 +226,53 @@ inline void
                 if (const uint16_t* value = std::get_if<uint16_t>(&val))
                 {
                     asyncResp->res.jsonValue["SecurityVersion"] = *value;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
+            else if (key == "SigningType")
+            {
+                if (const std::string* value = std::get_if<std::string>(&val))
+                {
+                    asyncResp->res.jsonValue["SigningType"] =
+                        getStrAfterLastDot(*value);
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
+            else if (key == "SigningKeyIndex")
+            {
+                if (const uint8_t* value = std::get_if<uint8_t>(&val))
+                {
+                    asyncResp->res.jsonValue["SigningKeyIndex"] = *value;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
+            else if (key == "TrustedKeys")
+            {
+                if (const std::vector<uint8_t>* value =
+                        std::get_if<std::vector<uint8_t>>(&val))
+                {
+                    asyncResp->res.jsonValue["AllowedKeyIndices"] = *value;
+                }
+                else
+                {
+                    BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                }
+            }
+            else if (key == "RevokedKeys")
+            {
+                if (const std::vector<uint8_t>* value =
+                        std::get_if<std::vector<uint8_t>>(&val))
+                {
+                    asyncResp->res.jsonValue["RevokedKeyIndices"] = *value;
                 }
                 else
                 {
@@ -227,7 +303,7 @@ inline void handleNvidiaRoTImageSlot(
     }
 
     dbus::utility::getSubTree(
-        chassisDbusPath + chassisId, 0, interfaces,
+        chassisDbusPath + chassisId, 0, propertyInterfaces,
         [chassisId, slotNum, fwTypeStr, slotNumStr,
          asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
@@ -252,7 +328,7 @@ inline void handleNvidiaRoTImageSlot(
                 auto it = std::find_if(std::begin(interfaces),
                                        std::end(interfaces),
                                        [](const auto& element) {
-                    return element == slotInterface;
+                    return element == softwareSlotInterface;
                 });
                 if (it == std::end(interfaces))
                 {
@@ -313,7 +389,7 @@ inline void updateProtectedComponentLink(
     const std::string& chassisId)
 {
     dbus::utility::getSubTreePaths(
-        chassisDbusPath + chassisId, 0, interfaces,
+        chassisDbusPath + chassisId, 0, propertyInterfaces,
         [chassisId, asyncResp](
             const boost::system::error_code& ec,
             const dbus::utility::MapperGetSubTreePathsResponse& subtreePaths) {
@@ -345,7 +421,7 @@ inline void handleNvidiaRoTProtectedComponentCollection(
         return;
     }
     dbus::utility::getSubTree(
-        chassisDbusPath + chassisId, 0, interfaces,
+        chassisDbusPath + chassisId, 0, propertyInterfaces,
         [chassisId,
          asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
@@ -377,7 +453,7 @@ inline void handleNvidiaRoTProtectedComponentCollection(
                 auto it = std::find_if(std::begin(interfaces),
                                        std::end(interfaces),
                                        [](const auto& element) {
-                    return element == slotInterface;
+                    return element == softwareSlotInterface;
                 });
                 if (it == std::end(interfaces))
                 {
@@ -459,7 +535,7 @@ inline void handleNvidiaRoTImageSlotCollection(
         return;
     }
     dbus::utility::getSubTree(
-        chassisDbusPath + chassisId, 0, interfaces,
+        chassisDbusPath + chassisId, 0, propertyInterfaces,
         [chassisId, fwTypeStr,
          asyncResp](const boost::system::error_code& ec,
                     const dbus::utility::MapperGetSubTreeResponse& subtree) {
@@ -492,7 +568,7 @@ inline void handleNvidiaRoTImageSlotCollection(
                 auto it = std::find_if(std::begin(interfaces),
                                        std::end(interfaces),
                                        [](const auto& element) {
-                    return element == slotInterface;
+                    return element == softwareSlotInterface;
                 });
                 if (it == std::end(interfaces))
                 {
@@ -551,12 +627,130 @@ inline void handleNvidiaRoTImageSlotCollection(
     });
 }
 
+inline void updateSigningKeyProperties(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, const std::string& componentId)
+{
+    static constexpr std::array<std::string_view, 2> signingInterfaces = {
+        securitySigningInterface, securitySigningConfigInterface};
+    std::string securityPath;
+    if (componentId == "Self")
+    {
+        securityPath = std::format("{}{}", chassisDbusPath, chassisId);
+    }
+    else
+    {
+        securityPath = std::format("{}{}", chassisDbusPath, componentId);
+    }
+    dbus::utility::getDbusObject(
+        securityPath, signingInterfaces,
+        [asyncResp, chassisId, securityPath,
+         componentId](const boost::system::error_code& ec,
+                      const ::dbus::utility::MapperGetObject& mapperResponse) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("Signing interfaces not present : {}, {}", ec,
+                             ec.message());
+            return;
+        }
+        if (mapperResponse.size() != 1)
+        {
+            BMCWEB_LOG_ERROR("Invalid response for GetObject: {}, {}", ec,
+                             ec.message());
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        const auto& valueIface = *mapperResponse.begin();
+        const std::string& service = valueIface.first;
+        crow::connections::systemBus->async_method_call(
+            [asyncResp, chassisId, componentId](
+                const boost::system::error_code ec,
+                const boost::container::flat_map<
+                    std::string, dbus::utility::DbusVariantType>& properties) {
+            if (ec)
+            {
+                if (ec == boost::system::errc::host_unreachable)
+                {
+                    // Service not available, no error, just don't
+                    // return chassis state info
+                    BMCWEB_LOG_ERROR("Service not available {}", ec);
+                    return;
+                }
+                BMCWEB_LOG_ERROR("DBUS response error {}", ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            if (properties.size() != 0)
+            {
+                auto revokeKeysTarget = boost::urls::format(
+                    "/redfish/v1/Chassis/{}/Oem/NvidiaRoT/RoTProtectedComponents"
+                    "/{}/Actions/NvidiaRoTProtectedComponent"
+                    ".RevokeKeys",
+                    chassisId, componentId);
+                auto revokeKeysInfo = boost::urls::format(
+                    "/redfish/v1/Chassis/{}/Oem/NvidiaRoT/RoTProtectedComponents"
+                    "/{}/RevokeKeysActionInfo",
+                    chassisId, componentId);
+                asyncResp->res
+                    .jsonValue["Actions"]
+                              ["#NvidiaRoTProtectedComponent.RevokeKeys"]
+                              ["target"] = revokeKeysTarget;
+                asyncResp->res
+                    .jsonValue["Actions"]
+                              ["#NvidiaRoTProtectedComponent.RevokeKeys"]
+                              ["@Redfish.ActionInfo"] = revokeKeysInfo;
+            }
+            for (const auto& [key, val] : properties)
+            {
+                if (key == "SigningKeyIndex")
+                {
+                    if (const uint8_t* value = std::get_if<uint8_t>(&val))
+                    {
+                        asyncResp->res.jsonValue["ActiveKeySetIdentifier"] =
+                            *value;
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                    }
+                }
+                else if (key == "TrustedKeys")
+                {
+                    if (const std::vector<uint8_t>* value =
+                            std::get_if<std::vector<uint8_t>>(&val))
+                    {
+                        asyncResp->res.jsonValue["AllowedKeyIndices"] = *value;
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                    }
+                }
+                else if (key == "RevokedKeys")
+                {
+                    if (const std::vector<uint8_t>* value =
+                            std::get_if<std::vector<uint8_t>>(&val))
+                    {
+                        asyncResp->res.jsonValue["RevokedKeyIndices"] = *value;
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                    }
+                }
+            }
+        },
+            service, securityPath, "org.freedesktop.DBus.Properties", "GetAll",
+            securitySigningInterface);
+    });
+}
+
 inline void updateSecurityVersionProperties(
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     const std::string& chassisId, const std::string& componentId)
 {
     static constexpr std::array<std::string_view, 2> securityInterfaces = {
-        secVersionInterface, minSecVersionInterface};
+        securityVersionInterface, minSecVersionConfigInterface};
     std::string securityPath;
     if (componentId == "Self")
     {
@@ -588,7 +782,7 @@ inline void updateSecurityVersionProperties(
         const std::string& service = valueIface.first;
         sdbusplus::asio::getProperty<uint16_t>(
             *crow::connections::systemBus, service, securityPath,
-            secVersionInterface, "Version",
+            securityVersionInterface, "Version",
             [asyncResp, chassisId, componentId](
                 const boost::system::error_code& ec, const uint16_t property) {
             if (ec)
@@ -624,8 +818,8 @@ inline void
                             const std::string& chassisId,
                             const std::string& componentId)
 {
-    static constexpr std::array<std::string_view, 1> securityInterfaces = {
-        secVersionInterface};
+    static constexpr std::array<std::string_view, 2> securityInterfaces = {
+        securitySigningInterface, securityVersionInterface};
     std::string securityPath;
     if (componentId == "Self")
     {
@@ -656,19 +850,66 @@ inline void
         }
         const auto& valueIface = *mapperResponse.begin();
         const std::string& service = valueIface.first;
-        sdbusplus::asio::getProperty<uint16_t>(
-            *crow::connections::systemBus, service, securityPath,
-            secVersionInterface, "Version",
-            [asyncResp, chassisId, componentId](
-                const boost::system::error_code& ec, const uint16_t property) {
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](
+                const boost::system::error_code ec,
+                const boost::container::flat_map<
+                    std::string, dbus::utility::DbusVariantType>& properties) {
             if (ec)
             {
-                BMCWEB_LOG_ERROR("MinSecurityVersion DBUS response error");
+                if (ec == boost::system::errc::host_unreachable)
+                {
+                    // Service not available, no error, just don't
+                    // return chassis state info
+                    BMCWEB_LOG_ERROR("Service not available {}", ec);
+                    return;
+                }
+                BMCWEB_LOG_ERROR("DBUS response error {}", ec);
                 messages::internalError(asyncResp->res);
                 return;
             }
-            asyncResp->res.jsonValue["MinimumSecurityVersion"] = property;
-        });
+            for (const auto& [key, val] : properties)
+            {
+                if (key == "Version")
+                {
+                    if (const uint16_t* value = std::get_if<uint16_t>(&val))
+                    {
+                        asyncResp->res.jsonValue["MinimumSecurityVersion"] =
+                            *value;
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                    }
+                }
+                else if (key == "TrustedKeys")
+                {
+                    if (const std::vector<uint8_t>* value =
+                            std::get_if<std::vector<uint8_t>>(&val))
+                    {
+                        asyncResp->res.jsonValue["AllowedKeyIndices"] = *value;
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                    }
+                }
+                else if (key == "RevokedKeys")
+                {
+                    if (const std::vector<uint8_t>* value =
+                            std::get_if<std::vector<uint8_t>>(&val))
+                    {
+                        asyncResp->res.jsonValue["RevokedKeyIndices"] = *value;
+                    }
+                    else
+                    {
+                        BMCWEB_LOG_ERROR("Null value returned for {}", key);
+                    }
+                }
+            }
+        },
+            service, securityPath, "org.freedesktop.DBus.Properties", "GetAll",
+            "");
     });
 }
 
@@ -682,7 +923,7 @@ inline void handleNvidiaRoTProtectedComponentSettings(
         return;
     }
     dbus::utility::getSubTree(
-        chassisDbusPath + chassisId, 0, interfaces,
+        chassisDbusPath + chassisId, 0, propertyInterfaces,
         [chassisId, fwTypeStr, asyncResp](
             const boost::system::error_code& ec,
             [[maybe_unused]] const dbus::utility::MapperGetSubTreeResponse&
@@ -734,7 +975,7 @@ inline void handleNvidiaRoTProtectedComponent(
         return;
     }
     dbus::utility::getSubTree(
-        chassisDbusPath + chassisId, 0, interfaces,
+        chassisDbusPath + chassisId, 0, propertyInterfaces,
         [chassisId, fwTypeStr, asyncResp](
             const boost::system::error_code& ec,
             [[maybe_unused]] const dbus::utility::MapperGetSubTreeResponse&
@@ -782,6 +1023,7 @@ inline void handleNvidiaRoTProtectedComponent(
         asyncResp->res.jsonValue["@Redfish.Settings"] = {
             {"@odata.type", "#Settings.v1_3_3.Settings"},
             {"SettingsObject", {{"@odata.id", settingsUrl}}}};
+        updateSigningKeyProperties(asyncResp, chassisId, componentId);
         updateSecurityVersionProperties(asyncResp, chassisId, componentId);
     });
 }
@@ -814,7 +1056,7 @@ inline void updateIrreversibleConfigEnabled(
     const std::string& chassisId)
 {
     static constexpr std::array<std::string_view, 1> cfgIntf = {
-        securityCfgIntf};
+        securityConfigInterface};
     auto chassisCfgPath = std::format("{}{}", chassisDbusPath, chassisId);
     dbus::utility::getDbusObject(
         chassisCfgPath, cfgIntf,
@@ -838,7 +1080,7 @@ inline void updateIrreversibleConfigEnabled(
         const std::string& service = valueIface.first;
         sdbusplus::asio::getProperty<bool>(
             *crow::connections::systemBus, service, chassisCfgPath,
-            securityCfgIntf, "IrreversibleConfigState",
+            securityConfigInterface, "IrreversibleConfigState",
             [asyncResp, chassisId](const boost::system::error_code& ec,
                                    const bool property) {
             if (ec)
@@ -902,7 +1144,7 @@ inline void handleIrreversibleConfigResponse(
                 {
                     sdbusplus::asio::getProperty<uint64_t>(
                         *crow::connections::systemBus, service, chassisCfgPath,
-                        securityCfgIntf, "Nonce",
+                        securityConfigInterface, "Nonce",
                         [asyncResp](const boost::system::error_code& ec,
                                     const uint64_t property) {
                         if (ec)
@@ -912,7 +1154,8 @@ inline void handleIrreversibleConfigResponse(
                             messages::internalError(asyncResp->res);
                             return;
                         }
-                        asyncResp->res.jsonValue["Nonce"] = property;
+                        asyncResp->res.jsonValue["Nonce"] =
+                            intToHexString(property, 16);
                         updateIrreversibleConfigMatch = nullptr;
                         irreversibleConfigTimer = nullptr;
                     });
@@ -938,7 +1181,7 @@ inline void
                           const std::string& chassisId, bool state)
 {
     static constexpr std::array<std::string_view, 1> cfgIntf = {
-        securityCfgIntf};
+        securityConfigInterface};
     auto chassisCfgPath = std::format("{}{}", chassisDbusPath, chassisId);
     dbus::utility::getDbusObject(
         chassisCfgPath, cfgIntf,
@@ -1010,7 +1253,7 @@ inline void
                 return;
             }
         },
-            service, chassisCfgPath, securityCfgIntf,
+            service, chassisCfgPath, securityConfigInterface,
             "UpdateIrreversibleConfig", state);
         return;
     });
@@ -1103,7 +1346,7 @@ inline void handleupdateMinSecVersionResponse(
             {
                 sdbusplus::asio::getProperty<std::vector<std::string>>(
                     *crow::connections::systemBus, service, securityPath,
-                    minSecVersionInterface, "UpdateMethod",
+                    minSecVersionConfigInterface, "UpdateMethod",
                     [asyncResp](const boost::system::error_code& ec,
                                 const std::vector<std::string> property) {
                     if (ec)
@@ -1118,7 +1361,7 @@ inline void handleupdateMinSecVersionResponse(
                     for (const auto& prop : property)
                     {
                         asyncResp->res.jsonValue["UpdateMethods"].push_back(
-                            getStrBeforeLastDot(prop));
+                            getStrAfterLastDot(prop));
                     }
                     clearSecVersion();
                 });
@@ -1127,7 +1370,7 @@ inline void handleupdateMinSecVersionResponse(
             {
                 sdbusplus::asio::getProperty<std::tuple<uint16_t, std::string>>(
                     *crow::connections::systemBus, service, securityPath,
-                    minSecVersionInterface, "ErrorCode",
+                    minSecVersionConfigInterface, "ErrorCode",
                     [asyncResp](
                         const boost::system::error_code& ec,
                         const std::tuple<uint16_t, std::string> property) {
@@ -1141,7 +1384,6 @@ inline void handleupdateMinSecVersionResponse(
                     redfish::messages::resourceErrorsDetectedFormatError(
                         asyncResp->res, "UpdateMinimumSecurityVersion",
                         std::get<1>((property)));
-                    BMCWEB_LOG_ERROR("Another staging is in progress.");
                     clearSecVersion();
                 });
             }
@@ -1157,7 +1399,7 @@ inline void updateMinSecurityVersion(
     uint64_t nonce)
 {
     static constexpr std::array<std::string_view, 1> minSecIntf = {
-        minSecVersionInterface};
+        minSecVersionConfigInterface};
     std::string securityPath;
     if (componentId == "Self")
     {
@@ -1238,11 +1480,12 @@ inline void updateMinSecurityVersion(
                 return;
             }
         },
-            service, securityPath, minSecVersionInterface,
+            service, securityPath, minSecVersionConfigInterface,
             "UpdateMinSecVersion", requestType, nonce, reqMinSecVersion);
         return;
     });
 }
+
 inline void handleUpdateMinSecVersionAction(
     App& app, const crow::Request& req,
     const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
@@ -1252,11 +1495,23 @@ inline void handleUpdateMinSecVersionAction(
     {
         return;
     }
-    uint64_t nonce;
+    std::string nonceStr;
     std::optional<uint16_t> minSecVersion;
-    if (!json_util::readJsonAction(req, asyncResp->res, "Nonce", nonce,
+    if (!json_util::readJsonAction(req, asyncResp->res, "Nonce", nonceStr,
                                    "MinimumSecurityVersion", minSecVersion))
     {
+        return;
+    }
+    uint64_t nonce;
+    try
+    {
+        nonce = std::stoull(nonceStr, nullptr, 16);
+    }
+    catch (std::exception& e)
+    {
+        BMCWEB_LOG_ERROR("stoull failed: {}", e.what());
+        messages::actionParameterValueError(asyncResp->res, "Nonce",
+                                            "UpdateMinimumSecurityVersion");
         return;
     }
     std::string requestType;
@@ -1264,17 +1519,338 @@ inline void handleUpdateMinSecVersionAction(
     if (minSecVersion)
     {
         requestType = std::format("{}.RequestTypes.SpecifiedValue",
-                                  minSecVersionInterface);
+                                  softwareSecurityCommonInterface);
         reqMinSecVersion = *minSecVersion;
     }
     else
     {
         requestType = std::format("{}.RequestTypes.MostRestrictiveValue",
-                                  minSecVersionInterface);
+                                  softwareSecurityCommonInterface);
         reqMinSecVersion = 0;
     }
     updateMinSecurityVersion(req, asyncResp, chassisId, componentId,
                              requestType, reqMinSecVersion, nonce);
 }
 
-} // namespace redfish::firmware_info
+inline void handleRevokeKeysActionInfo(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp, const std::string&,
+    const std::string&)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    asyncResp->res.jsonValue["@odata.id"] = req.url();
+    asyncResp->res.jsonValue["@odata.type"] = "#ActionInfo.v1_2_0.ActionInfo";
+    asyncResp->res.jsonValue["Id"] = "RevokeKeysActionInfo";
+    asyncResp->res.jsonValue["Name"] = "Revoke Keys ActionInfo";
+
+    nlohmann::json::array_t parameters;
+    nlohmann::json::object_t nonce;
+    nonce["Name"] = "Nonce";
+    nonce["Required"] = true;
+    nonce["DataType"] = "String";
+    parameters.emplace_back(std::move(nonce));
+    nlohmann::json::object_t keyIndexes;
+    keyIndexes["Name"] = "KeyIndexes";
+    keyIndexes["Required"] = false;
+    keyIndexes["DataType"] = "NumberArray";
+    parameters.emplace_back(std::move(keyIndexes));
+
+    asyncResp->res.jsonValue["Parameters"] = std::move(parameters);
+}
+
+inline void handleRevokeKeysResponse(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& service, const std::string& securityPath,
+    sdbusplus::message_t& msg)
+{
+    std::string interface;
+    boost::container::flat_map<std::string, dbus::utility::DbusVariantType>
+        values;
+    msg.read(interface, values);
+    if (interface == "xyz.openbmc_project.Common.Progress")
+    {
+        auto progress = values.find("Status");
+        if (progress != values.end())
+        {
+            auto value = std::get_if<std::string>(&(progress->second));
+            if (!value)
+            {
+                return;
+            }
+            if (*value ==
+                "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
+            {
+                sdbusplus::asio::getProperty<std::vector<std::string>>(
+                    *crow::connections::systemBus, service, securityPath,
+                    securitySigningConfigInterface, "UpdateMethod",
+                    [asyncResp](const boost::system::error_code& ec,
+                                const std::vector<std::string> property) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR("RevokeKeys DBUS error");
+                        messages::internalError(asyncResp->res);
+                        clearRevokeKeys();
+                        return;
+                    }
+                    asyncResp->res.jsonValue["UpdateMethods"] =
+                        nlohmann::json::array();
+                    for (const auto& prop : property)
+                    {
+                        asyncResp->res.jsonValue["UpdateMethods"].push_back(
+                            getStrAfterLastDot(prop));
+                    }
+                    clearRevokeKeys();
+                });
+            }
+            else
+            {
+                sdbusplus::asio::getProperty<std::tuple<uint16_t, std::string>>(
+                    *crow::connections::systemBus, service, securityPath,
+                    securitySigningConfigInterface, "ErrorCode",
+                    [asyncResp](
+                        const boost::system::error_code& ec,
+                        const std::tuple<uint16_t, std::string> property) {
+                    if (ec)
+                    {
+                        BMCWEB_LOG_ERROR("RevokeKeys DBUS error");
+                        messages::internalError(asyncResp->res);
+                        clearRevokeKeys();
+                        return;
+                    }
+                    redfish::messages::resourceErrorsDetectedFormatError(
+                        asyncResp->res, "RevokeKeys", std::get<1>((property)));
+                    clearRevokeKeys();
+                });
+            }
+        }
+    }
+}
+
+inline void revokeKeys(const crow::Request& req,
+                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                       const std::string& chassisId,
+                       const std::string& componentId,
+                       const std::string& requestType, uint64_t nonce,
+                       const std::vector<uint8_t>& keys)
+{
+    static constexpr std::array<std::string_view, 1> signingConfigIntf = {
+        securitySigningConfigInterface};
+    std::string securityPath;
+    if (componentId == "Self")
+    {
+        securityPath = std::format("{}{}", chassisDbusPath, chassisId);
+    }
+    else
+    {
+        securityPath = std::format("{}{}", chassisDbusPath, componentId);
+    }
+    dbus::utility::getDbusObject(
+        securityPath, signingConfigIntf,
+        [req, asyncResp, chassisId, securityPath, componentId, requestType,
+         keys, nonce](const boost::system::error_code& ec,
+                      const ::dbus::utility::MapperGetObject& mapperResponse) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR("SigningConfig interface not found : {}, {}", ec,
+                             ec.message());
+            messages::resourceNotFound(asyncResp->res, "RevokeKeys", chassisId);
+            return;
+        }
+        if (mapperResponse.size() != 1)
+        {
+            BMCWEB_LOG_ERROR("Invalid response for GetObject: {}, {}", ec,
+                             ec.message());
+            messages::resourceNotFound(asyncResp->res, "RevokeKeys", chassisId);
+            return;
+        }
+        const auto& valueIface = *mapperResponse.begin();
+        const std::string& service = valueIface.first;
+        revokeKeysTimer =
+            std::make_unique<boost::asio::steady_timer>(*req.ioService);
+        revokeKeysTimer->expires_after(
+            std::chrono::seconds(timeoutTimeSeconds));
+        revokeKeysTimer->async_wait(
+            [asyncResp](const boost::system::error_code& ec) {
+            if (ec == boost::asio::error::operation_aborted)
+            {
+                // expected, we were canceled before the timer
+                // completed.
+                return;
+            }
+            BMCWEB_LOG_ERROR("Timed out waiting for revokeKeys response");
+            revokeKeysMatch = nullptr;
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR("Async_wait failed {}", ec);
+                return;
+            }
+            if (asyncResp)
+            {
+                redfish::messages::internalError(asyncResp->res);
+            }
+        });
+
+        auto callback = [asyncResp, service,
+                         securityPath](sdbusplus::message_t& msg) mutable {
+            handleRevokeKeysResponse(asyncResp, service, securityPath, msg);
+        };
+        revokeKeysMatch = std::make_unique<sdbusplus::bus::match::match>(
+            *crow::connections::systemBus,
+            "interface='org.freedesktop.DBus.Properties',type='signal',"
+            "member='PropertiesChanged',path='" +
+                securityPath + "'",
+            callback);
+        crow::connections::systemBus->async_method_call(
+            [asyncResp](const boost::system::error_code& ec) {
+            if (ec)
+            {
+                BMCWEB_LOG_INFO("DBUS response error {}", ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+        },
+            service, securityPath, securitySigningConfigInterface, "RevokeKeys",
+            requestType, nonce, keys);
+        return;
+    });
+}
+
+inline void
+    handleRevokeKeysAction(App& app, const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& chassisId,
+                           const std::string& componentId)
+{
+    if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+    {
+        return;
+    }
+    std::string nonceStr;
+    std::optional<std::vector<uint8_t>> keys;
+    if (!json_util::readJsonAction(req, asyncResp->res, "Nonce", nonceStr,
+                                   "KeyIndexes", keys))
+    {
+        return;
+    }
+    uint64_t nonce;
+    try
+    {
+        nonce = std::stoull(nonceStr, nullptr, 16);
+    }
+    catch (std::exception& e)
+    {
+        BMCWEB_LOG_ERROR("stoull failed: {}", e.what());
+        messages::actionParameterValueError(asyncResp->res, "Nonce",
+                                            "RevokeKeys");
+        return;
+    }
+    std::string requestType;
+    if (keys)
+    {
+        requestType = std::format("{}.RequestTypes.SpecifiedValue",
+                                  softwareSecurityCommonInterface);
+    }
+    else
+    {
+        requestType = std::format("{}.RequestTypes.MostRestrictiveValue",
+                                  softwareSecurityCommonInterface);
+        keys = std::vector<uint8_t>();
+    }
+    revokeKeys(req, asyncResp, chassisId, componentId, requestType, nonce,
+               *keys);
+}
+
+} // namespace firmware_info
+
+inline void requestRoutesChassisFirmwareInfo(App& app)
+{
+    using namespace firmware_info;
+
+    BMCWEB_ROUTE(
+        app, "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleNvidiaRoTProtectedComponentCollection, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTProtectedComponent, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "ImageSlots/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTImageSlotCollection, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "ImageSlots/<str>/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleNvidiaRoTImageSlot, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>/"
+        "Settings/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleNvidiaRoTProtectedComponentSettings, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/SetIrreversibleConfigActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleSetIrreversibleConfigActionInfo, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Actions/Oem/NvidiaRoTChassis.SetIrreversibleConfig")
+        .privileges(redfish::privileges::postActionInfo)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleSetIrreversibleConfigAction, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>"
+        "/UpdateMinimumSecurityVersionActionInfo/")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(std::bind_front(
+            handleUpdateMinSecVersionActionInfo, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>"
+        "/Actions/NvidiaRoTProtectedComponent.UpdateMinimumSecurityVersion")
+        .privileges(redfish::privileges::postActionInfo)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleUpdateMinSecVersionAction, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>"
+        "/RevokeKeysActionInfo")
+        .privileges(redfish::privileges::getActionInfo)
+        .methods(boost::beast::http::verb::get)(
+            std::bind_front(handleRevokeKeysActionInfo, std::ref(app)));
+
+    BMCWEB_ROUTE(
+        app,
+        "/redfish/v1/Chassis/<str>/Oem/NvidiaRoT/RoTProtectedComponents/<str>"
+        "/Actions/NvidiaRoTProtectedComponent.RevokeKeys")
+        .privileges(redfish::privileges::postActionInfo)
+        .methods(boost::beast::http::verb::post)(
+            std::bind_front(handleRevokeKeysAction, std::ref(app)));
+}
+
+} // namespace redfish
