@@ -3438,9 +3438,7 @@ inline void requestRoutesManager(App& app)
         nlohmann::json& oem = asyncResp->res.jsonValue["Oem"];
 #ifdef BMCWEB_ENABLE_HOST_OS_FEATURE
         nlohmann::json& oemOpenbmc = oem["OpenBmc"];
-        oem["@odata.type"] = "#OemManager.Oem";
-        oem["@odata.id"] = boost::urls::format("/redfish/v1/Managers/{}#/Oem",
-                                               BMCWEB_REDFISH_MANAGER_URI_NAME);
+
         oemOpenbmc["@odata.type"] = "#OemManager.OpenBmc";
         oemOpenbmc["@odata.id"] = "/redfish/v1/Managers/" +
                                   std::string(BMCWEB_REDFISH_MANAGER_URI_NAME) +
