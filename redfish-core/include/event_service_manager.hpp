@@ -796,6 +796,39 @@ class Subscription : public persistent_data::UserSubscription
         return sendEvent(std::move(strMsg));
     }
 
+   /*!
+     * @brief   Send the event if this subscription does not filter it out.
+     * @param[in] event   The event to be sent.
+     * @return  Void
+     */
+    void sendEvent(Event& event)
+    {
+        nlohmann::json logEntry;
+
+        if (event.formatEventLogEntry(logEntry,
+                                        this->includeOriginOfCondition) != 0)
+        {
+            BMCWEB_LOG_ERROR("Failed to format the event log entry");
+        }
+
+        nlohmann::json eventsArray = nlohmann::json::array();
+        eventsArray.push_back(logEntry);
+        nlohmann::json::object_t msg;
+        msg["@odata.type"] = "#Event.v1_9_0.Event";
+        msg["Id"] = std::to_string(eventSeqNum);
+        msg["Name"] = "Event Log";
+        msg["Context"] = customText;
+        msg["Events"] = eventsArray;
+        if (!eventMatchesFilter(msg, "Event"))
+        {
+            return;
+        }
+        std::string strMsg = nlohmann::json(std::move(msg)).dump(
+            2, ' ', true, nlohmann::json::error_handler_t::replace);
+        this->sendEvent(std::move(strMsg));
+    }
+
+
     void filterAndSendEventLogs(
         const std::vector<EventLogObjectsType>& eventRecords)
     {
@@ -1557,6 +1590,22 @@ class EventServiceManager
                 2, ' ', true, nlohmann::json::error_handler_t::replace);
             entry->sendEvent(std::move(strMsg));
         }
+    }
+
+    /*!
+     * @brief   Send the event to all subscribers.
+     * @param[in] event   The event to be sent.
+     * @return  Void
+     */
+    void sendEvent(Event& event)
+    {
+        for (const auto& it : this->subscriptionsMap)
+        {
+            std::shared_ptr<Subscription> entry = it.second;
+
+            entry->sendEvent(event);
+        }
+        eventId++; // increament the eventId
     }
 
     void resetRedfishFilePosition()
@@ -2390,7 +2439,7 @@ class EventServiceManager
         matchDbusLogging = std::make_shared<sdbusplus::bus::match_t>(
             *crow::connections::systemBus, matchStr, signalHandler);
     }
-};
+
 /**
  * @brief Finds the right OriginOfCondition for @a path and sends the Event
  *        The map @a dBusToRedfishURI is used for that purpose
