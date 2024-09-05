@@ -405,6 +405,11 @@ inline std::string getChassisType(const std::string& chassisType)
         return "RackMount";
     }
     if (chassisType ==
+        "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.Shelf")
+    {
+        return "Shelf";
+    }
+    if (chassisType ==
         "xyz.openbmc_project.Inventory.Item.Chassis.ChassisType.StandAlone")
     {
         return "StandAlone";
