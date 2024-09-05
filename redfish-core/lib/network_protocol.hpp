@@ -211,6 +211,13 @@ inline void getNetworkData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             continue;
         }
 #endif
+
+#ifndef BMCWEB_ENABLE_IPMI
+        if (protocolName == "IPMI")
+        {
+            continue;
+        }
+#endif
         asyncResp->res.jsonValue[protocolName]["Port"] = nullptr;
         asyncResp->res.jsonValue[protocolName]["ProtocolEnabled"] = false;
     }
