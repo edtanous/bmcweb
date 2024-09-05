@@ -134,13 +134,21 @@ inline void fetchCableInventoryProperties(
         }
         std::ranges::sort(*data1, AlphanumLess<std::string>());
         sdbusplus::message::object_path objPathUp(data1->front());
+        nlohmann::json upstreamObj = nlohmann::json::object();
+        nlohmann::json upstreamList = nlohmann::json::array();
+        upstreamObj["@odata.id"] = boost::urls::format("/redfish/v1/Chassis/{}",
+                                                       objPathUp.filename());
+        upstreamList.emplace_back(std::move(upstreamObj));
+        asyncResp->res.jsonValue["Links"]["UpstreamChassis"] = upstreamList;
+
         sdbusplus::message::object_path objPathDown(data1->back());
-        asyncResp->res.jsonValue["Links"]["UpstreamChassis"] = {
-            "@odata.id", boost::urls::format("/redfish/v1/Chassis/{}",
-                                             objPathUp.filename())};
-        asyncResp->res.jsonValue["Links"]["DownstreamChassis"] = {
-            "@odata.id", boost::urls::format("/redfish/v1/Chassis/{}",
-                                             objPathDown.filename())};
+        nlohmann::json downstreamObj = nlohmann::json::object();
+        nlohmann::json downstreamList = nlohmann::json::array();
+        downstreamObj["@odata.id"] = boost::urls::format(
+            "/redfish/v1/Chassis/{}", objPathDown.filename());
+        downstreamList.emplace_back(std::move(downstreamObj));
+        asyncResp->res.jsonValue["Links"]["DownstreamChassis"] = downstreamList;
+        return;
     },
         "xyz.openbmc_project.ObjectMapper", cableObjectPath + "/connecting",
         "org.freedesktop.DBus.Properties", "Get",
