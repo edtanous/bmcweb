@@ -111,9 +111,10 @@ inline void requestRoutesStorageCollection(App& app)
 }
 
 inline void afterChassisDriveCollectionSubtree(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const boost::system::error_code& ec,
-    const dbus::utility::MapperGetSubTreeResponse& ret)
+    const std::shared_ptr<bmcweb::AsyncResp> &asyncResp,
+    const std::shared_ptr<HealthPopulate> &health,
+    const boost::system::error_code &ec,
+    const dbus::utility::MapperGetSubTreeResponse &ret)
 {
     if (ec)
     {
@@ -144,11 +145,8 @@ inline void afterChassisDriveCollectionSubtree(
         {
             continue;
         }
-        // FIXME: Health Populate
-        // if constexpr (bmcwebEnableHealthPopulate)
-        //{
-        //    health->inventory.insert(health->inventory.end(), path);
-        //}
+
+        health->inventory.insert(health->inventory.end(), path);
 
         nlohmann::json::object_t driveJson;
         std::string file = std::filesystem::path(path).filename();
@@ -160,13 +158,14 @@ inline void afterChassisDriveCollectionSubtree(
     }
     count = driveArray.size();
 }
-inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void getDrives(const std::shared_ptr<bmcweb::AsyncResp> &asyncResp,
+                      const std::shared_ptr<HealthPopulate> &health)
 {
     const std::array<std::string_view, 1> interfaces = {
         "xyz.openbmc_project.Inventory.Item.Drive"};
     dbus::utility::getSubTree(
         "/xyz/openbmc_project/inventory", 0, interfaces,
-        std::bind_front(afterChassisDriveCollectionSubtree, asyncResp));
+        std::bind_front(afterChassisDriveCollectionSubtree, asyncResp, health));
 }
 
 inline void afterSystemsStorageGetSubtree(
@@ -202,14 +201,11 @@ inline void afterSystemsStorageGetSubtree(
     asyncResp->res.jsonValue["Name"] = "Storage";
     asyncResp->res.jsonValue["Id"] = storageId;
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
-    // FIXME: HealthPopulate
-    // auto health = std::make_shared<HealthPopulate>(asyncResp);
-    // if constexpr (bmcwebEnableHealthPopulate)
-    //{
-    //    health->populate();
-    //}
 
-    getDrives(asyncResp);
+    auto health = std::make_shared<HealthPopulate>(asyncResp);
+    health->populate();
+
+    getDrives(asyncResp, health);
     asyncResp->res.jsonValue["Controllers"]["@odata.id"] =
         boost::urls::format("/redfish/v1/Systems/{}/Storage/{}/Controllers",
                             BMCWEB_REDFISH_SYSTEM_URI_NAME, storageId);
@@ -1086,93 +1082,91 @@ inline void createSanitizeProgressTask(
     [[maybe_unused]] const std::string& path,
     [[maybe_unused]] const std::string& driveId)
 {
-    // FIXME: Task
-    // std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
-    //     [service, path,
-    //      driveId](boost::system::error_code ec, sdbusplus::message_t& msg,
-    //               const std::shared_ptr<task::TaskData>& taskData) {
-    //     if (ec)
-    //     {
-    //         taskData->finishTask();
-    //         taskData->state = "Aborted";
-    //         taskData->messages.emplace_back(
-    //             messages::resourceErrorsDetectedFormatError("Drive
-    //             SecureErase",
-    //                                                         ec.message()));
-    //         return task::completed;
-    //     }
+    std::shared_ptr<task::TaskData> task = task::TaskData::createTask(
+        [service, path,
+         driveId](boost::system::error_code ec, sdbusplus::message_t &msg,
+                  const std::shared_ptr<task::TaskData> &taskData)
+        {
+            if (ec)
+            {
+                taskData->finishTask();
+                taskData->state = "Aborted";
+                taskData->messages.emplace_back(
+                    messages::resourceErrorsDetectedFormatError("Drive SecureErase",
+                                                                ec.message()));
+                return task::completed;
+            }
 
-    //     std::string iface;
-    //     boost::container::flat_map<std::string,
-    //     dbus::utility::DbusVariantType>
-    //         values;
+            std::string iface;
+            boost::container::flat_map<std::string, dbus::utility::DbusVariantType>
+                values;
 
-    //     std::string index = std::to_string(taskData->index);
-    //     msg.read(iface, values);
+            std::string index = std::to_string(taskData->index);
+            msg.read(iface, values);
 
-    //     if (iface != "xyz.openbmc_project.Common.Progress")
-    //     {
-    //         return !task::completed;
-    //     }
-    //     auto findStatus = values.find("Status");
-    //     if (findStatus != values.end())
-    //     {
-    //         std::string* state =
-    //             std::get_if<std::string>(&(findStatus->second));
-    //         if (state == nullptr)
-    //         {
-    //             taskData->messages.emplace_back(messages::internalError());
-    //             return !task::completed;
-    //         }
+            if (iface != "xyz.openbmc_project.Common.Progress")
+            {
+                return !task::completed;
+            }
+            auto findStatus = values.find("Status");
+            if (findStatus != values.end())
+            {
+                std::string *state =
+                    std::get_if<std::string>(&(findStatus->second));
+                if (state == nullptr)
+                {
+                    taskData->messages.emplace_back(messages::internalError());
+                    return !task::completed;
+                }
 
-    //         if (boost::ends_with(*state, "Aborted") ||
-    //             boost::ends_with(*state, "Failed"))
-    //         {
-    //             taskData->state = "Exception";
-    //             taskData->messages.emplace_back(messages::taskAborted(index));
-    //             return task::completed;
-    //         }
+                if (boost::ends_with(*state, "Aborted") ||
+                    boost::ends_with(*state, "Failed"))
+                {
+                    taskData->state = "Exception";
+                    taskData->messages.emplace_back(messages::taskAborted(index));
+                    return task::completed;
+                }
 
-    //         if (boost::ends_with(*state, "Completed"))
-    //         {
-    //             taskData->state = "Completed";
-    //             taskData->percentComplete = 100;
-    //             taskData->messages.emplace_back(
-    //                 messages::taskCompletedOK(index));
-    //             taskData->finishTask();
-    //             return task::completed;
-    //         }
-    //     }
+                if (boost::ends_with(*state, "Completed"))
+                {
+                    taskData->state = "Completed";
+                    taskData->percentComplete = 100;
+                    taskData->messages.emplace_back(
+                        messages::taskCompletedOK(index));
+                    taskData->finishTask();
+                    return task::completed;
+                }
+            }
 
-    //     auto findProgress = values.find("Progress");
-    //     if (findProgress == values.end())
-    //     {
-    //         return !task::completed;
-    //     }
-    //     uint8_t* progress = std::get_if<uint8_t>(&(findProgress->second));
-    //     if (progress == nullptr)
-    //     {
-    //         taskData->messages.emplace_back(messages::internalError());
-    //         return task::completed;
-    //     }
-    //     taskData->percentComplete = static_cast<int>(*progress);
+            auto findProgress = values.find("Progress");
+            if (findProgress == values.end())
+            {
+                return !task::completed;
+            }
+            uint8_t *progress = std::get_if<uint8_t>(&(findProgress->second));
+            if (progress == nullptr)
+            {
+                taskData->messages.emplace_back(messages::internalError());
+                return task::completed;
+            }
+            taskData->percentComplete = static_cast<int>(*progress);
 
-    //     BMCWEB_LOG_ERROR("{}", taskData->percentComplete);
-    //     taskData->messages.emplace_back(messages::taskProgressChanged(
-    //         index, static_cast<size_t>(*progress)));
+            BMCWEB_LOG_ERROR("{}", taskData->percentComplete);
+            taskData->messages.emplace_back(messages::taskProgressChanged(
+                index, static_cast<size_t>(*progress)));
 
-    //     return !task::completed;
-    // },
-    //     "type='signal',interface='org.freedesktop.DBus.Properties',"
-    //     "member='PropertiesChanged',path='" +
-    //         path + "'");
-    // task->startTimer(std::chrono::seconds(60));
-    // task->payload.emplace(req);
-    // task->populateResp(asyncResp->res);
+            return !task::completed;
+        },
+        "type='signal',interface='org.freedesktop.DBus.Properties',"
+        "member='PropertiesChanged',path='" + path + "'");
 
-    // taskUris.clear();
-    // taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
-    //                    std::to_string(task->index));
+    task->startTimer(std::chrono::seconds(60));
+    task->payload.emplace(req);
+    task->populateResp(asyncResp->res);
+
+    taskUris.clear();
+    taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
+                       std::to_string(task->index));
 }
 
 inline void
