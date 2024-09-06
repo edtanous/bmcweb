@@ -45,5 +45,8 @@ jobs:
           sonar-scanner  \
           -Dsonar.verbose=true \
           -Dsonar.projectVersion="${{ github.sha }}" \
+          -Dsonar.projectKey=edtanous_bmcweb \
+          -Dsonar.organization=edtanous \
+          -Dsonar.python.version=3.12 \
           -Dsonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
 
