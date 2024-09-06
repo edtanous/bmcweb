@@ -636,17 +636,6 @@ class RedfishAggregator
             return;
         }
 
-        // Add "application/json" at the beginning of the "Accept" field if it
-        // doesn't have it as we expected the response should be in JSON format
-        std::string curAccept(localReq->getHeaderValue("Accept"));
-        if (curAccept.find("application/json") == std::string::npos)
-        {
-            localReq->req.set("Accept", "application/json," + curAccept);
-            BMCWEB_LOG_DEBUG(
-                "Expected response in JSON format, update Accept: {}",
-                localReq->getHeaderValue("Accept"));
-        }
-
         getSatelliteConfigs(
             std::bind_front(aggregateAndHandle, aggType, localReq, asyncResp));
     }
