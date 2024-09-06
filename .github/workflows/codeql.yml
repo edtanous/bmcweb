@@ -90,7 +90,7 @@ jobs:
     - name: Build bmcweb  
       shell: bash
       run: |
-        meson setup builddir -Dtests=disabled
+        CXX=g++-13 CC=gcc-13 meson setup builddir -Dtests=disabled
         ninja -C builddir bmcweb
 
     - name: Perform CodeQL Analysis

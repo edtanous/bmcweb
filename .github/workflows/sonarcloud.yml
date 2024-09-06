@@ -59,7 +59,7 @@ jobs:
         uses: SonarSource/sonarcloud-github-c-cpp@v3
 
       - name: Configure bmcweb
-        run: meson setup builddir -Dtests=disabled
+        run: CXX=g++-13 CC=gcc-13 meson setup builddir -Dtests=disabled
 
       - name: Run build-wrapper
         run: |
