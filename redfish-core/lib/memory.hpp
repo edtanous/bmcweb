@@ -1342,10 +1342,14 @@ inline void requestRoutesMemoryMetrics(App& app)
     BMCWEB_ROUTE(app, "/redfish/v1/Systems/<str>/Memory/<str>/MemoryMetrics")
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
-            [](const crow::Request&,
+            [&app](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                [[maybe_unused]] const std::string& systemName,
                const std::string& dimmId) {
+        if (!redfish::setUpRedfishRoute(app, req, asyncResp))
+        {
+            return;
+        }
         getMemoryMetricsData(asyncResp, dimmId);
     });
 }
