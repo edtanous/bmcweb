@@ -19,7 +19,7 @@ jobs:
       run: sudo apt update && sudo apt install libsystemd-dev libpam-dev ninja-build cmake
       
     - name: Configure bmcweb
-      run: CXX=g++-13 CC=gcc-13 meson setup builddir -Dtests=disabled
+      run: CXX=g++-13 CC=gcc-13 meson setup builddir
       
     - uses: vapier/coverity-scan-action@v1
       with:
@@ -27,5 +27,5 @@ jobs:
         token: ${{ secrets.COVERITY_SCAN_TOKEN }}
         build_language: 'cxx'
         project: 'openbmc/bmcweb'
-        command: 'ninja -C builddir bmcweb'
+        command: 'ninja -C builddir'
         description: 'github action triggered build'
