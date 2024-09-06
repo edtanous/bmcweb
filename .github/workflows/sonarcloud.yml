@@ -70,4 +70,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }} # Put the name of your token here
         run: |
-          sonar-scanner -Dsonar.verbose=true -Dsonar.projectVersion="${{ github.sha }}" -Dsonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
+          sonar-scanner  \
+          -Dsonar.verbose=true \
+          -Dsonar.projectVersion="${{ github.sha }}" \
+          -Dsonar.cfamily.compile-commands="${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
+
