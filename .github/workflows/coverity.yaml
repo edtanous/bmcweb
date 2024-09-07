@@ -20,7 +20,7 @@ jobs:
       run: sudo apt update && sudo apt install libsystemd-dev libpam-dev ninja-build cmake
       
     - name: Configure bmcweb
-      run: CXX=g++-13 CC=gcc-13 meson setup builddir
+      run: CXX=g++-13 CC=gcc-13 meson setup builddir -Dtests=disabled
       
     - uses: vapier/coverity-scan-action@v1
       with:
