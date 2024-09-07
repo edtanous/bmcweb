@@ -13,6 +13,7 @@ permissions:
 jobs:
   Analysis:
     runs-on: ubuntu-24.04
+    timeout-minutes: 120
     env:
       BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory
     steps:
