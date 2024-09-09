@@ -626,13 +626,6 @@ inline void
     std::optional<bool> backgroundCopyEnabled;
     std::optional<bool> inBandEnabled;
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
-    if (isCpuEROT == false)
-    {
-        // Couldn't find an object with that name.  return an error
-        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_17_0.Chassis",
-                                   chassisId);
-        return;
-    }
     std::optional<bool> manualBootModeEnabled;
 #endif
 
@@ -649,6 +642,12 @@ inline void
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
     if (manualBootModeEnabled.has_value())
     {
+        if (isCpuEROT == false)
+        {
+            messages::actionNotSupported(asyncResp->res,
+                                         "ERoT manualBootModeEnabled");
+            return;
+        }
         manual_boot::bootModeSet(req, asyncResp, chassisId,
                                  *manualBootModeEnabled);
     }
@@ -686,42 +685,36 @@ inline void
                 continue;
             }
 
-            const std::string& connectionName = connectionNames[0].first;
+            for (const auto& connection : connectionNames)
+            {
+                sdbusplus::asio::getProperty<std::string>(
+                    *crow::connections::systemBus, connection.first, path,
+                    "xyz.openbmc_project.Common.UUID", "UUID",
+                    [req, asyncResp, chassisId(std::string(chassisId)),
+                     backgroundCopyEnabled,
+                     inBandEnabled](const boost::system::error_code ec,
+                                    const std::string& chassisUUID) {
+                    if (ec)
+                    {
+                        return;
+                    }
 
-            sdbusplus::asio::getProperty<std::string>(
-                *crow::connections::systemBus, connectionName, path,
-                "xyz.openbmc_project.Common.UUID", "UUID",
-                [req, asyncResp, chassisId(std::string(chassisId)),
-                 backgroundCopyEnabled,
-                 inBandEnabled](const boost::system::error_code ec,
-                                const std::string& chassisUUID) {
-                if (ec)
-                {
-                    BMCWEB_LOG_DEBUG("DBUS response error for UUID");
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
+                    if (backgroundCopyEnabled.has_value())
+                    {
+                        redfish::chassis_utils::setBackgroundCopyEnabled(
+                            req, asyncResp, chassisId, chassisUUID,
+                            backgroundCopyEnabled.value());
+                    }
 
-                if (backgroundCopyEnabled.has_value())
-                {
-                    redfish::chassis_utils::setBackgroundCopyEnabled(
-                        req, asyncResp, chassisId, chassisUUID,
-                        backgroundCopyEnabled.value());
-                }
-
-                if (inBandEnabled.has_value())
-                {
-                    redfish::chassis_utils::setInBandEnabled(
-                        req, asyncResp, chassisId, chassisUUID,
-                        inBandEnabled.value());
-                }
-            });
-            return;
+                    if (inBandEnabled.has_value())
+                    {
+                        redfish::chassis_utils::setInBandEnabled(
+                            req, asyncResp, chassisId, chassisUUID,
+                            inBandEnabled.value());
+                    }
+                });
+            }
         }
-
-        // Couldn't find an object with that name.  return an error
-        messages::resourceNotFound(asyncResp->res, "#Chassis.v1_17_0.Chassis",
-                                   chassisId);
     },
 
         "xyz.openbmc_project.ObjectMapper",
