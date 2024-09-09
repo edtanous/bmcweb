@@ -81,7 +81,6 @@ inline void
         if (ec)
         {
             BMCWEB_LOG_DEBUG("DBUS response error for assembly properties");
-            messages::internalError(asyncResp->res);
             return;
         }
         // Assemblies data
