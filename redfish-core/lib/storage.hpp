@@ -40,8 +40,8 @@
 
 namespace redfish
 {
-// task uri for long-run drive operation:1650
-static std::vector<std::string> taskUris;
+// task uri for long-run drive operation
+static std::string taskUri;
 // drive resouce has two interfaces from Dbus.
 // EM will also populate drive resource with the only one interface
 const std::array<const char*, 2> driveInterface = {
@@ -726,7 +726,7 @@ inline void
                     messages::internalError(asyncResp->res);
                     return;
                 }
-                asyncResp->res.jsonValue["FormFactor"] = *formFactor;
+                asyncResp->res.jsonValue["DriveFormFactor"] = *formFactor;
             }
             else if (propertyName == "PredictedMediaLifeLeftPercent")
             {
@@ -859,7 +859,7 @@ inline void getDriveVersion(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         {
             return;
         }
-        asyncResp->res.jsonValue["FirmwareVersion"] = version;
+        asyncResp->res.jsonValue["Revision"] = version;
     });
 }
 
@@ -876,7 +876,21 @@ inline void
         {
             return;
         }
-        asyncResp->res.jsonValue["PhysicalLocation"] = location;
+        asyncResp->res.jsonValue["PhysicalLocation"]["PartLocation"]
+                                ["ServiceLabel"] = location;
+    });
+    sdbusplus::asio::getProperty<std::string>(
+        *crow::connections::systemBus, connectionName, path,
+        "xyz.openbmc_project.Inventory.Decorator.Location", "LocationType",
+        [asyncResp, path](const boost::system::error_code ec,
+                          const std::string& type) {
+        if (ec)
+        {
+            return;
+        }
+        asyncResp->res
+            .jsonValue["PhysicalLocation"]["PartLocation"]["LocationType"] =
+            redfish::dbus_utils::toLocationType(type);
     });
 }
 
@@ -934,19 +948,30 @@ inline void
 
 inline void
     getDriveProgress(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                     const std::string& connectionName, const std::string& path)
+                     const std::string& connectionName, const std::string& path,
+                     const std::optional<std::string>& operationName)
 {
     sdbusplus::asio::getProperty<uint8_t>(
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Common.Progress", "Progress",
-        [asyncResp, connectionName, path](const boost::system::error_code ec,
-                                          const uint8_t prog) {
+        [asyncResp, operationName](const boost::system::error_code ec,
+                                    const uint8_t prog) {
         if (ec)
         {
             BMCWEB_LOG_ERROR("fail to get drive progress");
             return;
         }
-        asyncResp->res.jsonValue["Operations"]["PercentageComplete"] = prog;
+        nlohmann::json::object_t obj;
+        asyncResp->res.jsonValue["Operations"] = nlohmann::json::array_t();
+
+        obj["PercentageComplete"] = prog;
+        if (operationName) 
+        {
+            obj["OperationName"] = *operationName;
+        }
+        obj["AssociatedTask"]["@odata.id"] = taskUri;
+
+        asyncResp->res.jsonValue["Operations"].emplace_back(std::move(obj));
     });
 }
 
@@ -958,17 +983,16 @@ inline void
     sdbusplus::asio::getProperty<std::string>(
         *crow::connections::systemBus, connectionName, path,
         "xyz.openbmc_project.Nvme.Operation", "Operation",
-        [asyncResp, connectionName, path](const boost::system::error_code ec,
-                                          const std::string& op) {
+        [asyncResp, connectionName, path](
+            const boost::system::error_code ec, const std::string& op) {
         if (ec)
         {
             BMCWEB_LOG_ERROR("fail to get drive progress");
             return;
         }
 
-        std::optional<std::string> operation = convertDriveOperation(op);
-        asyncResp->res.jsonValue["Operations"]["Operation"] = *operation;
-        asyncResp->res.jsonValue["Operations"]["AssociatedTask"] = taskUris;
+        std::optional<std::string> operationName = convertDriveOperation(op);
+        getDriveProgress(asyncResp, connectionName, path, operationName);
     });
 }
 
@@ -1012,10 +1036,6 @@ static void addAllDriveInfo(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                  "xyz.openbmc_project.Inventory.Decorator.LocationCode")
         {
             getDriveLocation(asyncResp, connectionName, path);
-        }
-        else if (interface == "xyz.openbmc_project.Common.Progress")
-        {
-            getDriveProgress(asyncResp, connectionName, path);
         }
         else if (interface == "xyz.openbmc_project.Nvme.Operation")
         {
@@ -1164,9 +1184,7 @@ inline void createSanitizeProgressTask(
     task->payload.emplace(req);
     task->populateResp(asyncResp->res);
 
-    taskUris.clear();
-    taskUris.push_back("/redfish/v1/TaskService/Tasks/" +
-                       std::to_string(task->index));
+    taskUri = "/redfish/v1/TaskService/Tasks/" + std::to_string(task->index);
 }
 
 inline void
@@ -1451,7 +1469,7 @@ inline void afterGetSubtreeSystemsStorageDrive(
     const std::string& path = drive->first;
     const dbus::utility::MapperServiceMap& connectionNames = drive->second;
 
-    asyncResp->res.jsonValue["@odata.type"] = "#Drive.v1_7_0.Drive";
+    asyncResp->res.jsonValue["@odata.type"] = "#Drive.v1_18_0.Drive";
     asyncResp->res.jsonValue["@odata.id"] =
         boost::urls::format("/redfish/v1/Systems/{}/Storage/1/Drives/{}",
                             BMCWEB_REDFISH_SYSTEM_URI_NAME, driveId);
@@ -1742,7 +1760,7 @@ inline void buildDrive(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         asyncResp->res.jsonValue["@odata.id"] = boost::urls::format(
             "/redfish/v1/Chassis/{}/Drives/{}", chassisId, driveName);
 
-        asyncResp->res.jsonValue["@odata.type"] = "#Drive.v1_7_0.Drive";
+        asyncResp->res.jsonValue["@odata.type"] = "#Drive.v1_18_0.Drive";
         asyncResp->res.jsonValue["Name"] = driveName;
         asyncResp->res.jsonValue["Id"] = driveName;
         // default it to Enabled
