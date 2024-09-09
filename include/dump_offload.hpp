@@ -254,7 +254,7 @@ inline void requestRoutes(App& app)
 {
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Managers/<str>/LogServices/Dump/Entries/<str>/attachment")
+        "/redfish/v1/Managers/<str>/LogServices/Dump/Entries/<str>/attachment/")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
@@ -285,7 +285,7 @@ inline void requestRoutes(App& app)
 
     BMCWEB_ROUTE(
         app,
-        "/redfish/v1/Systems/<str>/LogServices/Dump/Entries/<str>/attachment")
+        "/redfish/v1/Systems/<str>/LogServices/Dump/Entries/<str>/attachment/")
         .privileges({{"ConfigureComponents", "ConfigureManager"}})
         .streamingResponse()
         .onopen([](crow::streaming_response::Connection& conn) {
