@@ -41,6 +41,14 @@ def parse_schema(element, filename):
             for member in schema_element.findall(EDM + "Member"):
                 enums.append(member.attrib["Name"])
             EntityTypes.append(Enum(name, enums, namespace, filename))
+        if schema_element.tag == EDM + "TypeDefinition":
+            enums = []
+            for annotation in schema_element:
+                for collection in annotation:
+                    for record in collection.findall(EDM + "Record"):
+                        for member in record.findall(EDM + "PropertyValue"):
+                            enums.append(member.attrib["String"])
+            EntityTypes.append(Enum(name, enums, namespace, filename))
     return EntityTypes
 
 
@@ -84,7 +92,7 @@ def write_enum_list(redfish_defs_file, enum_list, snake_case_namespace):
             values.insert(0, "Invalid")
 
         for value in values:
-            redfish_defs_file.write("    {},\n".format(value))
+            redfish_defs_file.write("    {},\n".format(re.sub(r"[^0-9_a-zA-Z]", "", value)))
 
         redfish_defs_file.write("};\n\n")
 
@@ -101,7 +109,9 @@ def write_enum_list(redfish_defs_file, enum_list, snake_case_namespace):
         )
         for value in values:
             redfish_defs_file.write(
-                '    {{{}::{}, "{}"}},\n'.format(element.name, value, value)
+                '    {{{}::{}, "{}"}},\n'.format(element.name,
+                                                 re.sub(r"[^0-9_a-zA-Z]", "", value),
+                                                 value)
             )
 
         redfish_defs_file.write("});\n\n")

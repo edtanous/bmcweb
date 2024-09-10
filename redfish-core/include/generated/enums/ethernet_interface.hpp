@@ -5,6 +5,10 @@ namespace ethernet_interface
 {
 // clang-format off
 
+enum class MACAddress{
+    Invalid,
+};
+
 enum class LinkStatus{
     Invalid,
     LinkUp,
@@ -52,6 +56,10 @@ enum class RoutingScope{
     Internal,
     Limited,
 };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(MACAddress, {
+    {MACAddress::Invalid, "Invalid"},
+});
 
 NLOHMANN_JSON_SERIALIZE_ENUM(LinkStatus, {
     {LinkStatus::Invalid, "Invalid"},
