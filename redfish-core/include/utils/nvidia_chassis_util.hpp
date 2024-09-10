@@ -1675,5 +1675,17 @@ inline void
     });
 }
 
+// Function to insert an element in sorted order based on "Id" field
+inline void insertSorted(nlohmann::json& arr, const nlohmann::json& element,
+                         const std::string sortField)
+{
+    auto it = std::lower_bound(
+        arr.begin(), arr.end(), element,
+        [sortField](const nlohmann::json& left, const nlohmann::json& right) {
+        return left[sortField] < right[sortField];
+    });
+    arr.insert(it, element);
+}
+
 } // namespace nvidia_chassis_utils
 } // namespace redfish

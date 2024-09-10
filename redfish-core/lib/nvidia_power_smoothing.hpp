@@ -174,8 +174,7 @@ inline void getProcessorCurrentProfileData(
                 }
                 else
                 {
-                    // AppliedProfilePath is invalid
-                    aResp->res.jsonValue["AppliedPresetProfile"] = nullptr;
+                    BMCWEB_LOG_ERROR("Invalud AppliedPresetProfile");
                 }
             }
         }
@@ -328,7 +327,7 @@ inline void
             pwrSmoothingURI += processorId;
             pwrSmoothingURI += "/Oem/Nvidia/PowerSmoothing";
             aResp->res.jsonValue["@odata.type"] =
-                "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing";
+                "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing";
             aResp->res.jsonValue["@odata.id"] = pwrSmoothingURI;
             aResp->res.jsonValue["Id"] = "PowerSmoothing";
             aResp->res.jsonValue["Name"] = processorId + " Power Smoothing";
@@ -371,9 +370,12 @@ inline void
                     interfaces.end())
                 {
                     // Object not found
+                    BMCWEB_LOG_ERROR(
+                        "Resource not found #NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing for {}",
+                        processorId);
                     messages::resourceNotFound(
                         aResp->res,
-                        "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+                        "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
                         processorId);
                     return;
                 }
@@ -385,9 +387,12 @@ inline void
                     interfaces.end())
                 {
                     // Object not found
+                    BMCWEB_LOG_ERROR(
+                        "Resource not found #NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing for {}",
+                        processorId);
                     messages::resourceNotFound(
                         aResp->res,
-                        "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+                        "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
                         processorId);
                     return;
                 }
@@ -398,7 +403,7 @@ inline void
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -586,7 +591,7 @@ inline void getProcessorPowerSmoothingAdminOverrideData(
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -769,7 +774,7 @@ inline void getProcessorPowerSmoothingPresetProfileData(
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -852,7 +857,7 @@ inline void getProcessorPowerSmoothingPresetProfileCollectionData(
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -941,7 +946,7 @@ inline void patchPowerSmoothingFeature(std::shared_ptr<bmcweb::AsyncResp> aResp,
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -1099,7 +1104,7 @@ inline void patchAdminOverrideProfile(std::shared_ptr<bmcweb::AsyncResp> aResp,
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -1272,7 +1277,7 @@ inline void patchPresetProfile(std::shared_ptr<bmcweb::AsyncResp> aResp,
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -1358,7 +1363,7 @@ inline void applyAdminOverride(std::shared_ptr<bmcweb::AsyncResp> aResp,
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -1428,7 +1433,7 @@ inline void activatePresetProfile(std::shared_ptr<bmcweb::AsyncResp> aResp,
         }
         // Object not found
         messages::resourceNotFound(
-            aResp->res, "#NvidiaPowerSmoothing.v1_0_0.NvidiaPowerSmoothing",
+            aResp->res, "#NvidiaPowerSmoothing.v1_1_0.NvidiaPowerSmoothing",
             processorId);
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -1562,6 +1567,7 @@ inline void requestRoutesProcessorPowerSmoothing(App& app)
         asyncResp->res.jsonValue["@odata.type"] =
             "#ActionInfo.v1_2_0.ActionInfo";
         asyncResp->res.jsonValue["Id"] = "ActivatePresetProfileActionInfo";
+        asyncResp->res.jsonValue["Name"] = "ActivatePresetProfile Action Info";
         nlohmann::json& parameters = asyncResp->res.jsonValue["Parameters"];
         nlohmann::json param = nlohmann::json::object();
         param["Name"] = "ProfileId";

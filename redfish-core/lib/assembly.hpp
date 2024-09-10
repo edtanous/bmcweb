@@ -204,7 +204,10 @@ inline void
                                    "/Assembly#/Assemblies/" + id;
         assemblyRes["MemberId"] = id;
         nlohmann::json& jResp = asyncResp->res.jsonValue["Assemblies"];
-        jResp.push_back(assemblyRes);
+        // inserting the assembly object to Assemblies array
+        std::string sortField = "MemberId";
+        redfish::nvidia_chassis_utils::insertSorted(jResp, assemblyRes,
+                                                    sortField);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         // Assembly OEM properties if exist, search by association
         redfish::nvidia_chassis_utils::getOemAssemblyAssert(asyncResp, id,
