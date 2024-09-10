@@ -199,7 +199,7 @@ inline void getChassisOEMComponentProtected(
             // if we don't get the association
             // assumption is, it is hmc.
             asyncResp->res.jsonValue["Links"]["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaChassis.v1_0_0.NvidiaChassis";
+                "#NvidiaChassis.v1_3_0.NvidiaChassis";
             nlohmann::json& componentsProtectedArray =
                 asyncResp->res
                     .jsonValue["Links"]["Oem"]["Nvidia"]["ComponentsProtected"];
@@ -229,7 +229,7 @@ inline void getChassisOEMComponentProtected(
                 }
             }
             asyncResp->res.jsonValue["Links"]["Oem"]["Nvidia"]["@odata.type"] =
-                "#NvidiaChassis.v1_0_0.NvidiaChassis";
+                "#NvidiaChassis.v1_3_0.NvidiaChassis";
             nlohmann::json& componentsProtectedArray =
                 asyncResp->res
                     .jsonValue["Links"]["Oem"]["Nvidia"]["ComponentsProtected"];
