@@ -69,8 +69,8 @@ inline void
 
 static inline void
     getAerErrorStatusOem(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& device, const std::string& path,
-                           const std::string& service)
+                         const std::string& device, const std::string& path,
+                         const std::string& service)
 {
     auto getAerErrorStatusOemCallback =
         [asyncResp{asyncResp}](
@@ -86,8 +86,9 @@ static inline void
             return;
         }
 
-        for (const std::pair<std::string, std::variant<std::string,
-                             std::vector<uint32_t> > >& property : propertiesList)
+        for (const std::pair<std::string,
+                             std::variant<std::string, std::vector<uint32_t>>>&
+                 property : propertiesList)
         {
             const std::string& propertyName = property.first;
             if (propertyName == "AERUncorrectableErrorStatus")
@@ -119,13 +120,12 @@ static inline void
         "org.freedesktop.DBus.Properties", "GetAll", pcieAerErrorStatusIntf);
 }
 
-inline void clearAerErrorStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& connection,
-                           const std::string& path)
+inline void
+    clearAerErrorStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                        const std::string& connection, const std::string& path)
 {
     dbus::utility::getDbusObject(
-        path,
-        std::array<std::string_view, 1>{"com.nvidia.PCIe.AERErrorStatus"},
+        path, std::array<std::string_view, 1>{"com.nvidia.PCIe.AERErrorStatus"},
         [asyncResp, path,
          connection](const boost::system::error_code& ec,
                      const dbus::utility::MapperGetObject& object) {
@@ -142,20 +142,18 @@ inline void clearAerErrorStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncR
 
                 nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
                     int>(asyncResp, std::chrono::seconds(60), connection, path,
-                         "com.nvidia.PCIe.AERErrorStatus",
-                         "ClearAERStatus",
+                         "com.nvidia.PCIe.AERErrorStatus", "ClearAERStatus",
                          [asyncResp](const std::string& status,
                                      [[maybe_unused]] const int* retValue) {
                     if (status ==
                         nvidia_async_operation_utils::asyncStatusValueSuccess)
                     {
-                        BMCWEB_LOG_DEBUG(
-                            "Clear AER Error Status Succeeded");
+                        BMCWEB_LOG_DEBUG("Clear AER Error Status Succeeded");
                         messages::success(asyncResp->res);
                         return;
                     }
-                    BMCWEB_LOG_ERROR(
-                        "Clear AER Error Status Throws error {}", status);
+                    BMCWEB_LOG_ERROR("Clear AER Error Status Throws error {}",
+                                     status);
                     messages::internalError(asyncResp->res);
                 });
 
@@ -166,8 +164,7 @@ inline void clearAerErrorStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncR
 };
 
 inline void
-    postClearAerErrorStatus(
-                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    postClearAerErrorStatus(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
                             const std::string& chassisId,
                             const std::string& device)
 {

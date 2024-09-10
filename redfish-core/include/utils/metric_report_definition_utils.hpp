@@ -37,8 +37,7 @@ constexpr const char* mrdConfigFile = "/usr/share/bmcweb/";
 
 #ifdef BMCWEB_ENABLE_SHMEM_PLATFORM_METRICS
 inline int mrdConfigRead(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& deviceType,
-    const std::string& id)
+                         const std::string& deviceType, const std::string& id)
 {
     asyncResp->res.jsonValue["@odata.id"] = metricReportDefinitionUri +
                                             std::string("/") + id;
@@ -60,32 +59,39 @@ inline int mrdConfigRead(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
     mrdConfigPath += std::string(".json");
     nlohmann::json jStatus = nlohmann::json::object();
     int rc = file_utils::readFile2Json(mrdConfigPath, jStatus);
-    if(rc == 0){
+    if (rc == 0)
+    {
         auto jMsgNamespace = jStatus.find("Namespace");
-        std::string msgNamespace= *jMsgNamespace;
-        if (jMsgNamespace != jStatus.end() && msgNamespace == deviceType){
+        std::string msgNamespace = *jMsgNamespace;
+        if (jMsgNamespace != jStatus.end() && msgNamespace == deviceType)
+        {
             auto jMsgMetricProperties = jStatus.find("MetricProperties");
             if (jMsgMetricProperties != jStatus.end())
             {
-                asyncResp->res.jsonValue["MetricProperties"] = *jMsgMetricProperties;
+                asyncResp->res.jsonValue["MetricProperties"] =
+                    *jMsgMetricProperties;
             }
         }
     }
     return rc;
 }
 
-inline std::string metricId(const std::string& input, const std::string& platformDevicePrefix) {
+inline std::string metricId(const std::string& input,
+                            const std::string& platformDevicePrefix)
+{
     std::string result = input;
 
     // Check if the input string starts with the platformDevicePrefix
-    if (result.find(platformDevicePrefix) == 0) {
+    if (result.find(platformDevicePrefix) == 0)
+    {
         // Remove the platformDevicePrefix from the input string
         result = result.substr(platformDevicePrefix.length());
     }
 
     // Find the position of the underscore
     size_t underscorePos = result.find('_');
-    if (underscorePos != std::string::npos) {
+    if (underscorePos != std::string::npos)
+    {
         // Extract the part before the underscore
         result = result.substr(0, underscorePos);
     }
@@ -100,15 +106,20 @@ inline void validateAndGetMetricReportDefinition(
     static std::string platformDevicePrefix(PLATFORMDEVICEPREFIX);
     std::string deviceType = metricId(id, platformDevicePrefix);
     int rc = mrdConfigRead(asyncResp, deviceType, id);
-    if (rc != 0){
-        messages::resourceNotFound(asyncResp->res, "MetricReportDefinition Config File Not Present", id);
+    if (rc != 0)
+    {
+        messages::resourceNotFound(
+            asyncResp->res, "MetricReportDefinition Config File Not Present",
+            id);
         return;
     }
-    redfish::shmem::getShmemMetricsDefinitionWildCard(asyncResp, id, deviceType);
+    redfish::shmem::getShmemMetricsDefinitionWildCard(asyncResp, id,
+                                                      deviceType);
     return;
 #else
 
-    messages::resourceNotFound(asyncResp->res, "Enable Shmem to get the MRD", id);
+    messages::resourceNotFound(asyncResp->res, "Enable Shmem to get the MRD",
+                               id);
     return;
 #endif
 }
@@ -121,7 +132,8 @@ inline void getMetricReportCollection(
                                                     "MetricReportDefinitions");
     return;
 #else
-    messages::resourceNotFound(asyncResp->res, "Enable Shmem to get the MRD", "MetricReportDefinitions");
+    messages::resourceNotFound(asyncResp->res, "Enable Shmem to get the MRD",
+                               "MetricReportDefinitions");
     return;
 #endif
 }

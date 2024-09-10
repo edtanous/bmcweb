@@ -19,12 +19,12 @@
 
 #include <app.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <health.hpp>
 #include <openbmc_dbus_rest.hpp>
 #include <query.hpp>
+#include <utils/chassis_utils.hpp>
 #include <utils/dbus_utils.hpp>
 #include <utils/json_utils.hpp>
-#include <health.hpp>
-#include <utils/chassis_utils.hpp>
 #include <utils/nvidia_chassis_util.hpp>
 
 #include <iostream>
@@ -68,7 +68,7 @@ inline void
     std::string memberId;
     if (regex_match(assemblyName.c_str(), match, assemblyRegex))
     {
-    const std::string& assemblyId = match[1].first;
+        const std::string& assemblyId = match[1].first;
         memberId = assemblyId;
     }
     // Get interface properties
@@ -86,8 +86,8 @@ inline void
         // Assemblies data
         std::string id = memberId;
         nlohmann::json assemblyRes;
-        for (const std::pair<std::string, std::variant<std::string, uint64_t>>& property :
-             propertiesList)
+        for (const std::pair<std::string, std::variant<std::string, uint64_t>>&
+                 property : propertiesList)
         {
             // Store DBus properties that are also Redfish
             // properties with same name and a string value
@@ -207,8 +207,8 @@ inline void
         jResp.push_back(assemblyRes);
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
         // Assembly OEM properties if exist, search by association
-        redfish::nvidia_chassis_utils::getOemAssemblyAssert(asyncResp,
-            id, objPath);
+        redfish::nvidia_chassis_utils::getOemAssemblyAssert(asyncResp, id,
+                                                            objPath);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
     },
         service, objPath, "org.freedesktop.DBus.Properties", "GetAll", "");

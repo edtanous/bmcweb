@@ -301,9 +301,9 @@ inline void requestRoutesEventDestinationCollection(App& app)
                 "Protocol", protocol, "SubscriptionType", subscriptionType,
                 "EventFormatType", eventFormatType2, "HttpHeaders", headers,
                 "RegistryPrefixes", regPrefixes, "MessageIds", msgIds,
-                "OriginResources", originResources,
-                "DeliveryRetryPolicy", retryPolicy, "MetricReportDefinitions",
-                mrdJsonArray, "ResourceTypes", resTypes))
+                "OriginResources", originResources, "DeliveryRetryPolicy",
+                retryPolicy, "MetricReportDefinitions", mrdJsonArray,
+                "ResourceTypes", resTypes))
         {
             return;
         }

@@ -90,10 +90,14 @@ TEST(headerContains, PositiveTest)
 {
     EXPECT_TRUE(headerContains("chunked", "chunked"));
     EXPECT_TRUE(headerContains("chunked;q=0.8", "chunked"));
-    EXPECT_TRUE(headerContains("chunked, br;q=1.0, gzip;q=0.8, *;q=0.1", "chunked"));
-    EXPECT_TRUE(headerContains("br;q=1.0, chunked, gzip;q=0.8, *;q=0.1", "chunked"));
-    EXPECT_TRUE(headerContains("br;q=1.0, gzip;q=0.8, chunked, *;q=0.1", "chunked"));
-    EXPECT_TRUE(headerContains("br;q=1.0, gzip;q=0.8, *;q=0.1, chunked", "chunked"));
+    EXPECT_TRUE(
+        headerContains("chunked, br;q=1.0, gzip;q=0.8, *;q=0.1", "chunked"));
+    EXPECT_TRUE(
+        headerContains("br;q=1.0, chunked, gzip;q=0.8, *;q=0.1", "chunked"));
+    EXPECT_TRUE(
+        headerContains("br;q=1.0, gzip;q=0.8, chunked, *;q=0.1", "chunked"));
+    EXPECT_TRUE(
+        headerContains("br;q=1.0, gzip;q=0.8, *;q=0.1, chunked", "chunked"));
 }
 
 TEST(headerContains, NegativeTest)

@@ -111,11 +111,12 @@ inline void getProcessorObject(const std::shared_ptr<bmcweb::AsyncResp>& resp,
             handler(resp, processorId, objectPath, serviceMap, deviceType);
 
             isFoundProcessorObject = true;
-            // need to check all objpath because a few configs are set by another service
+            // need to check all objpath because a few configs are set by
+            // another service
         }
         if (isFoundProcessorObject == false)
         {
-        messages::resourceNotFound(resp->res, "Processor", processorId);
+            messages::resourceNotFound(resp->res, "Processor", processorId);
         }
     },
         "xyz.openbmc_project.ObjectMapper",
@@ -238,7 +239,7 @@ inline void getPCIeErrorData(std::shared_ptr<bmcweb::AsyncResp> aResp,
             {
                 const int64_t* value = std::get_if<int64_t>(&property.second);
                 if (value == nullptr)
-                {  
+                {
                     BMCWEB_LOG_ERROR("Invalid Data Type");
                     messages::internalError(aResp->res);
                     return;

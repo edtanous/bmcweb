@@ -17,8 +17,9 @@
 
 #pragma once
 
-#include <utils/nvidia_async_set_utils.hpp>
 #include "utils/nvidia_async_set_callbacks.hpp"
+
+#include <utils/nvidia_async_set_utils.hpp>
 
 namespace redfish
 {
@@ -31,11 +32,9 @@ static std::map<std::string, std::string> clockLimitModes = {
     {"com.nvidia.ClockMode.Mode.PowerSaving", "Manual"},
     {"com.nvidia.ClockMode.Mode.Static", "Disabled"}};
 
-
-inline void
-    getClockLimitControlObjects(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& chassisID,
-                           const std::string& chassisPath)
+inline void getClockLimitControlObjects(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisID, const std::string& chassisPath)
 {
     nlohmann::json& members = asyncResp->res.jsonValue["Members"];
     members = nlohmann::json::array();
@@ -63,10 +62,11 @@ inline void
         "xyz.openbmc_project.Association", "endpoints");
 }
 
-inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                            const std::string& path,
-                            const std::string& chassisPath)
-{   
+inline void
+    getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& path,
+                         const std::string& chassisPath)
+{
     crow::connections::systemBus->async_method_call(
         [asyncResp, path](
             const boost::system::error_code errorno,
@@ -84,9 +84,9 @@ inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& async
         {
             for (const auto& interface : element.second)
             {
-                if (
-                    (interface == "com.nvidia.ClockMode") ||
-                    (interface == "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig") ||
+                if ((interface == "com.nvidia.ClockMode") ||
+                    (interface ==
+                     "xyz.openbmc_project.Inventory.Item.Cpu.OperatingConfig") ||
                     (interface ==
                      "xyz.openbmc_project.Inventory.Decorator.Area"))
                 {
@@ -105,15 +105,17 @@ inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& async
                             messages::internalError(asyncResp->res);
                             return;
                         }
-                        for (const std::pair<std::string,
-                                             std::variant<uint32_t, std::string>>&
+                        for (const std::pair<
+                                 std::string,
+                                 std::variant<uint32_t, std::string>>&
                                  property : propertiesList)
                         {
                             std::string propertyName = property.first;
                             if (propertyName == "MaxSpeed")
                             {
                                 propertyName = "AllowableMax";
-                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_ERROR(
@@ -127,10 +129,11 @@ inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& async
                             else if (propertyName == "MinSpeed")
                             {
                                 propertyName = "AllowableMin";
-                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
                                 if (value == nullptr)
                                 {
-                                     BMCWEB_LOG_ERROR(
+                                    BMCWEB_LOG_ERROR(
                                         "Internal errror for AllowableMin");
                                     messages::internalError(asyncResp->res);
                                     return;
@@ -141,7 +144,8 @@ inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& async
                             else if (propertyName == "RequestedSpeedLimitMax")
                             {
                                 propertyName = "SettingMax";
-                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_ERROR(
@@ -155,7 +159,8 @@ inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& async
                             else if (propertyName == "RequestedSpeedLimitMin")
                             {
                                 propertyName = "SettingMin";
-                                const uint32_t* value = std::get_if<uint32_t>(&property.second);
+                                const uint32_t* value =
+                                    std::get_if<uint32_t>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_ERROR(
@@ -222,10 +227,12 @@ inline void getChassisClockLimit(const std::shared_ptr<bmcweb::AsyncResp>& async
     health->populate();
 }
 
-inline void getClockLimitControl(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisID, const std::string& controlID,
-     const std::optional<std::string>& validChassisPath, const std::string& processorName)
+inline void
+    getClockLimitControl(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                         const std::string& chassisID,
+                         const std::string& controlID,
+                         const std::optional<std::string>& validChassisPath,
+                         const std::string& processorName)
 {
     if (!validChassisPath)
     {
@@ -537,6 +544,5 @@ inline void
         "xyz.openbmc_project.Association", "endpoints");
 };
 
-
 } // namespace nvidia_control_utils
-}
+} // namespace redfish

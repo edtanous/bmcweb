@@ -57,9 +57,9 @@
 #endif
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 #include "nvidia_debug_token.hpp"
+#include "nvidia_error_injection.hpp"
 #include "nvidia_power_smoothing.hpp"
 #include "nvidia_workload_power_profiles.hpp"
-#include "nvidia_error_injection.hpp"
 #endif
 #include "boot_options.hpp"
 #include "erot_chassis.hpp"

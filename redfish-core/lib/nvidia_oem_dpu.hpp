@@ -1109,20 +1109,21 @@ inline void handleTruststoreCertificatesResetKeys(
     });
 }
 
-inline void handleGetOemFru(
-    [[maybe_unused]] crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void handleGetOemFru([[maybe_unused]] crow::App& app,
+                            const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     // Check if the OEM FRU is enabled
     // OEM FRU only available when the "Enabled" property is true
     sdbusplus::asio::getProperty<bool>(
-    *crow::connections::systemBus, "xyz.openbmc_project.Settings",
-    "/xyz/openbmc_project/control/oem_fru",
-    "xyz.openbmc_project.Object.Enable", "Enabled",
-    [req, asyncResp](const boost::system::error_code& ec, bool enabled) {
+        *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+        "/xyz/openbmc_project/control/oem_fru",
+        "xyz.openbmc_project.Object.Enable", "Enabled",
+        [req, asyncResp](const boost::system::error_code& ec, bool enabled) {
         if (ec)
         {
-            BMCWEB_LOG_ERROR("DBUS response error: Checking OEM FRU Enabled error{}", ec);
+            BMCWEB_LOG_ERROR(
+                "DBUS response error: Checking OEM FRU Enabled error{}", ec);
             messages::internalError(asyncResp->res);
             return;
         }
@@ -1134,120 +1135,128 @@ inline void handleGetOemFru(
         }
         // Fetch all properties of the OEM FRU object
         sdbusplus::asio::getAllProperties(
-            *crow::connections::systemBus, oemFruService, oemFruObj,
-            oemFruIntf, [asyncResp{asyncResp}](
+            *crow::connections::systemBus, oemFruService, oemFruObj, oemFruIntf,
+            [asyncResp{asyncResp}](
                 const boost::system::error_code& ec,
                 const dbus::utility::DBusPropertiesMap& propertyList) {
-                    if (ec)
-                    {
-                        BMCWEB_LOG_ERROR("DBUS response error: Get All OEM FRU Property error{}", ec);
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    const std::string* productManufacturer = nullptr;
-                    const std::string* productSerialNumber = nullptr;
-                    const std::string* productPartNumber = nullptr;
-                    const std::string* productVersion = nullptr;
-                    const std::string* productExtra = nullptr;
-                    const std::string* productManufactureDate = nullptr;
-                    const std::string* ProductAssetTag = nullptr;
-                    const std::string* productGUID = nullptr;
-                    // Unpack properties from the property list
-                    const bool success = sdbusplus::unpackPropertiesNoThrow(
-                        dbus_utils::UnpackErrorPrinter(), propertyList, "PRODUCT_MANUFACTURER", productManufacturer,
-                        "PRODUCT_SERIAL_NUMBER", productSerialNumber,
-                        "PRODUCT_PART_NUMBER", productPartNumber,
-                        "PRODUCT_VERSION", productVersion,
-                        "PRODUCT_INFO_AM1", productExtra,
-                        "BOARD_MANUFACTURE_DATE", productManufactureDate,
-                        "PRODUCT_ASSET_TAG", ProductAssetTag,
-                        "CHASSIS_INFO_AM1", productGUID);
-                    if (!success)
-                    {
-                        BMCWEB_LOG_ERROR("Unpack OEM FRU Property error");
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    // Populate the response with the OEM data values
-                    if (productManufacturer != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductManufacturer"] = *productManufacturer;
-                    }
-                    if (productSerialNumber != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductSerialNumber"] = *productSerialNumber;
-                    }
-                    if (productPartNumber != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductPartNumber"] = *productPartNumber;
-                    }
-                    if (productVersion != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductVersion"] = *productVersion;
-                    }
-                    if (productExtra != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductExtra"] = *productExtra;
-                    }
-                    if (productManufactureDate != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductManufactureDate"] = *productManufactureDate;
-                    }
-                    if (ProductAssetTag != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductAssetTag"] = *ProductAssetTag;
-                    }
-                    if (productGUID != nullptr)
-                    {
-                        asyncResp->res.jsonValue["ProductGUID"] = *productGUID;
-                    }
+            if (ec)
+            {
+                BMCWEB_LOG_ERROR(
+                    "DBUS response error: Get All OEM FRU Property error{}",
+                    ec);
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            const std::string* productManufacturer = nullptr;
+            const std::string* productSerialNumber = nullptr;
+            const std::string* productPartNumber = nullptr;
+            const std::string* productVersion = nullptr;
+            const std::string* productExtra = nullptr;
+            const std::string* productManufactureDate = nullptr;
+            const std::string* ProductAssetTag = nullptr;
+            const std::string* productGUID = nullptr;
+            // Unpack properties from the property list
+            const bool success = sdbusplus::unpackPropertiesNoThrow(
+                dbus_utils::UnpackErrorPrinter(), propertyList,
+                "PRODUCT_MANUFACTURER", productManufacturer,
+                "PRODUCT_SERIAL_NUMBER", productSerialNumber,
+                "PRODUCT_PART_NUMBER", productPartNumber, "PRODUCT_VERSION",
+                productVersion, "PRODUCT_INFO_AM1", productExtra,
+                "BOARD_MANUFACTURE_DATE", productManufactureDate,
+                "PRODUCT_ASSET_TAG", ProductAssetTag, "CHASSIS_INFO_AM1",
+                productGUID);
+            if (!success)
+            {
+                BMCWEB_LOG_ERROR("Unpack OEM FRU Property error");
+                messages::internalError(asyncResp->res);
+                return;
+            }
+            // Populate the response with the OEM data values
+            if (productManufacturer != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductManufacturer"] =
+                    *productManufacturer;
+            }
+            if (productSerialNumber != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductSerialNumber"] =
+                    *productSerialNumber;
+            }
+            if (productPartNumber != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductPartNumber"] =
+                    *productPartNumber;
+            }
+            if (productVersion != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductVersion"] = *productVersion;
+            }
+            if (productExtra != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductExtra"] = *productExtra;
+            }
+            if (productManufactureDate != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductManufactureDate"] =
+                    *productManufactureDate;
+            }
+            if (ProductAssetTag != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductAssetTag"] = *ProductAssetTag;
+            }
+            if (productGUID != nullptr)
+            {
+                asyncResp->res.jsonValue["ProductGUID"] = *productGUID;
+            }
         });
     });
 }
 
-inline void setOemFruProperty(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& dbusProperty,
-    const std::string& lastProperty,
-    const std::string& value)
+inline void
+    setOemFruProperty(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                      const std::string& dbusProperty,
+                      const std::string& lastProperty, const std::string& value)
 {
     std::variant<std::string> variantValue(value);
     crow::connections::systemBus->async_method_call(
-        [asyncResp, dbusProperty, lastProperty, value](const boost::system::error_code ec) {
-            if (ec)
-            {
-                BMCWEB_LOG_ERROR("DBUS response error: Set OEM FRU Property error{}", ec);
-                messages::internalError(asyncResp->res);
-                return;
-            }
-            // Sync OEM FRU data only when the last property is set
-            // This is to avoid multiple SyncOemFru calls
-            if (lastProperty == dbusProperty)
-            {
-                // Make an asynchronous DBUS call to sync the OEM FRU data
-                // The FRU DBUS object and config flash will be updated
-                crow::connections::systemBus->async_method_call(
-                    [asyncResp](const boost::system::error_code ec) {
-                        if (ec)
-                        {
-                            BMCWEB_LOG_ERROR("DBUS response error: Sync OEM FRU Data error{}", ec);
-                            messages::internalError(asyncResp->res);
-                            return;
-                        }
-                    },
-                    oemFruService, oemFruObj, oemFruIntf,
-                    "SyncOemFru");
-                // Send success response after set last property and save the FRU data
-                messages::success(asyncResp->res);
-            }
-        },
-        oemFruService, oemFruObj, dbusPropertyInterface,
-        "Set", oemFruIntf, dbusProperty, variantValue);
+        [asyncResp, dbusProperty, lastProperty,
+         value](const boost::system::error_code ec) {
+        if (ec)
+        {
+            BMCWEB_LOG_ERROR(
+                "DBUS response error: Set OEM FRU Property error{}", ec);
+            messages::internalError(asyncResp->res);
+            return;
+        }
+        // Sync OEM FRU data only when the last property is set
+        // This is to avoid multiple SyncOemFru calls
+        if (lastProperty == dbusProperty)
+        {
+            // Make an asynchronous DBUS call to sync the OEM FRU data
+            // The FRU DBUS object and config flash will be updated
+            crow::connections::systemBus->async_method_call(
+                [asyncResp](const boost::system::error_code ec) {
+                if (ec)
+                {
+                    BMCWEB_LOG_ERROR(
+                        "DBUS response error: Sync OEM FRU Data error{}", ec);
+                    messages::internalError(asyncResp->res);
+                    return;
+                }
+            },
+                oemFruService, oemFruObj, oemFruIntf, "SyncOemFru");
+            // Send success response after set last property and save the FRU
+            // data
+            messages::success(asyncResp->res);
+        }
+    },
+        oemFruService, oemFruObj, dbusPropertyInterface, "Set", oemFruIntf,
+        dbusProperty, variantValue);
 }
 
-inline void handleSetOemFru(
-    [[maybe_unused]] crow::App& app, const crow::Request& req,
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+inline void handleSetOemFru([[maybe_unused]] crow::App& app,
+                            const crow::Request& req,
+                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
 {
     BMCWEB_LOG_DEBUG("Set OEM FRU info");
 
@@ -1266,22 +1275,27 @@ inline void handleSetOemFru(
             // Check if the OEM FRU is enabled
             // OEM FRU only available when the "Enabled" property is true
             sdbusplus::asio::getProperty<bool>(
-            *crow::connections::systemBus, "xyz.openbmc_project.Settings",
-            "/xyz/openbmc_project/control/oem_fru",
-            "xyz.openbmc_project.Object.Enable", "Enabled",
-            [req, asyncResp](const boost::system::error_code& ec, bool enabled) {
+                *crow::connections::systemBus, "xyz.openbmc_project.Settings",
+                "/xyz/openbmc_project/control/oem_fru",
+                "xyz.openbmc_project.Object.Enable", "Enabled",
+                [req, asyncResp](const boost::system::error_code& ec,
+                                 bool enabled) {
                 if (ec)
                 {
-                    BMCWEB_LOG_ERROR("DBUS response error: Checking OEM FRU Enabled error{}", ec);
+                    BMCWEB_LOG_ERROR(
+                        "DBUS response error: Checking OEM FRU Enabled error{}",
+                        ec);
                     messages::internalError(asyncResp->res);
                     return;
                 }
                 if (!enabled)
                 {
-                    messages::actionNotSupported(asyncResp->res, "OEM FRU not enabled");
+                    messages::actionNotSupported(asyncResp->res,
+                                                 "OEM FRU not enabled");
                     return;
                 }
-                // Map of property names to their corresponding DBUS property names
+                // Map of property names to their corresponding DBUS property
+                // names
                 std::unordered_map<std::string, std::string> propertyMap = {
                     {"ProductManufacturer", "PRODUCT_MANUFACTURER"},
                     {"ProductSerialNumber", "PRODUCT_SERIAL_NUMBER"},
@@ -1290,8 +1304,7 @@ inline void handleSetOemFru(
                     {"ProductExtra", "PRODUCT_INFO_AM1"},
                     {"ProductManufactureDate", "BOARD_MANUFACTURE_DATE"},
                     {"ProductAssetTag", "PRODUCT_ASSET_TAG"},
-                    {"ProductGUID", "CHASSIS_INFO_AM1"}
-                };
+                    {"ProductGUID", "CHASSIS_INFO_AM1"}};
                 // Initialize the last property to be set
                 std::string lastProperty = "CHASSIS_INFO_AM1";
                 std::optional<std::string> productManufacturer;
@@ -1302,21 +1315,22 @@ inline void handleSetOemFru(
                 std::optional<std::string> productManufactureDate;
                 std::optional<std::string> productAssetTag;
                 std::optional<std::string> productGUID;
-                // Read the data from the post request and populate the optional variables
-                if(!json_util::readJsonPatch(req, asyncResp->res,
-                                        "ProductManufacturer", productManufacturer,
-                                        "ProductSerialNumber", productSerialNumber,
-                                        "ProductPartNumber", productPartNumber,
-                                        "ProductVersion", productVersion,
-                                        "ProductExtra", productExtra,
-                                        "ProductManufactureDate", productManufactureDate,
-                                        "ProductAssetTag", productAssetTag,
-                                        "ProductGUID", productGUID))
+                // Read the data from the post request and populate the optional
+                // variables
+                if (!json_util::readJsonPatch(
+                        req, asyncResp->res, "ProductManufacturer",
+                        productManufacturer, "ProductSerialNumber",
+                        productSerialNumber, "ProductPartNumber",
+                        productPartNumber, "ProductVersion", productVersion,
+                        "ProductExtra", productExtra, "ProductManufactureDate",
+                        productManufactureDate, "ProductAssetTag",
+                        productAssetTag, "ProductGUID", productGUID))
                 {
                     return;
                 }
-                // Only sync the OEM FRU data one time when setting the last property
-                // Determine the last property to set based on the provided values
+                // Only sync the OEM FRU data one time when setting the last
+                // property Determine the last property to set based on the
+                // provided values
                 if (productManufacturer)
                 {
                     lastProperty = propertyMap["ProductManufacturer"];
@@ -1349,44 +1363,59 @@ inline void handleSetOemFru(
                 {
                     lastProperty = propertyMap["ProductGUID"];
                 }
-                // Set each property with OEM data using the setOemFruProperty function
+                // Set each property with OEM data using the setOemFruProperty
+                // function
                 if (productManufacturer)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductManufacturer"], lastProperty, *productManufacturer);
+                    setOemFruProperty(asyncResp,
+                                      propertyMap["ProductManufacturer"],
+                                      lastProperty, *productManufacturer);
                 }
                 if (productSerialNumber)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductSerialNumber"], lastProperty, *productSerialNumber);
+                    setOemFruProperty(asyncResp,
+                                      propertyMap["ProductSerialNumber"],
+                                      lastProperty, *productSerialNumber);
                 }
                 if (productPartNumber)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductPartNumber"], lastProperty, *productPartNumber);
+                    setOemFruProperty(asyncResp,
+                                      propertyMap["ProductPartNumber"],
+                                      lastProperty, *productPartNumber);
                 }
                 if (productVersion)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductVersion"], lastProperty, *productVersion);
+                    setOemFruProperty(asyncResp, propertyMap["ProductVersion"],
+                                      lastProperty, *productVersion);
                 }
                 if (productExtra)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductExtra"], lastProperty, *productExtra);
+                    setOemFruProperty(asyncResp, propertyMap["ProductExtra"],
+                                      lastProperty, *productExtra);
                 }
                 if (productManufactureDate)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductManufactureDate"], lastProperty, *productManufactureDate);
+                    setOemFruProperty(asyncResp,
+                                      propertyMap["ProductManufactureDate"],
+                                      lastProperty, *productManufactureDate);
                 }
                 if (productAssetTag)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductAssetTag"], lastProperty, *productAssetTag);
+                    setOemFruProperty(asyncResp, propertyMap["ProductAssetTag"],
+                                      lastProperty, *productAssetTag);
                 }
                 if (productGUID)
                 {
-                    setOemFruProperty(asyncResp, propertyMap["ProductGUID"], lastProperty, *productGUID);
+                    setOemFruProperty(asyncResp, propertyMap["ProductGUID"],
+                                      lastProperty, *productGUID);
                 }
             });
             return;
         }
-        // Respond with action not supported if the request is from Redfish Host Interface
-        messages::actionNotSupported(asyncResp->res, "Setting OEM FRU Data from Redfish Host Interface");
+        // Respond with action not supported if the request is from Redfish Host
+        // Interface
+        messages::actionNotSupported(
+            asyncResp->res, "Setting OEM FRU Data from Redfish Host Interface");
         return;
     });
 }
@@ -1627,7 +1656,8 @@ inline void requestRoutesNvidiaOemBf(App& app)
             return;
         }
         asyncResp->res.jsonValue["@odata.id"] =
-            "/redfish/v1/Systems/" + std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Oem/Nvidia";
+            "/redfish/v1/Systems/" +
+            std::string(BMCWEB_REDFISH_SYSTEM_URI_NAME) + "/Oem/Nvidia";
         asyncResp->res.jsonValue["@odata.type"] =
             "#NvidiaComputerSystem.v1_0_0.NvidiaComputerSystem";
         auto& nvidia = asyncResp->res.jsonValue;

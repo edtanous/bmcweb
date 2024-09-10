@@ -126,7 +126,7 @@ struct Request
         return req.body().str();
     }
 
-    void clearBody() 
+    void clearBody()
     {
         return req.body().clear();
     }

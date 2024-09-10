@@ -1785,7 +1785,7 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                     [asyncResp, device, chassisPCIePath, interface, chassisId,
                      chassisPCIeDevicePath,
                      chassisPath](const boost::system::error_code ec,
-                                            const GetSubTreeType& subtree) {
+                                  const GetSubTreeType& subtree) {
                     if (ec)
                     {
                         BMCWEB_LOG_DEBUG("DBUS response error");
@@ -1877,9 +1877,9 @@ inline void requestRoutesChassisPCIeDevice(App& app)
                                       pcieAerErrorStatusIntf) !=
                             interfaces2.end())
                         {
-                           redfish::nvidia_pcie_utils::getAerErrorStatusOem(asyncResp, device,
-                                                 chassisPCIePath,
-                                                 connectionName);
+                            redfish::nvidia_pcie_utils::getAerErrorStatusOem(
+                                asyncResp, device, chassisPCIePath,
+                                connectionName);
                             asyncResp->res.jsonValue
                                 ["Actions"]["Oem"]
                                 ["#NvidiaPCIeDevice.ClearAERErrorStatus"]
@@ -2144,8 +2144,6 @@ inline void requestRoutesChassisPCIeFunction(App& app)
     //     .methods(boost::beast::http::verb::get)(
     //         std::bind_front(handlePCIeFunctionGet, std::ref(app)));
 }
-
-
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 

@@ -51,11 +51,11 @@ inline nlohmann::json debugTokenAlreadyInstalled(std::string_view arg1)
 {
     std::array<std::string_view, 1> args{arg1};
     return getLogNvidia(
-        redfish::registries::nvidia::Index::debugTokenAlreadyInstalled,
-        args);
+        redfish::registries::nvidia::Index::debugTokenAlreadyInstalled, args);
 }
 
-inline void debugTokenAlreadyInstalled(crow::Response& res, std::string_view arg1)
+inline void debugTokenAlreadyInstalled(crow::Response& res,
+                                       std::string_view arg1)
 {
     res.result(boost::beast::http::status::service_unavailable);
     addMessageToErrorJson(res.jsonValue, debugTokenAlreadyInstalled(arg1));

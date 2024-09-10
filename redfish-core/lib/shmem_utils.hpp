@@ -140,10 +140,9 @@ inline std::string getSwitchId(const std::string& key)
     return swithId;
 }
 
-inline void replaceNumber(const std::string& input,
-                                 const std::string& key,
-                                 const std::string& value,
-                                 std::set<std::string>& replacedName)
+inline void replaceNumber(const std::string& input, const std::string& key,
+                          const std::string& value,
+                          std::set<std::string>& replacedName)
 {
     std::regex pattern(key + "(\\d+)");
     std::smatch match;
@@ -286,32 +285,32 @@ inline void metricsReplacementsNonPlatformMetrics(
             std::regex cpuProcessorPattern(cpuProcessor + "(\\d+)");
             if (std::regex_search(e, match, cpuProcessorPattern))
             {
-                 int number = std::stoi(match[1].str());
-                 cpuId.insert(number);
+                int number = std::stoi(match[1].str());
+                cpuId.insert(number);
             }
             std::regex processorPattern(processor + "(\\d+)");
             if (std::regex_search(e, match, processorPattern))
             {
-                 int number = std::stoi(match[1].str());
-                 processorId.insert(number);
+                int number = std::stoi(match[1].str());
+                processorId.insert(number);
             }
             std::regex cpuCorePattern(cpuCore + "(\\d+)");
             if (std::regex_search(e, match, cpuCorePattern))
             {
-                 int number = std::stoi(match[1].str());
-                 coreId.insert(number);
+                int number = std::stoi(match[1].str());
+                coreId.insert(number);
             }
             std::regex nvLinkPattern(nvLink + "(\\d+)");
             if (std::regex_search(e, match, nvLinkPattern))
             {
-                 int number = std::stoi(match[1].str());
-                 nvLinkId.insert(number);
+                int number = std::stoi(match[1].str());
+                nvLinkId.insert(number);
             }
             std::regex pcieLinkPattern(pcieLink + "(\\d+)");
             if (std::regex_search(e, match, pcieLinkPattern))
             {
-                 int number = std::stoi(match[1].str());
-                 pcieLinkId.insert(number);
+                int number = std::stoi(match[1].str());
+                pcieLinkId.insert(number);
             }
         }
     }
@@ -429,7 +428,8 @@ inline void metricsReplacementsNonPlatformMetrics(
             {"Values", devCountnvlinkId},
         });
     }
-    if (deviceType == "CpuProcessorMetrics"){
+    if (deviceType == "CpuProcessorMetrics")
+    {
         nlohmann::json devCountCpuId = nlohmann::json::array();
         for (const auto& e : cpuId)
         {
@@ -525,10 +525,12 @@ inline void getShmemMetricsDefinitionWildCard(
         {{pcieRetimer, "{PRWild}", "PRWild"}};
     std::vector<std::string> pcieSwitchPlatformEnvironmentMetricsReplacements =
         {{pcieSwtich, "{PSWild}", "PSWild"}};
-    std::vector<std::string> nvLinkManagementNICPlatformEnvironmentMetricsReplacements =
-        {{nvLinkManagementNIC, "{NicWild}", "NicWild"}};
-    std::vector<std::string> nvLinkManagementNICPortPlatformEnvironmentMetricsReplacements =
-        {{nvLinkManagementNICPort, "{PortWild}", "PortWild"}};
+    std::vector<std::string>
+        nvLinkManagementNICPlatformEnvironmentMetricsReplacements = {
+            {nvLinkManagementNIC, "{NicWild}", "NicWild"}};
+    std::vector<std::string>
+        nvLinkManagementNICPortPlatformEnvironmentMetricsReplacements = {
+            {nvLinkManagementNICPort, "{PortWild}", "PortWild"}};
 
     try
     {
@@ -590,11 +592,11 @@ inline void getShmemMetricsDefinitionWildCard(
                 pcieSwitchPlatformEnvironmentMetricsReplacements, asyncResp,
                 inputMetricProperties);
             metricsReplacements(
-                nvLinkManagementNICPlatformEnvironmentMetricsReplacements, asyncResp,
-                inputMetricProperties);
+                nvLinkManagementNICPlatformEnvironmentMetricsReplacements,
+                asyncResp, inputMetricProperties);
             metricsReplacements(
-                nvLinkManagementNICPortPlatformEnvironmentMetricsReplacements, asyncResp,
-                inputMetricProperties);
+                nvLinkManagementNICPortPlatformEnvironmentMetricsReplacements,
+                asyncResp, inputMetricProperties);
         }
         else
         {

@@ -2916,10 +2916,9 @@ inline void getProcessorData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
     getProcessorFPGAPCIeInterface(aResp, objectPath);
 
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
-    nvidia_processor_utils::getInbandReconfigPermissionsData(
-        aResp, processorId, objectPath);
-    nvidia_processor_utils::populateErrorInjectionData(
-        aResp, processorId);
+    nvidia_processor_utils::getInbandReconfigPermissionsData(aResp, processorId,
+                                                             objectPath);
+    nvidia_processor_utils::populateErrorInjectionData(aResp, processorId);
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 }
 

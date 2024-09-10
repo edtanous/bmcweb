@@ -6,6 +6,7 @@
 #include "http/utility.hpp"
 #include "human_sort.hpp"
 
+#include <boost/container/flat_set.hpp>
 #include <boost/url/url.hpp>
 #include <nlohmann/json.hpp>
 
@@ -14,8 +15,6 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <boost/container/flat_set.hpp>
 
 namespace redfish
 {

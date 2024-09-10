@@ -129,7 +129,8 @@ inline void patchEdppSetPoint(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 std::string errBusyResolution =
                     "SMBPBI Command failed with error busy, please try after 60 seconds";
                 // busy error
-                BMCWEB_LOG_ERROR("Command failed with error busy, for patch EDPp Setpoint");
+                BMCWEB_LOG_ERROR(
+                    "Command failed with error busy, for patch EDPp Setpoint");
                 messages::asyncError(resp->res, errBusy, errBusyResolution);
             }
             else if (strcmp(dbusError->name,
@@ -147,7 +148,8 @@ inline void patchEdppSetPoint(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                                              "Device.Error.WriteFailure") == 0)
             {
                 // Service failed to change the config
-                BMCWEB_LOG_ERROR("Write Operation failed for patch EDPp Setpoint");
+                BMCWEB_LOG_ERROR(
+                    "Write Operation failed for patch EDPp Setpoint");
                 messages::operationFailed(resp->res);
             }
             else
@@ -156,8 +158,8 @@ inline void patchEdppSetPoint(const std::shared_ptr<bmcweb::AsyncResp>& resp,
                 messages::internalError(resp->res);
             }
         },
-            service, cpuObjectPath, "org.freedesktop.DBus.Properties",
-            "Set", "com.nvidia.Edpp", "SetPoint",
+            service, cpuObjectPath, "org.freedesktop.DBus.Properties", "Set",
+            "com.nvidia.Edpp", "SetPoint",
             std::variant<std::tuple<size_t, bool>>(reqSetPoint));
     });
 }
@@ -785,9 +787,9 @@ inline void getEDPpData(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
         "com.nvidia.Edpp");
 }
 
-inline void getPowerLimitPersistency(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& connectionName,
-                        const std::string& objPath)
+inline void getPowerLimitPersistency(
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& connectionName, const std::string& objPath)
 {
     crow::connections::systemBus->async_method_call(
         [asyncResp, connectionName,
@@ -1077,81 +1079,81 @@ inline void patchPowerLimit(const std::shared_ptr<bmcweb::AsyncResp>& resp,
 
                 BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
 
-            // Set the property, with handler to check error responses
-            crow::connections::systemBus->async_method_call(
-                [resp, resourceId, powerLimit,
-                 resourceType](boost::system::error_code ec,
-                               sdbusplus::message::message& msg) {
-                if (!ec)
-                {
-                    BMCWEB_LOG_DEBUG("Set power limit property succeeded");
-                    messages::success(resp->res);
-                    return;
-                }
+                // Set the property, with handler to check error responses
+                crow::connections::systemBus->async_method_call(
+                    [resp, resourceId, powerLimit,
+                     resourceType](boost::system::error_code ec,
+                                   sdbusplus::message::message& msg) {
+                    if (!ec)
+                    {
+                        BMCWEB_LOG_DEBUG("Set power limit property succeeded");
+                        messages::success(resp->res);
+                        return;
+                    }
 
                     BMCWEB_LOG_ERROR(
                         "{}: {} set power limit property failed: {}",
-                                 resourceType, resourceId, ec);
-                // Read and convert dbus error message to redfish error
-                const sd_bus_error* dbusError = msg.get_error();
-                if (dbusError == nullptr)
-                {
-                    messages::internalError(resp->res);
-                    return;
-                }
-                if (strcmp(
-                        dbusError->name,
-                        "xyz.openbmc_project.Common.Error.InvalidArgument") ==
-                    0)
-                {
-                    // Invalid value
-                    messages::propertyValueIncorrect(
+                        resourceType, resourceId, ec);
+                    // Read and convert dbus error message to redfish error
+                    const sd_bus_error* dbusError = msg.get_error();
+                    if (dbusError == nullptr)
+                    {
+                        messages::internalError(resp->res);
+                        return;
+                    }
+                    if (strcmp(
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.InvalidArgument") ==
+                        0)
+                    {
+                        // Invalid value
+                        messages::propertyValueIncorrect(
                             resp->res, "powerLimit",
                             std::to_string(powerLimit));
-                }
+                    }
                     else if (
                         strcmp(
-                             dbusError->name,
-                             "xyz.openbmc_project.Common.Error.Unavailable") ==
-                         0)
-                {
-                    std::string errBusy = "0x50A";
-                    std::string errBusyResolution =
-                        "SMBPBI Command failed with error busy, please try after 60 seconds";
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                        0)
+                    {
+                        std::string errBusy = "0x50A";
+                        std::string errBusyResolution =
+                            "SMBPBI Command failed with error busy, please try after 60 seconds";
 
-                    // busy error
+                        // busy error
                         messages::asyncError(resp->res, errBusy,
                                              errBusyResolution);
-                }
+                    }
                     else if (strcmp(
                                  dbusError->name,
-                                "xyz.openbmc_project.Common.Error.Timeout") ==
-                         0)
-                {
-                    std::string errTimeout = "0x600";
-                    std::string errTimeoutResolution =
-                        "Settings may/maynot have applied, please check get response before patching";
+                                 "xyz.openbmc_project.Common.Error.Timeout") ==
+                             0)
+                    {
+                        std::string errTimeout = "0x600";
+                        std::string errTimeoutResolution =
+                            "Settings may/maynot have applied, please check get response before patching";
 
-                    // timeout error
-                    messages::asyncError(resp->res, errTimeout,
-                                         errTimeoutResolution);
-                }
-                else if (strcmp(dbusError->name,
-                                "xyz.openbmc_project.Common."
-                                "Device.Error.WriteFailure") == 0)
-                {
-                    // Service failed to change the config
-                    messages::operationFailed(resp->res);
-                }
-                else
-                {
-                    messages::internalError(resp->res);
-                }
-            },
+                        // timeout error
+                        messages::asyncError(resp->res, errTimeout,
+                                             errTimeoutResolution);
+                    }
+                    else if (strcmp(dbusError->name,
+                                    "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+                    {
+                        // Service failed to change the config
+                        messages::operationFailed(resp->res);
+                    }
+                    else
+                    {
+                        messages::internalError(resp->res);
+                    }
+                },
                     element.first, objectPath,
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.Control.Power.Cap", "PowerCap",
-                std::variant<uint32_t>(static_cast<uint32_t>(powerLimit)));
+                    std::variant<uint32_t>(static_cast<uint32_t>(powerLimit)));
             });
         }
     },
@@ -1176,17 +1178,17 @@ inline void getSensorDataByService(
                               const PropertiesMap& properties) {
         if (ec)
         {
-            BMCWEB_LOG_DEBUG("Can't get sensor reading for {}",
-                             objPath);
+            BMCWEB_LOG_DEBUG("Can't get sensor reading for {}", objPath);
             // Not reporting Internal Failure for services that dont host
             // sensor path in case of Processor Env Eg: GpuOobRecovery in
             // case of FPGA Processor
             if (resourceType != "Processor")
             {
                 // Not reporting Internal Failure because we might have another
-                // service with the same objpath to set up config only. Eg: PartLoaction
-                BMCWEB_LOG_WARNING("Can't get Processor sensor DBus properties {}",
-                                   objPath);
+                // service with the same objpath to set up config only. Eg:
+                // PartLoaction
+                BMCWEB_LOG_WARNING(
+                    "Can't get Processor sensor DBus properties {}", objPath);
             }
             return;
         }
@@ -1700,67 +1702,66 @@ inline void postEdppReset(const std::shared_ptr<bmcweb::AsyncResp>& resp,
         return;
     }
 
-    static const auto resetEdppAsyncIntf =
-            "com.nvidia.Common.ResetEdppAsync";
+    static const auto resetEdppAsyncIntf = "com.nvidia.Common.ResetEdppAsync";
 
     dbus::utility::getDbusObject(
-            cpuObjectPath, std::array<std::string_view, 1>{resetEdppAsyncIntf},
-            [resp, cpuObjectPath, conName = *inventoryService,
-             processorId](const boost::system::error_code& ec,
-                          const dbus::utility::MapperGetObject& object) {
-            if (!ec)
-            {
-                for (const auto& [serv, _] : object)
-                {
-                    if (serv != conName)
-                    {
-                        continue;
-                    }
-
-                    nvidia_async_operation_utils::
-                        doGenericCallAsyncAndGatherResult<int>(
-                            resp, std::chrono::seconds(60), conName,
-                            cpuObjectPath, resetEdppAsyncIntf, "Reset",
-                            [resp, processorId](
-                                const std::string& status,
-                                [[maybe_unused]] const int* retValue) {
-                        if (status == nvidia_async_operation_utils::
-                                          asyncStatusValueSuccess)
-                        {
-                            BMCWEB_LOG_DEBUG("Edpp Reset for {} Succeded",
-                                             processorId);
-                            messages::success(resp->res);
-                            return;
-                        }
-                        BMCWEB_LOG_ERROR("Edpp Reset for {} failed",
-                                         processorId, status);
-                        messages::internalError(resp->res);
-                    });
-
-                    return;
-                }
-            }
-
-
-    // Call Edpp Reset Method
-    crow::connections::systemBus->async_method_call(
-        [resp, processorId](boost::system::error_code ec, const int retValue) {
+        cpuObjectPath, std::array<std::string_view, 1>{resetEdppAsyncIntf},
+        [resp, cpuObjectPath, conName = *inventoryService,
+         processorId](const boost::system::error_code& ec,
+                      const dbus::utility::MapperGetObject& object) {
         if (!ec)
         {
-            if (retValue != 0)
+            for (const auto& [serv, _] : object)
             {
-                BMCWEB_LOG_ERROR("{}", retValue);
-                messages::operationFailed(resp->res);
+                if (serv != conName)
+                {
+                    continue;
+                }
+
+                nvidia_async_operation_utils::doGenericCallAsyncAndGatherResult<
+                    int>(
+                    resp, std::chrono::seconds(60), conName, cpuObjectPath,
+                    resetEdppAsyncIntf, "Reset",
+                    [resp, processorId](const std::string& status,
+                                        [[maybe_unused]] const int* retValue) {
+                    if (status ==
+                        nvidia_async_operation_utils::asyncStatusValueSuccess)
+                    {
+                        BMCWEB_LOG_DEBUG("Edpp Reset for {} Succeded",
+                                         processorId);
+                        messages::success(resp->res);
+                        return;
+                    }
+                    BMCWEB_LOG_ERROR("Edpp Reset for {} failed", processorId,
+                                     status);
+                    messages::internalError(resp->res);
+                });
+
+                return;
             }
-            BMCWEB_LOG_DEBUG("CPU:{} Edpp Reset Succeded", processorId);
-            messages::success(resp->res);
-            return;
         }
-        BMCWEB_LOG_DEBUG("{}", ec);
-        messages::internalError(resp->res);
-        return;
-    },
-        conName, cpuObjectPath, "com.nvidia.Edpp", "Reset");});
+
+        // Call Edpp Reset Method
+        crow::connections::systemBus->async_method_call(
+            [resp, processorId](boost::system::error_code ec,
+                                const int retValue) {
+            if (!ec)
+            {
+                if (retValue != 0)
+                {
+                    BMCWEB_LOG_ERROR("{}", retValue);
+                    messages::operationFailed(resp->res);
+                }
+                BMCWEB_LOG_DEBUG("CPU:{} Edpp Reset Succeded", processorId);
+                messages::success(resp->res);
+                return;
+            }
+            BMCWEB_LOG_DEBUG("{}", ec);
+            messages::internalError(resp->res);
+            return;
+        },
+            conName, cpuObjectPath, "com.nvidia.Edpp", "Reset");
+    });
 }
 #endif // BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
 

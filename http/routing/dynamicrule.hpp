@@ -87,8 +87,7 @@ class DynamicRule : public BaseRule, public RuleParameterTraits<DynamicRule>
     }
 
   private:
-    std::function<void(Request&,
-                       const std::shared_ptr<bmcweb::AsyncResp>&,
+    std::function<void(Request&, const std::shared_ptr<bmcweb::AsyncResp>&,
                        const std::vector<std::string>&)>
         erasedHandler;
 };

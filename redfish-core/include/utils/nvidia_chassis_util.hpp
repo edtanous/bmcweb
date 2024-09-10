@@ -60,7 +60,7 @@ inline void
             }
             chassisNames.emplace(std::move(chassisName));
         }
-        for (const auto &chassisName : chassisNames)
+        for (const auto& chassisName : chassisNames)
         {
             linksArray.push_back(
                 {{"@odata.id", "/redfish/v1/Chassis/" + chassisName}});
@@ -581,10 +581,9 @@ inline void setOemBaseboardChassisAssert(
  * @param[in]       service     D-Bus service to query.
  * @param[in]       objPath     D-Bus object to query.
  */
-inline void
-    getOemAssemblyAssert(std::shared_ptr<bmcweb::AsyncResp> aResp,
-                         const std::string& assemblyId,
-                         const std::string& objPath)
+inline void getOemAssemblyAssert(std::shared_ptr<bmcweb::AsyncResp> aResp,
+                                 const std::string& assemblyId,
+                                 const std::string& objPath)
 
 {
     BMCWEB_LOG_DEBUG("Get assembly OEM info");
@@ -595,9 +594,9 @@ inline void
      */
     dbus::utility::findAssociations(
         objPath + "/associated_fru",
-        [aResp{std::move(aResp)}, assemblyId](
-            const boost::system::error_code ec,
-            std::variant<std::vector<std::string>>& assoc) {
+        [aResp{std::move(aResp)},
+         assemblyId](const boost::system::error_code ec,
+                     std::variant<std::vector<std::string>>& assoc) {
         if (ec)
         {
             BMCWEB_LOG_DEBUG("Cannot get association");
@@ -611,10 +610,10 @@ inline void
         }
         const std::string& fruPath = data->front();
         crow::connections::systemBus->async_method_call(
-            [aResp{std::move(aResp)},
-             fruPath, assemblyId](const boost::system::error_code ec,
-                      const std::vector<std::pair<
-                          std::string, std::vector<std::string>>>& objects) {
+            [aResp{std::move(aResp)}, fruPath,
+             assemblyId](const boost::system::error_code ec,
+                         const std::vector<std::pair<
+                             std::string, std::vector<std::string>>>& objects) {
             if (ec || objects.size() <= 0)
             {
                 BMCWEB_LOG_DEBUG("Cannpt get object");
@@ -636,7 +635,8 @@ inline void
                 }
                 for (auto& assembly : aResp->res.jsonValue["Assemblies"])
                 {
-                    if (assembly["MemberId"] == assemblyId) {
+                    if (assembly["MemberId"] == assemblyId)
+                    {
                         assembly["Oem"]["Nvidia"]["@odata.type"] =
                             "#NvidiaAssembly.v1_0_0.NvidiaAssembly";
                         nlohmann::json& vendorDataArray =
@@ -644,7 +644,8 @@ inline void
                         vendorDataArray = nlohmann::json::array();
                         for (const auto& property : propertiesList)
                         {
-                            if (property.first.find("BOARD_INFO_AM") != std::string::npos &&
+                            if (property.first.find("BOARD_INFO_AM") !=
+                                    std::string::npos &&
                                 assembly["PhysicalContext"] == "Board")
                             {
                                 const std::string* value =
@@ -652,35 +653,38 @@ inline void
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_DEBUG("Null value returned "
-                                                    "Board Extra");
+                                                     "Board Extra");
                                     messages::internalError(aResp->res);
                                     return;
                                 }
                                 vendorDataArray.emplace_back(std::move(*value));
                             }
-                            else if (property.first.find("PRODUCT_INFO_AM") != std::string::npos &&
-                                    assembly["PhysicalContext"] == "SystemBoard")
+                            else if (property.first.find("PRODUCT_INFO_AM") !=
+                                         std::string::npos &&
+                                     assembly["PhysicalContext"] ==
+                                         "SystemBoard")
                             {
                                 const std::string* value =
                                     std::get_if<std::string>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_DEBUG("Null value returned "
-                                                    "Product Extra");
+                                                     "Product Extra");
                                     messages::internalError(aResp->res);
                                     return;
                                 }
                                 vendorDataArray.emplace_back(std::move(*value));
                             }
-                            else if (property.first.find("CHASSIS_INFO_AM") != std::string::npos &&
-                                    assembly["PhysicalContext"] == "Chassis")
+                            else if (property.first.find("CHASSIS_INFO_AM") !=
+                                         std::string::npos &&
+                                     assembly["PhysicalContext"] == "Chassis")
                             {
                                 const std::string* value =
                                     std::get_if<std::string>(&property.second);
                                 if (value == nullptr)
                                 {
                                     BMCWEB_LOG_DEBUG("Null value returned "
-                                                    "Product Extra");
+                                                     "Product Extra");
                                     messages::internalError(aResp->res);
                                     return;
                                 }
@@ -1309,7 +1313,7 @@ inline void handleChassisGetAllProperties(
         maxPowerWatts, "AssetTag", assetTag, "WriteProtected", writeProtected,
         "WriteProtectedControl", writeProtectedControl,
         "PCIeReferenceClockCount", pCIeReferenceClockCount,
-        "PCIeReferenceClockEnabled", pCIeReferenceClockEnabled,"State", state,
+        "PCIeReferenceClockEnabled", pCIeReferenceClockEnabled, "State", state,
         "LocationContext", locationContext);
 
     if (!success)
@@ -1425,9 +1429,11 @@ inline void handleChassisGetAllProperties(
 
     if (pCIeReferenceClockCount != nullptr)
     {
-        if(pCIeReferenceClockEnabled != nullptr && *pCIeReferenceClockEnabled) {
-            asyncResp->res.jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockCount"] =
-            *pCIeReferenceClockCount;
+        if (pCIeReferenceClockEnabled != nullptr && *pCIeReferenceClockEnabled)
+        {
+            asyncResp->res
+                .jsonValue["Oem"]["Nvidia"]["PCIeReferenceClockCount"] =
+                *pCIeReferenceClockCount;
         }
     }
     if (state != nullptr && operationalStatusPresent)

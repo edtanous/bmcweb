@@ -22,10 +22,9 @@
 
 namespace redfish
 {
-inline void doLeakDetection(
-    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-    const std::string& chassisId,
-    const std::optional<std::string>& validChassisPath)
+inline void doLeakDetection(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& chassisId,
+                            const std::optional<std::string>& validChassisPath)
 {
     if (!validChassisPath)
     {
@@ -44,10 +43,10 @@ inline void doLeakDetection(
     asyncResp->res.jsonValue["Name"] = "Leak Detection Systems";
     asyncResp->res.jsonValue["Id"] = "LeakDetection";
 
-    asyncResp->res.jsonValue["LeakDetectors"]["@odata.id"] =
-        boost::urls::format(
-            "/redfish/v1/Chassis/{}/ThermalSubsystem/LeakDetection/LeakDetectors",
-            chassisId);
+    asyncResp->res
+        .jsonValue["LeakDetectors"]["@odata.id"] = boost::urls::format(
+        "/redfish/v1/Chassis/{}/ThermalSubsystem/LeakDetection/LeakDetectors",
+        chassisId);
 
     asyncResp->res.jsonValue["Status"]["State"] = "Enabled";
     asyncResp->res.jsonValue["Status"]["Health"] = "OK";
@@ -56,9 +55,10 @@ inline void doLeakDetection(
 #endif // BMCWEB_DISABLE_HEALTH_ROLLUP
 }
 
-inline void handleLeakDetectionGet(App& app, const crow::Request& req,
-                         const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                         const std::string& chassisId)
+inline void
+    handleLeakDetectionGet(App& app, const crow::Request& req,
+                           const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                           const std::string& chassisId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -72,7 +72,8 @@ inline void handleLeakDetectionGet(App& app, const crow::Request& req,
 
 inline void requestRoutesLeakDetection(App& app)
 {
-    BMCWEB_ROUTE(app, "/redfish/v1/Chassis/<str>/ThermalSubsystem/LeakDetection/")
+    BMCWEB_ROUTE(app,
+                 "/redfish/v1/Chassis/<str>/ThermalSubsystem/LeakDetection/")
         .privileges(redfish::privileges::getLeakDetection)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handleLeakDetectionGet, std::ref(app)));

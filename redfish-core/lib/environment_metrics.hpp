@@ -688,10 +688,10 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                     "xyz.openbmc_project.Inventory.Item.Cpu",
                     "xyz.openbmc_project.Inventory.Item.Accelerator"};
 
-                bool persistency = false; 
-                if(powerLimitPersistency)
+                bool persistency = false;
+                if (powerLimitPersistency)
                 {
-                   persistency = *powerLimitPersistency;
+                    persistency = *powerLimitPersistency;
                 }
 
                 crow::connections::systemBus->async_method_call(
@@ -738,8 +738,8 @@ inline void requestRoutesProcessorEnvironmentMetrics(App& app)
                         {
                             std::string resourceType = "Processors";
                             redfish::nvidia_env_utils::patchPowerLimit(
-                                asyncResp, processorId, *setPoint,
-                                objPath, resourceType, persistency);
+                                asyncResp, processorId, *setPoint, objPath,
+                                resourceType, persistency);
                         }
 
                         return;

@@ -545,9 +545,9 @@ class Router
 
         std::optional<HttpVerb> verb = httpVerbFromBoost(req.method());
         if (!verb)
-            {
+        {
             return findRoute;
-            }
+        }
         size_t reqMethodIndex = static_cast<size_t>(*verb);
         if (reqMethodIndex >= perMethods.size())
         {

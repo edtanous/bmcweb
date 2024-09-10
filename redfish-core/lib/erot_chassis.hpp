@@ -311,12 +311,12 @@ inline void getEROTChassis(const crow::Request& req,
                     oemActionsRouteDot + "DOTTokenInstall";
 #endif
 #ifdef BMCWEB_ENABLE_MANUAL_BOOT_MODE
-            auto& oemActionsJsonManualBoot =
-                asyncResp->res.jsonValue["Actions"]["Oem"];
-            oemActionsJsonManualBoot
-                ["#NvidiaChassis.BootProtectedDevice"]["target"] =
-                    "/redfish/v1/Chassis/" + chassisId +
-                    "/Actions/Oem/NvidiaChassis.BootProtectedDevice";
+                auto& oemActionsJsonManualBoot =
+                    asyncResp->res.jsonValue["Actions"]["Oem"];
+                oemActionsJsonManualBoot
+                    ["#NvidiaChassis.BootProtectedDevice"]["target"] =
+                        "/redfish/v1/Chassis/" + chassisId +
+                        "/Actions/Oem/NvidiaChassis.BootProtectedDevice";
 #endif
             }
 
@@ -382,37 +382,47 @@ inline void getEROTChassis(const crow::Request& req,
                                                            chassisId);
 
             // Might have 2+ services to support different properties
-            for (size_t serviceIdx = 0; serviceIdx < connectionNames.size(); serviceIdx++)
+            for (size_t serviceIdx = 0; serviceIdx < connectionNames.size();
+                 serviceIdx++)
             {
-                // Check if the interface exists, then go ahead getting the property value to prevent getting an internal error
+                // Check if the interface exists, then go ahead getting the
+                // property value to prevent getting an internal error
                 for (const auto& interface : connectionNames[serviceIdx].second)
                 {
                     if (interface == "xyz.openbmc_project.Common.UUID")
                     {
-	                redfish::chassis_utils::getChassisUUID(
-                            req, asyncResp, connectionNames[serviceIdx].first, path, true);
+                        redfish::chassis_utils::getChassisUUID(
+                            req, asyncResp, connectionNames[serviceIdx].first,
+                            path, true);
                     }
-                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.Location")
+                    else if (interface ==
+                             "xyz.openbmc_project.Inventory.Decorator.Location")
                     {
                         redfish::chassis_utils::getChassisLocationType(
                             asyncResp, connectionNames[serviceIdx].first, path);
                     }
-                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.LocationCode")
+                    else if (
+                        interface ==
+                        "xyz.openbmc_project.Inventory.Decorator.LocationCode")
                     {
                         redfish::chassis_utils::getChassisLocationCode(
                             asyncResp, connectionNames[serviceIdx].first, path);
                     }
-                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.LocationContext")
+                    else if (
+                        interface ==
+                        "xyz.openbmc_project.Inventory.Decorator.LocationContext")
                     {
                         redfish::chassis_utils::getChassisLocationContext(
                             asyncResp, connectionNames[serviceIdx].first, path);
                     }
-                    else if (interface == "xyz.openbmc_project.Inventory.Item.Chassis")
+                    else if (interface ==
+                             "xyz.openbmc_project.Inventory.Item.Chassis")
                     {
                         redfish::chassis_utils::getChassisType(
                             asyncResp, connectionNames[serviceIdx].first, path);
                     }
-                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.Asset")
+                    else if (interface ==
+                             "xyz.openbmc_project.Inventory.Decorator.Asset")
                     {
                         redfish::chassis_utils::getChassisManufacturer(
                             asyncResp, connectionNames[serviceIdx].first, path);
@@ -423,7 +433,9 @@ inline void getEROTChassis(const crow::Request& req,
                         redfish::chassis_utils::getChassisSKU(
                             asyncResp, connectionNames[serviceIdx].first, path);
                     }
-                    else if (interface == "xyz.openbmc_project.Inventory.Decorator.Replaceable")
+                    else if (
+                        interface ==
+                        "xyz.openbmc_project.Inventory.Decorator.Replaceable")
                     {
                         redfish::chassis_utils::getChassisReplaceable(
                             asyncResp, connectionNames[serviceIdx].first, path);
@@ -502,8 +514,9 @@ inline void requestRoutesEROTChassisCertificate(App& app)
 
             crow::connections::systemBus->async_method_call(
                 [req, asyncResp, chassisID(std::string(chassisID)),
-                certificateID](const boost::system::error_code ec,
-                               const crow::openbmc_mapper::GetSubTreeType& subtree) {
+                 certificateID](
+                    const boost::system::error_code ec,
+                    const crow::openbmc_mapper::GetSubTreeType& subtree) {
                 if (ec)
                 {
                     messages::internalError(asyncResp->res);
@@ -512,11 +525,13 @@ inline void requestRoutesEROTChassisCertificate(App& app)
                 // Iterate over all retrieved ObjectPaths.
                 for (const std::pair<
                          std::string,
-                         std::vector<std::pair<std::string, std::vector<std::string>>>>&
+                         std::vector<
+                             std::pair<std::string, std::vector<std::string>>>>&
                          object : subtree)
                 {
                     const std::string& path = object.first;
-                    const std::vector<std::pair<std::string, std::vector<std::string>>>&
+                    const std::vector<
+                        std::pair<std::string, std::vector<std::string>>>&
                         connectionNames = object.second;
 
                     sdbusplus::message::object_path objectPath(path);
@@ -531,7 +546,8 @@ inline void requestRoutesEROTChassisCertificate(App& app)
                         continue;
                     }
 
-                    getChassisCertificate(req, asyncResp, objectPath, certificateID);
+                    getChassisCertificate(req, asyncResp, objectPath,
+                                          certificateID);
                     break;
                 }
             },
@@ -584,7 +600,8 @@ inline void requestRoutesEROTChassisCertificate(App& app)
 inline void
     handleEROTChassisPatch(const crow::Request& req,
                            const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                           const std::string& chassisId,[[maybe_unused]] bool isCpuEROT)
+                           const std::string& chassisId,
+                           [[maybe_unused]] bool isCpuEROT)
 {
     if (chassisId.empty())
     {

@@ -471,8 +471,9 @@ inline void getInbandReconfigPermissionsData(
  * @param[in,out]   aResp       Async HTTP response.
  * @param[in]       cpuId       Processor ID.
  */
-inline void populateErrorInjectionData(
-    const std::shared_ptr<bmcweb::AsyncResp>& aResp, const std::string& cpuId)
+inline void
+    populateErrorInjectionData(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
+                               const std::string& cpuId)
 {
     processor_utils::getProcessorObject(
         aResp, cpuId,

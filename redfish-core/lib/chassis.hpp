@@ -727,18 +727,21 @@ inline void handleChassisGetSubTree(
                 {
                     getChassisLocationCode(asyncResp, connectionName, path);
                 }
-                else if (interface ==
-                         "xyz.openbmc_project.Inventory.Decorator.LocationContext")
+                else if (
+                    interface ==
+                    "xyz.openbmc_project.Inventory.Decorator.LocationContext")
                 {
-                    redfish::chassis_utils::getChassisLocationContext(asyncResp, connectionName, path);
+                    redfish::chassis_utils::getChassisLocationContext(
+                        asyncResp, connectionName, path);
                 }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
                 else if (
                     interface ==
                     "xyz.openbmc_project.Inventory.Decorator.VendorInformation")
-                { 
-                    //CBC chassis extention
-                    redfish::nvidia_chassis_utils::getOemCBCChassisAsset(asyncResp, connectionName, path);
+                {
+                    // CBC chassis extention
+                    redfish::nvidia_chassis_utils::getOemCBCChassisAsset(
+                        asyncResp, connectionName, path);
                 }
 #endif
             }
@@ -775,7 +778,8 @@ inline void handleChassisGetSubTree(
                 asyncResp, path, "all_states", chassisId);
         }
         isFoundChassisObject = true;
-        // need to check all objpath because a few configs are set by another service
+        // need to check all objpath because a few configs are set by another
+        // service
     }
 
     if (isFoundChassisObject == false)
@@ -1058,8 +1062,8 @@ inline void
     {
         return;
     }
-    redfish::chassis_utils::isEROTChassis(param,
-                                          [req, asyncResp, param](bool isEROT, bool isCpuEROT) {
+    redfish::chassis_utils::isEROTChassis(
+        param, [req, asyncResp, param](bool isEROT, bool isCpuEROT) {
         if (isEROT)
         {
             BMCWEB_LOG_DEBUG(" EROT chassis");
@@ -1207,7 +1211,8 @@ inline void handleChassisResetActionInfoPost(
     BMCWEB_LOG_DEBUG("Post Chassis Reset.");
 #ifdef BMCWEB_ENABLE_EROT_RESET
     redfish::chassis_utils::isEROTChassis(
-        chassisId, [req, asyncResp, chassisId](bool isEROT, bool /*isCpuEROT*/) {
+        chassisId,
+        [req, asyncResp, chassisId](bool isEROT, bool /*isCpuEROT*/) {
         if (isEROT)
         {
             handleEROTChassisResetAction(req, asyncResp, chassisId);

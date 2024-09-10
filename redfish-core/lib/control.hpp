@@ -25,7 +25,6 @@
 #include <utils/chassis_utils.hpp>
 #include <utils/json_utils.hpp>
 #include <utils/nvidia_async_set_utils.hpp>
-#include "utils/nvidia_async_set_callbacks.hpp"
 #include <utils/nvidia_control_utils.hpp>
 
 namespace redfish
@@ -635,70 +634,70 @@ inline void changepowercap(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
                 BMCWEB_LOG_DEBUG("Performing Patch using set-property Call");
 
-            crow::connections::systemBus->async_method_call(
-                [asyncResp, path, setpoint,
-                 element](const boost::system::error_code ec2,
-                          sdbusplus::message::message& msg) {
-                if (!ec2)
-                {
-                    BMCWEB_LOG_DEBUG("Set power limit property succeeded");
-                    messages::success(asyncResp->res);
-                    return;
-                }
-                // Read and convert dbus error message to redfish error
-                const sd_bus_error* dbusError = msg.get_error();
-                if (dbusError == nullptr)
-                {
-                    messages::internalError(asyncResp->res);
-                    return;
-                }
-                if (strcmp(
-                        dbusError->name,
-                        "xyz.openbmc_project.Common.Error.InvalidArgument") ==
-                    0)
-                {
-                    // Invalid value
+                crow::connections::systemBus->async_method_call(
+                    [asyncResp, path, setpoint,
+                     element](const boost::system::error_code ec2,
+                              sdbusplus::message::message& msg) {
+                    if (!ec2)
+                    {
+                        BMCWEB_LOG_DEBUG("Set power limit property succeeded");
+                        messages::success(asyncResp->res);
+                        return;
+                    }
+                    // Read and convert dbus error message to redfish error
+                    const sd_bus_error* dbusError = msg.get_error();
+                    if (dbusError == nullptr)
+                    {
+                        messages::internalError(asyncResp->res);
+                        return;
+                    }
+                    if (strcmp(
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.InvalidArgument") ==
+                        0)
+                    {
+                        // Invalid value
                         messages::propertyValueIncorrect(
                             asyncResp->res, "setpoint",
-                                                     std::to_string(setpoint));
-                }
-                else if (strcmp(dbusError->name,
-                                "xyz.openbmc_project.Common."
-                                "Device.Error.WriteFailure") == 0)
-                {
-                    // Service failed to change the config
-                    messages::operationFailed(asyncResp->res);
-                }
+                            std::to_string(setpoint));
+                    }
+                    else if (strcmp(dbusError->name,
+                                    "xyz.openbmc_project.Common."
+                                    "Device.Error.WriteFailure") == 0)
+                    {
+                        // Service failed to change the config
+                        messages::operationFailed(asyncResp->res);
+                    }
                     else if (
                         strcmp(
-                             dbusError->name,
-                             "xyz.openbmc_project.Common.Error.Unavailable") ==
-                         0)
-                {
-                    std::string errBusy = "0x50A";
-                    std::string errBusyResolution =
-                        "SMBPBI Command failed with error busy, please try after 60 seconds";
-                    // busy error
-                    messages::asyncError(asyncResp->res, errBusy,
-                                         errBusyResolution);
-                }
+                            dbusError->name,
+                            "xyz.openbmc_project.Common.Error.Unavailable") ==
+                        0)
+                    {
+                        std::string errBusy = "0x50A";
+                        std::string errBusyResolution =
+                            "SMBPBI Command failed with error busy, please try after 60 seconds";
+                        // busy error
+                        messages::asyncError(asyncResp->res, errBusy,
+                                             errBusyResolution);
+                    }
                     else if (strcmp(
                                  dbusError->name,
-                                "xyz.openbmc_project.Common.Error.Timeout") ==
-                         0)
-                {
-                    std::string errTimeout = "0x600";
-                    std::string errTimeoutResolution =
-                        "Settings may/maynot have applied, please check get response before patching";
-                    // timeout error
-                    messages::asyncError(asyncResp->res, errTimeout,
-                                         errTimeoutResolution);
-                }
-                else
-                {
-                    messages::internalError(asyncResp->res);
-                }
-            },
+                                 "xyz.openbmc_project.Common.Error.Timeout") ==
+                             0)
+                    {
+                        std::string errTimeout = "0x600";
+                        std::string errTimeoutResolution =
+                            "Settings may/maynot have applied, please check get response before patching";
+                        // timeout error
+                        messages::asyncError(asyncResp->res, errTimeout,
+                                             errTimeoutResolution);
+                    }
+                    else
+                    {
+                        messages::internalError(asyncResp->res);
+                    }
+                },
                     element.first, path, "org.freedesktop.DBus.Properties",
                     "Set", "xyz.openbmc_project.Control.Power.Cap",
                     setPointPropName, dbus::utility::DbusVariantType(setpoint));
@@ -838,7 +837,6 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetObject", path,
         std::array<const char*, 1>{"xyz.openbmc_project.Control.Power.Mode"});
 }
-
 
 inline void requestRoutesChassisControlsCollection(App& app)
 {
@@ -1035,8 +1033,7 @@ inline void requestRoutesChassisControls(App& app)
         };
 
         auto getChassisControl =
-            [asyncResp, chassisID, controlID,
-             getControlSystem](
+            [asyncResp, chassisID, controlID, getControlSystem](
                 const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
@@ -1074,7 +1071,7 @@ inline void requestRoutesChassisControls(App& app)
                 {
                     crow::connections::systemBus->async_method_call(
                         [asyncResp, controlID, chassisID, processorPath,
-                          validChassisPath](
+                         validChassisPath](
                             const boost::system::error_code ec,
                             const dbus::utility::MapperGetObject& objType) {
                         if (ec || objType.empty())
@@ -1115,8 +1112,8 @@ inline void requestRoutesChassisControls(App& app)
         };
 
         auto getControl =
-            [asyncResp, chassisID, getControlSystem,
-             getChassisControl, getControlCpu](
+            [asyncResp, chassisID, getControlSystem, getChassisControl,
+             getControlCpu](
                 const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
@@ -1126,8 +1123,8 @@ inline void requestRoutesChassisControls(App& app)
                 return;
             }
             crow::connections::systemBus->async_method_call(
-                [asyncResp, getControlSystem,
-                 getControlCpu, getChassisControl, validChassisPath](
+                [asyncResp, getControlSystem, getControlCpu, getChassisControl,
+                 validChassisPath](
                     const boost::system::error_code ec,
                     const dbus::utility::MapperGetObject& objType) {
                 if (ec || objType.empty())
@@ -1151,7 +1148,7 @@ inline void requestRoutesChassisControls(App& app)
                     }
                 }
                 // Not a CPU
-                getChassisControl(validChassisPath);             
+                getChassisControl(validChassisPath);
             },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
@@ -1267,9 +1264,8 @@ inline void requestRoutesChassisControls(App& app)
         };
 
         auto patchChassisControl =
-            [asyncResp, chassisID, controlID,
-             patchControlSystem, req](
-                const std::optional<std::string>& validChassisPath) {
+            [asyncResp, chassisID, controlID, patchControlSystem,
+             req](const std::optional<std::string>& validChassisPath) {
             if (!validChassisPath)
             {
                 BMCWEB_LOG_ERROR("Not a valid chassis ID:{}", chassisID);
@@ -1279,10 +1275,9 @@ inline void requestRoutesChassisControls(App& app)
             }
 
             crow::connections::systemBus->async_method_call(
-                [asyncResp, controlID, validChassisPath,
-                 patchControlSystem, chassisID, req](
-                    const boost::system::error_code ec,
-                    std::variant<std::vector<std::string>>& resp) {
+                [asyncResp, controlID, validChassisPath, patchControlSystem,
+                 chassisID, req](const boost::system::error_code ec,
+                                 std::variant<std::vector<std::string>>& resp) {
                 if (ec)
                 {
                     BMCWEB_LOG_DEBUG(
@@ -1455,8 +1450,8 @@ inline void requestRoutesChassisControls(App& app)
                 return;
             }
             crow::connections::systemBus->async_method_call(
-                [asyncResp, patchChassisControl, patchControlSystem, patchControlCpu, 
-                 validChassisPath](
+                [asyncResp, patchChassisControl, patchControlSystem,
+                 patchControlCpu, validChassisPath](
                     const boost::system::error_code ec,
                     const dbus::utility::MapperGetObject& objType) {
                 if (ec || objType.empty())
@@ -1480,7 +1475,7 @@ inline void requestRoutesChassisControls(App& app)
                     }
                 }
 
-               patchChassisControl(validChassisPath);
+                patchChassisControl(validChassisPath);
             },
                 "xyz.openbmc_project.ObjectMapper",
                 "/xyz/openbmc_project/object_mapper",
@@ -1683,7 +1678,6 @@ inline void requestRoutesChassisControlsReset(App& app)
                 "/xyz/openbmc_project/object_mapper",
                 "xyz.openbmc_project.ObjectMapper", "GetObject",
                 *validChassisPath, std::array<const char*, 0>{});
-
         };
 
         redfish::chassis_utils::getValidChassisPath(asyncResp, chassisId,

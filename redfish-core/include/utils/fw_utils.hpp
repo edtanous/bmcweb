@@ -580,7 +580,8 @@ inline void populateSlotInfo(std::shared_ptr<bmcweb::AsyncResp> asyncResp,
             return;
         }
 
-        const std::string softwareSlotInterface = "xyz.openbmc_project.Software.Slot";
+        const std::string softwareSlotInterface =
+            "xyz.openbmc_project.Software.Slot";
         std::string slotService;
 
         for (const auto& [service, interfaces] : response)

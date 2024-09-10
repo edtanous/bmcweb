@@ -21,8 +21,7 @@
 namespace redfish::firmware_info
 {
 
-static constexpr auto slotInterface =
-    "xyz.openbmc_project.Software.Slot";
+static constexpr auto slotInterface = "xyz.openbmc_project.Software.Slot";
 static constexpr auto secVersionInterface =
     "xyz.openbmc_project.Software.SecurityVersion";
 static constexpr auto securityCfgIntf =
@@ -33,8 +32,7 @@ static constexpr auto minSecVersionInterface =
 static constexpr std::array<std::string_view, 4> interfaces = {
     "xyz.openbmc_project.Software.Slot",
     "xyz.openbmc_project.Software.BuildType",
-    "xyz.openbmc_project.Software.State",
-    secVersionInterface};
+    "xyz.openbmc_project.Software.State", secVersionInterface};
 
 static const std::string chassisDbusPath =
     "/xyz/openbmc_project/inventory/system/chassis/";
@@ -825,8 +823,8 @@ inline void updateIrreversibleConfigEnabled(
             const ::dbus::utility::MapperGetObject& mapperResponse) {
         if (ec)
         {
-            BMCWEB_LOG_INFO("SecurityConfig interface not present : {}, {}",
-                             ec, ec.message());
+            BMCWEB_LOG_INFO("SecurityConfig interface not present : {}, {}", ec,
+                            ec.message());
             return;
         }
         if (mapperResponse.size() != 1)
@@ -1130,8 +1128,9 @@ inline void handleupdateMinSecVersionResponse(
                 sdbusplus::asio::getProperty<std::tuple<uint16_t, std::string>>(
                     *crow::connections::systemBus, service, securityPath,
                     minSecVersionInterface, "ErrorCode",
-                    [asyncResp](const boost::system::error_code& ec,
-                                const std::tuple<uint16_t, std::string> property) {
+                    [asyncResp](
+                        const boost::system::error_code& ec,
+                        const std::tuple<uint16_t, std::string> property) {
                     if (ec)
                     {
                         BMCWEB_LOG_ERROR("UpdateMinSecVersion DBUS error");
@@ -1140,8 +1139,7 @@ inline void handleupdateMinSecVersionResponse(
                         return;
                     }
                     redfish::messages::resourceErrorsDetectedFormatError(
-                        asyncResp->res,
-                        "UpdateMinimumSecurityVersion",
+                        asyncResp->res, "UpdateMinimumSecurityVersion",
                         std::get<1>((property)));
                     BMCWEB_LOG_ERROR("Another staging is in progress.");
                     clearSecVersion();

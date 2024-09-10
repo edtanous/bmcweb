@@ -449,9 +449,9 @@ inline void
         channel, "MemoryController", memoryController, "Slot", slot, "Socket",
         socket, "SparePartNumber", sparePartNumber, "Model", model,
         "LocationCode", locationCode, "LocationType", locationType,
-        "LocationContext", locationContext,
-        "RowRemappingFailureState", rowMappingFailureState,
-        "RowRemappingPendingState", rowMappingPendingState);
+        "LocationContext", locationContext, "RowRemappingFailureState",
+        rowMappingFailureState, "RowRemappingPendingState",
+        rowMappingPendingState);
 
     if (!success)
     {
@@ -623,8 +623,7 @@ inline void
     }
     if (locationContext != nullptr)
     {
-        asyncResp->res
-            .jsonValue[jsonPtr]["Location"]["PartLocationContext"] =
+        asyncResp->res.jsonValue[jsonPtr]["Location"]["PartLocationContext"] =
             *locationContext;
     }
 #ifdef BMCWEB_ENABLE_NVIDIA_OEM_PROPERTIES
@@ -1343,9 +1342,9 @@ inline void requestRoutesMemoryMetrics(App& app)
         .privileges({{"Login"}})
         .methods(boost::beast::http::verb::get)(
             [&app](const crow::Request& req,
-               const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               [[maybe_unused]] const std::string& systemName,
-               const std::string& dimmId) {
+                   const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                   [[maybe_unused]] const std::string& systemName,
+                   const std::string& dimmId) {
         if (!redfish::setUpRedfishRoute(app, req, asyncResp))
         {
             return;

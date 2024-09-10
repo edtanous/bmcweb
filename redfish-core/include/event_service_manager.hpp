@@ -750,8 +750,7 @@ class Subscription : public persistent_data::UserSubscription
             event_log::getRegistryAndMessageKey(*messageId, registry,
                                                 messageKey);
 
-            auto obj = std::ranges::find(registryPrefixes,
-                                    registry);
+            auto obj = std::ranges::find(registryPrefixes, registry);
             if (obj == registryPrefixes.end())
             {
                 return false;
@@ -774,8 +773,7 @@ class Subscription : public persistent_data::UserSubscription
                 return false;
             }
 
-            auto obj = std::ranges::find(originResources,
-                                    *originOfCondition);
+            auto obj = std::ranges::find(originResources, *originOfCondition);
 
             if (obj == originResources.end())
             {
@@ -853,7 +851,7 @@ class Subscription : public persistent_data::UserSubscription
         return sendEvent(std::move(strMsg));
     }
 
-   /*!
+    /*!
      * @brief   Send the event if this subscription does not filter it out.
      * @param[in] event   The event to be sent.
      * @return  Void
@@ -863,7 +861,7 @@ class Subscription : public persistent_data::UserSubscription
         nlohmann::json logEntry;
 
         if (event.formatEventLogEntry(logEntry,
-                                        this->includeOriginOfCondition) != 0)
+                                      this->includeOriginOfCondition) != 0)
         {
             BMCWEB_LOG_ERROR("Failed to format the event log entry");
         }
@@ -880,11 +878,11 @@ class Subscription : public persistent_data::UserSubscription
         {
             return;
         }
-        std::string strMsg = nlohmann::json(std::move(msg)).dump(
-            2, ' ', true, nlohmann::json::error_handler_t::replace);
+        std::string strMsg =
+            nlohmann::json(std::move(msg))
+                .dump(2, ' ', true, nlohmann::json::error_handler_t::replace);
         this->sendEvent(std::move(strMsg));
     }
-
 
     void filterAndSendEventLogs(
         const std::vector<EventLogObjectsType>& eventRecords)
@@ -2495,102 +2493,104 @@ class EventServiceManager
             *crow::connections::systemBus, matchStr, signalHandler);
     }
 
-/**
- * @brief Finds the right OriginOfCondition for @a path and sends the Event
- *        The map @a dBusToRedfishURI is used for that purpose
- * @param path  orginal path that came from Phosphor Logging
- * @param event  the event to be sent out
- */
-inline void eventServiceOOC(const std::string& path, const std::string& devName,
-                            Event& event)
-{
+    /**
+     * @brief Finds the right OriginOfCondition for @a path and sends the Event
+     *        The map @a dBusToRedfishURI is used for that purpose
+     * @param path  orginal path that came from Phosphor Logging
+     * @param event  the event to be sent out
+     */
+    inline void eventServiceOOC(const std::string& path,
+                                const std::string& devName, Event& event)
+    {
 #ifdef BMCWEB_ENABLE_REDFISH_AGGREGATION
-    // OOC Path in HMC events is already converted to Redfish path.
-    if (path.starts_with("/redfish/v1/"))
-    {
-        std::string oocPath(path);
-        addPrefixToStringItem(oocPath, redfishAggregationPrefix);
-        sendEventWithOOC(oocPath, event);
-        return;
-    }
-#endif
-    sdbusplus::message::object_path objPath(path);
-    std::string deviceName = objPath.filename();
-    if (false == deviceName.empty())
-    {
-        for (auto& it : dBusToRedfishURI)
+        // OOC Path in HMC events is already converted to Redfish path.
+        if (path.starts_with("/redfish/v1/"))
         {
-            if (path.find(it.first) != std::string::npos)
+            std::string oocPath(path);
+            addPrefixToStringItem(oocPath, redfishAggregationPrefix);
+            sendEventWithOOC(oocPath, event);
+            return;
+        }
+#endif
+        sdbusplus::message::object_path objPath(path);
+        std::string deviceName = objPath.filename();
+        if (false == deviceName.empty())
+        {
+            for (auto& it : dBusToRedfishURI)
             {
-                std::string newPath;
-                if (it.first == sensorSubTree)
+                if (path.find(it.first) != std::string::npos)
                 {
-                    std::string chassisName = PLATFORMDEVICEPREFIX + devName;
-                    std::string sensorName;
-                    dbus::utility::getNthStringFromPath(path, 4, sensorName);
-                    newPath = chassisName + "/Sensors/";
-                    newPath += sensorName;
+                    std::string newPath;
+                    if (it.first == sensorSubTree)
+                    {
+                        std::string chassisName = PLATFORMDEVICEPREFIX +
+                                                  devName;
+                        std::string sensorName;
+                        dbus::utility::getNthStringFromPath(path, 4,
+                                                            sensorName);
+                        newPath = chassisName + "/Sensors/";
+                        newPath += sensorName;
+                    }
+                    else
+                    {
+                        newPath = path.substr(it.first.length(), path.length());
+                    }
+                    sendEventWithOOC(it.second + newPath, event);
+                    return;
                 }
-                else
-                {
-                    newPath = path.substr(it.first.length(), path.length());
-                }
-                sendEventWithOOC(it.second + newPath, event);
-                return;
             }
         }
+
+        BMCWEB_LOG_ERROR(
+            "No Matching prefix found for OriginOfCondition Object Path: '{}' sending empty OriginOfCondition",
+            path);
+
+        sendEventWithOOC(std::string{""}, event);
     }
-
-    BMCWEB_LOG_ERROR(
-        "No Matching prefix found for OriginOfCondition Object Path: '{}' sending empty OriginOfCondition",
-        path);
-
-    sendEventWithOOC(std::string{""}, event);
-}
 #endif
 
-bool validateAndSplitUrl(const std::string& destUrl, std::string& urlProto,
-                         std::string& host, std::string& port,
-                         std::string& path)
-{
-    // Validate URL using regex expression
-    // Format: <protocol>://<host>:<port>/<path>
-    // protocol: http/https
-    std::cmatch match;
-    if (!std::regex_match(destUrl.c_str(), match, urlRegex))
+    bool validateAndSplitUrl(const std::string& destUrl, std::string& urlProto,
+                             std::string& host, std::string& port,
+                             std::string& path)
     {
-        BMCWEB_LOG_INFO("Dest. url did not match ");
-        return false;
-    }
+        // Validate URL using regex expression
+        // Format: <protocol>://<host>:<port>/<path>
+        // protocol: http/https
+        std::cmatch match;
+        if (!std::regex_match(destUrl.c_str(), match, urlRegex))
+        {
+            BMCWEB_LOG_INFO("Dest. url did not match ");
+            return false;
+        }
 
-    urlProto = std::string(match[1].first, match[1].second);
-    if (urlProto == "http")
-    {
-#ifndef BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING
-        return false;
-#endif
-    }
-
-    host = std::string(match[2].first, match[2].second);
-    port = std::string(match[3].first, match[3].second);
-    path = std::string(match[4].first, match[4].second);
-    if (port.empty())
-    {
+        urlProto = std::string(match[1].first, match[1].second);
         if (urlProto == "http")
         {
-            port = "80";
+#ifndef BMCWEB_INSECURE_ENABLE_HTTP_PUSH_STYLE_EVENTING
+            return false;
+#endif
         }
-        else
+
+        host = std::string(match[2].first, match[2].second);
+        port = std::string(match[3].first, match[3].second);
+        path = std::string(match[4].first, match[4].second);
+        if (port.empty())
         {
-            port = "443";
+            if (urlProto == "http")
+            {
+                port = "80";
+            }
+            else
+            {
+                port = "443";
+            }
         }
+        if (path.empty())
+        {
+            path = "/";
+        }
+        return true;
     }
-    if (path.empty())
-    {
-        path = "/";
-    }
-    return true;
-}
 };
 
 } // namespace redfish

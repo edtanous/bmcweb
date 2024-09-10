@@ -8,6 +8,7 @@
 #include "utils/dbus_utils.hpp"
 #include "utils/json_utils.hpp"
 #include "utils/nvidia_power_supply_utils.hpp"
+
 #include <boost/system/error_code.hpp>
 #include <boost/url/format.hpp>
 
@@ -480,9 +481,9 @@ inline void
 
         dbus::utility::getDbusObject(
             powerSupplyPath, powerSupplyInterface,
-            [asyncResp,
-             powerSupplyPath, powerSupplyId, chassisId](const boost::system::error_code& ec,
-                              const dbus::utility::MapperGetObject& object) {
+            [asyncResp, powerSupplyPath, powerSupplyId,
+             chassisId](const boost::system::error_code& ec,
+                        const dbus::utility::MapperGetObject& object) {
             if (ec || object.empty())
             {
                 messages::internalError(asyncResp->res);
@@ -499,8 +500,9 @@ inline void
                                           powerSupplyPath);
             getPowerSupplyLocation(asyncResp, object.begin()->first,
                                    powerSupplyPath);
-            redfish::nvidia_power_supply_utils::getNvidiaPowerSupply(asyncResp, object.begin()->first,
-                                   powerSupplyPath, powerSupplyId, chassisId);
+            redfish::nvidia_power_supply_utils::getNvidiaPowerSupply(
+                asyncResp, object.begin()->first, powerSupplyPath,
+                powerSupplyId, chassisId);
         });
 
         getEfficiencyPercent(asyncResp);
@@ -508,10 +510,10 @@ inline void
 }
 
 inline void
-doPowerSupplyMetricsGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                        const std::string& chassisId,
-                        const std::string& powerSupplyId,
-                        const std::optional<std::string>& validChassisPath)
+    doPowerSupplyMetricsGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+                            const std::string& chassisId,
+                            const std::string& powerSupplyId,
+                            const std::optional<std::string>& validChassisPath)
 {
     if (!validChassisPath)
     {
@@ -521,12 +523,12 @@ doPowerSupplyMetricsGet(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
 
     // Get the correct Path and Service that match the input parameters
     getValidPowerSupplyPath(asyncResp, *validChassisPath, powerSupplyId,
-                            [asyncResp, chassisId, powerSupplyId](const std::string& powerSupplyPath)
-    {
-        redfish::nvidia_power_supply_utils::getNvidiaPowerSupplyMetrics(asyncResp, chassisId, powerSupplyId, powerSupplyPath);
+                            [asyncResp, chassisId, powerSupplyId](
+                                const std::string& powerSupplyPath) {
+        redfish::nvidia_power_supply_utils::getNvidiaPowerSupplyMetrics(
+            asyncResp, chassisId, powerSupplyId, powerSupplyPath);
     });
 }
-
 
 inline void
     handlePowerSupplyHead(App& app, const crow::Request& req,
@@ -575,10 +577,10 @@ inline void
         std::bind_front(doPowerSupplyGet, asyncResp, chassisId, powerSupplyId));
 }
 
-inline void handlePowerSupplyMetricsGet(App& app, const crow::Request& req,
-                                       const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-                                       const std::string& chassisId,
-                                       const std::string& powerSupplyId)
+inline void handlePowerSupplyMetricsGet(
+    App& app, const crow::Request& req,
+    const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
+    const std::string& chassisId, const std::string& powerSupplyId)
 {
     if (!redfish::setUpRedfishRoute(app, req, asyncResp))
     {
@@ -587,7 +589,8 @@ inline void handlePowerSupplyMetricsGet(App& app, const crow::Request& req,
 
     redfish::chassis_utils::getValidChassisPath(
         asyncResp, chassisId,
-        std::bind_front(doPowerSupplyMetricsGet, asyncResp, chassisId, powerSupplyId));
+        std::bind_front(doPowerSupplyMetricsGet, asyncResp, chassisId,
+                        powerSupplyId));
 }
 
 inline void requestRoutesPowerSupply(App& app)
@@ -605,7 +608,8 @@ inline void requestRoutesPowerSupply(App& app)
             std::bind_front(handlePowerSupplyGet, std::ref(app)));
 
     BMCWEB_ROUTE(
-        app, "/redfish/v1/Chassis/<str>/PowerSubsystem/PowerSupplies/<str>/Metrics/")
+        app,
+        "/redfish/v1/Chassis/<str>/PowerSubsystem/PowerSupplies/<str>/Metrics/")
         .privileges(redfish::privileges::getPowerSupplyMetrics)
         .methods(boost::beast::http::verb::get)(
             std::bind_front(handlePowerSupplyMetricsGet, std::ref(app)));

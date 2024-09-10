@@ -85,7 +85,8 @@ class PatchSpeedConfigCallback
   public:
     explicit PatchSpeedConfigCallback(std::shared_ptr<bmcweb::AsyncResp> resp,
                                       uint32_t speedLimit) :
-        resp(std::move(resp)), speedLimit(speedLimit)
+        resp(std::move(resp)),
+        speedLimit(speedLimit)
     {}
 
     void operator()(const std::string& status) const
@@ -144,7 +145,8 @@ class PatchPowerCapCallback
   public:
     explicit PatchPowerCapCallback(std::shared_ptr<bmcweb::AsyncResp> resp,
                                    int64_t setpoint) :
-        resp(std::move(resp)), setpoint(setpoint)
+        resp(std::move(resp)),
+        setpoint(setpoint)
     {}
 
     void operator()(const std::string& status) const
@@ -202,7 +204,8 @@ class PatchClockLimitControlCallback
 {
   public:
     explicit PatchClockLimitControlCallback(
-        std::shared_ptr<bmcweb::AsyncResp> resp) : resp(std::move(resp))
+        std::shared_ptr<bmcweb::AsyncResp> resp) :
+        resp(std::move(resp))
     {}
 
     void operator()(const std::string& status) const
