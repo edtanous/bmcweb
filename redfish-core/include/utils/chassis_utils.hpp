@@ -1014,7 +1014,10 @@ inline void getChassisSKU(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
             messages::internalError(asyncResp->res);
             return;
         }
-        asyncResp->res.jsonValue["SKU"] = chassisSKU;
+        if (!chassisSKU.empty())
+        {
+            asyncResp->res.jsonValue["SKU"] = chassisSKU;
+        }
     });
 }
 
