@@ -4657,7 +4657,7 @@ inline void updateParametersForCommitImageInfo(
 
     nlohmann::json parameterTargets;
     parameterTargets["Name"] = "Targets";
-    parameterTargets["Required"] = "false";
+    parameterTargets["Required"] = false;
     parameterTargets["DataType"] = "StringArray";
     parameterTargets["AllowableValues"] = nlohmann::json::array();
 
@@ -6399,14 +6399,14 @@ inline void updateParametersForInitiateActionInfo(
 
         nlohmann::json parameterPackageURI;
         parameterPackageURI["Name"] = "StagedFirmwarePackageURI";
-        parameterPackageURI["Required"] = "true";
+        parameterPackageURI["Required"] = true;
         parameterPackageURI["DataType"] = "String";
 
         parameters.push_back(parameterPackageURI);
 
         nlohmann::json parameterTargets;
         parameterTargets["Name"] = "Targets";
-        parameterTargets["Required"] = "false";
+        parameterTargets["Required"] = false;
         parameterTargets["DataType"] = "StringArray";
         parameterTargets["AllowableValues"] = nlohmann::json::array();
         nlohmann::json& allowableValues = parameterTargets["AllowableValues"];
@@ -6434,7 +6434,7 @@ inline void updateParametersForInitiateActionInfo(
 
         nlohmann::json parameterForceUpdate;
         parameterForceUpdate["Name"] = "ForceUpdate";
-        parameterForceUpdate["Required"] = "false";
+        parameterForceUpdate["Required"] = false;
         parameterForceUpdate["DataType"] = "Boolean";
 
         parameters.push_back(parameterForceUpdate);
