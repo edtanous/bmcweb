@@ -101,6 +101,7 @@ inline void handleTrustedComponentsCollectionGet(
             "#TrustedComponentCollection.TrustedComponentCollection";
         asyncResp->res.jsonValue["Name"] = "Trusted Component Collection";
         asyncResp->res.jsonValue["@odata.id"] = collectionPath;
+        asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
         constexpr std::array<std::string_view, 1> interfaces{
             "xyz.openbmc_project.Inventory.Item.Tpm"};
         redfish::collection_util::getCollectionMembers(
