@@ -17,6 +17,7 @@
 
 #include "app.hpp"
 #include "query.hpp"
+#include "redfish-core/lib/bios.hpp"
 #include "registries.hpp"
 #include "registries/base_message_registry.hpp"
 #include "registries/bios_attribute_registry.hpp"
@@ -28,7 +29,6 @@
 #include "registries/telemetry_message_registry.hpp"
 
 #include <boost/url/format.hpp>
-#include "redfish-core/lib/bios.hpp"
 namespace redfish
 {
 
