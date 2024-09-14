@@ -851,39 +851,6 @@ class Subscription : public persistent_data::UserSubscription
         return sendEvent(std::move(strMsg));
     }
 
-    /*!
-     * @brief   Send the event if this subscription does not filter it out.
-     * @param[in] event   The event to be sent.
-     * @return  Void
-     */
-    void sendEvent(Event& event)
-    {
-        nlohmann::json logEntry;
-
-        if (event.formatEventLogEntry(logEntry,
-                                      this->includeOriginOfCondition) != 0)
-        {
-            BMCWEB_LOG_ERROR("Failed to format the event log entry");
-        }
-
-        nlohmann::json eventsArray = nlohmann::json::array();
-        eventsArray.push_back(logEntry);
-        nlohmann::json::object_t msg;
-        msg["@odata.type"] = "#Event.v1_9_0.Event";
-        msg["Id"] = std::to_string(eventSeqNum);
-        msg["Name"] = "Event Log";
-        msg["Context"] = customText;
-        msg["Events"] = eventsArray;
-        if (!eventMatchesFilter(msg, "Event"))
-        {
-            return;
-        }
-        std::string strMsg =
-            nlohmann::json(std::move(msg))
-                .dump(2, ' ', true, nlohmann::json::error_handler_t::replace);
-        this->sendEvent(std::move(strMsg));
-    }
-
     void filterAndSendEventLogs(
         const std::vector<EventLogObjectsType>& eventRecords)
     {
@@ -1481,7 +1448,9 @@ class EventServiceManager
             {
                 nlohmann::json msg = messages::eventBufferExceeded();
                 // If the buffer overloaded, send all messages.
-                subValue->sendEvent(msg);
+                std::string strMsg = msg.dump(
+                    2, ' ', false, nlohmann::json::error_handler_t::replace);
+		subValue->sendEvent(std::move(strMsg));
                 lastEvent = messages.begin();
             }
             else
@@ -1492,9 +1461,11 @@ class EventServiceManager
 
             for (boost::circular_buffer<Event2>::const_iterator event =
                      lastEvent;
-                 lastEvent != messages.end(); lastEvent++)
+                 event != messages.end(); event++)
             {
-                subValue->sendEvent(event->message);
+		std::string strMsg = event->message.dump(
+                    2, ' ', false, nlohmann::json::error_handler_t::replace);
+                subValue->sendEvent(std::move(strMsg));
             }
         }
         return id;
@@ -1652,11 +1623,24 @@ class EventServiceManager
      */
     void sendEvent(Event& event)
     {
+	nlohmann::json logEntry;
+	if (event.formatEventLogEntry(logEntry,1!= 0))
+        {
+            BMCWEB_LOG_ERROR("Failed to format the event log entry");
+        }
+	nlohmann::json eventsArray = nlohmann::json::array();
+	eventsArray.push_back(logEntry);
+	nlohmann::json::object_t msg;
+        msg["@odata.type"] = "#Event.v1_9_0.Event";
+        msg["Id"] = std::to_string(eventId);
+        msg["Name"] = "Event Log";
+        messages.push_back(Event2(std::to_string(eventId), msg));
         for (const auto& it : this->subscriptionsMap)
         {
             std::shared_ptr<Subscription> entry = it.second;
-
-            entry->sendEvent(event);
+            std::string strMsg = nlohmann::json(std::move(msg)).dump(
+                2, ' ', true, nlohmann::json::error_handler_t::replace);
+            entry->sendEvent(std::move(strMsg));
         }
         eventId++; // increament the eventId
     }
