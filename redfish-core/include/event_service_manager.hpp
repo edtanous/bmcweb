@@ -1623,17 +1623,18 @@ class EventServiceManager
      */
     void sendEvent(Event& event)
     {
-	nlohmann::json logEntry;
-	if (event.formatEventLogEntry(logEntry,1!= 0))
+        nlohmann::json logEntry;
+        if (event.formatEventLogEntry(logEntry) != 0)
         {
             BMCWEB_LOG_ERROR("Failed to format the event log entry");
         }
-	nlohmann::json eventsArray = nlohmann::json::array();
-	eventsArray.push_back(logEntry);
-	nlohmann::json::object_t msg;
+        nlohmann::json eventsArray = nlohmann::json::array();
+        eventsArray.push_back(logEntry);
+        nlohmann::json::object_t msg;
         msg["@odata.type"] = "#Event.v1_9_0.Event";
         msg["Id"] = std::to_string(eventId);
         msg["Name"] = "Event Log";
+        msg["Events"] = eventsArray;
         messages.push_back(Event2(std::to_string(eventId), msg));
         for (const auto& it : this->subscriptionsMap)
         {
