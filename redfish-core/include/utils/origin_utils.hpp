@@ -167,6 +167,7 @@ static void oocUtilServiceConditions(
                                  "/"
                                  "LogServices/EventLog/Entries/" +
                                  id;
+    j["@odata.type"] = "#LogEntry.v1_13_0.LogEntry";
     if (ooc.size() > 0)
     {
         BMCWEB_LOG_DEBUG("Populating service conditions with ooc {}", ooc);
