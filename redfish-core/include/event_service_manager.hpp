@@ -1450,7 +1450,7 @@ class EventServiceManager
                 // If the buffer overloaded, send all messages.
                 std::string strMsg = msg.dump(
                     2, ' ', false, nlohmann::json::error_handler_t::replace);
-		subValue->sendEvent(std::move(strMsg));
+                subValue->sendEvent(std::move(strMsg));
                 lastEvent = messages.begin();
             }
             else
@@ -1463,7 +1463,7 @@ class EventServiceManager
                      lastEvent;
                  event != messages.end(); event++)
             {
-		std::string strMsg = event->message.dump(
+                std::string strMsg = event->message.dump(
                     2, ' ', false, nlohmann::json::error_handler_t::replace);
                 subValue->sendEvent(std::move(strMsg));
             }
@@ -1639,8 +1639,10 @@ class EventServiceManager
         for (const auto& it : this->subscriptionsMap)
         {
             std::shared_ptr<Subscription> entry = it.second;
-            std::string strMsg = nlohmann::json(std::move(msg)).dump(
-                2, ' ', true, nlohmann::json::error_handler_t::replace);
+            std::string strMsg =
+                nlohmann::json(std::move(msg))
+                    .dump(2, ' ', true,
+                          nlohmann::json::error_handler_t::replace);
             entry->sendEvent(std::move(strMsg));
         }
         eventId++; // increament the eventId
