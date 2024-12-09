@@ -181,6 +181,7 @@ add_project_arguments(
             '-DBOOST_BEAST_SEPARATE_COMPILATION',
             '-DBOOST_EXCEPTION_DISABLE',
             '-DBOOST_NO_EXCEPTIONS',
+            '-DBOOST_PROCESS_USE_STD_FS',
             '-DBOOST_URL_NO_SOURCE_LOCATION',
             '-DBOOST_SPIRIT_X3_NO_RTTI',
             '-DJSON_NOEXCEPTION',
@@ -381,6 +382,28 @@ bmcweblib = static_library(
     include_directories: incdir,
     dependencies: bmcweb_dependencies,
 )
+
+if get_option('redfish-dbus-client').allowed()
+    # Generate the bmcweb CLI application
+    executable(
+        'redfishclient',
+        files(
+            'redfish-core/src/error_messages.cpp',
+            'redfish-core/src/utils/json_utils.cpp',
+            'src/boost_asio_ssl.cpp',
+            'src/boost_asio.cpp',
+            'src/boost_beast.cpp',
+            'src/redfish_client_main.cpp',
+            'src/ssl_key_handler.cpp',
+            'src/dbus_singleton.cpp',
+        ),
+        include_directories: incdir,
+        dependencies: [bmcweb_cli_dependencies, nghttp2, openssl],
+        install: true,
+        install_dir: bindir,
+    )
+
+endif
 
 # Generate the bmcwebd daemon
 executable(

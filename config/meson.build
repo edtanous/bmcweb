@@ -119,5 +119,17 @@ configure_file(
     ),
 )
 
+if get_option('redfish-dbus-client').allowed()
+    configure_file(
+        input: 'redfishclient.service.in',
+        output: 'redfishclient.service',
+        install_dir: systemd_system_unit_dir,
+        install: true,
+        configuration: configuration_data(
+            {'MESON_INSTALL_PREFIX': get_option('prefix')},
+        ),
+    )
+endif
+
 # Copy pam-webserver to etc/pam.d
 install_data('pam-webserver', install_dir: '/etc/pam.d/', rename: 'webserver')

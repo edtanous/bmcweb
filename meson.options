@@ -356,8 +356,18 @@ option(
     'redfish-aggregation',
     type: 'feature',
     value: 'disabled',
-    description: 'Allows this BMC to aggregate resources from satellite BMCs',
+    description: 'Allows this BMC to aggregate resources from satellite BMCs to Redfish',
 )
+
+
+# BMCWEB_DBUS_CLIENT
+option(
+    'redfish-dbus-client',
+    type: 'feature',
+    value: 'disabled',
+    description: 'Allows this BMC to aggregate resources from satellite BMCs to DBus',
+)
+
 
 # BMCWEB_HYPERVISOR_COMPUTER_SYSTEM
 option(
