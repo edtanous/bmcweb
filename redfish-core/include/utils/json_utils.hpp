@@ -16,7 +16,6 @@ limitations under the License.
 #pragma once
 
 #include "error_messages.hpp"
-#include "http_connection.hpp"
 #include "http_request.hpp"
 #include "http_response.hpp"
 #include "human_sort.hpp"
@@ -33,12 +32,7 @@ limitations under the License.
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <map>
 #include <optional>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>

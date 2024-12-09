@@ -16,6 +16,7 @@ limitations under the License.
 #pragma once
 
 #include "async_resolve.hpp"
+#include "boost_formatters.hpp"
 #include "http_body.hpp"
 #include "http_response.hpp"
 #include "logging.hpp"
