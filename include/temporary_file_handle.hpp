@@ -14,7 +14,7 @@
 // On destruction, the file is removed.
 class TemporaryFileHandle
 {
-    public:
+  public:
     std::filesystem::path stringPath;
     DuplicatableFileHandle fileHandle;
 
@@ -30,7 +30,9 @@ class TemporaryFileHandle
         fileHandle.fileHandle.write(sampleData.data(), sampleData.size(), ec);
         if (ec)
         {
-            BMCWEB_LOG_ERROR("Failed to write sample data to temporary file: {}", ec.message());
+            BMCWEB_LOG_ERROR(
+                "Failed to write sample data to temporary file: {}",
+                ec.message());
         }
     }
 
