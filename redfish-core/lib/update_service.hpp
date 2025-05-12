@@ -823,7 +823,7 @@ inline bool processUpdateFile(
     TemporaryFileHandle dupHandle(*file);
     if constexpr (BMCWEB_REDFISH_UPDATESERVICE_USE_DBUS)
     {
-        int fd = dupHandle.moveToFd();
+        int fd = dup(dupHandle.fileHandle.native_handle());
         if (fd < 0)
         {
             BMCWEB_LOG_ERROR("moveToFd() failed");
