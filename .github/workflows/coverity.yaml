@@ -28,5 +28,5 @@ jobs:
         token: ${{ secrets.COVERITY_SCAN_TOKEN }}
         build_language: 'cxx'
         project: 'openbmc/bmcweb'
-        command: 'ninja -C builddir -j 1 bmcwebd'
+        command: 'ninja -C builddir -j 1 bmcweb'
         description: 'github action triggered build'
