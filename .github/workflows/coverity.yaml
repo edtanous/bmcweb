@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 120
     steps:
   
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Install systemd-dev
       run: sudo apt update && sudo apt install libsystemd-dev libpam-dev ninja-build   
