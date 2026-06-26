@@ -2,6 +2,9 @@ name: Coverity
 on:
   push:
     branches: [ master ]
+  schedule:
+  # Every Monday at 2AM PST
+  - cron: "0 5 * * 2"
   workflow_dispatch:
 
 jobs:
