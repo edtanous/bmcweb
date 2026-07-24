@@ -235,7 +235,9 @@ if not nghttp2.found()
 endif
 bmcweb_dependencies += nghttp2
 
-sdbusplus = dependency('sdbusplus')
+sdbusplus = dependency('sdbusplus', default_options: {
+    'werror': 'false'
+})
 bmcweb_dependencies += sdbusplus
 
 cli11 = dependency('CLI11', include_type: 'system')
