@@ -311,7 +311,10 @@ else
     endforeach
 endif
 
-systemd_system_unit_dir = systemd.get_variable('systemd_system_unit_dir')
+
+
+
+systemd_system_unit_dir = systemd.get_variable('systemd_system_unit_dir', '/invalid/systemd/path')
 
 bindir = get_option('prefix') + '/' + get_option('bindir')
 
